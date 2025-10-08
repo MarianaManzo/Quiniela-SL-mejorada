@@ -807,7 +807,7 @@ function JuegoG7_DiaYHora() {
         <div className="content-stretch flex flex-col gap-[10px] items-start relative shrink-0 w-[108px]">
           <div className="content-stretch flex gap-[10px] items-center justify-center relative shrink-0" data-name="Dias">
             <div className="flex flex-col font-['Antonio:Regular',_sans-serif] font-normal justify-center leading-[0] relative shrink-0 text-[#222222] text-[29px] tracking-[-1.015px] uppercase w-[67px]">
-              <p className="leading-[normal]">SABADO</p>
+              <p className="leading-[normal]">SÁBADO</p>
             </div>
           </div>
         </div>
@@ -899,7 +899,7 @@ function JuegoG8_DiaYHora() {
         <div className="content-stretch flex flex-col gap-[10px] items-start relative shrink-0 w-[108px]">
           <div className="content-stretch flex gap-[10px] items-center justify-center relative shrink-0" data-name="Dias">
             <div className="flex flex-col font-['Antonio:Regular',_sans-serif] font-normal justify-center leading-[0] relative shrink-0 text-[#222222] text-[29px] tracking-[-1.015px] uppercase w-[67px]">
-              <p className="leading-[normal]">SABADO</p>
+              <p className="leading-[normal]">SÁBADO</p>
             </div>
           </div>
         </div>

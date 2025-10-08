@@ -1,15 +1,18 @@
 import { Suspense, lazy, useCallback, useRef, useState } from 'react';
 import { toJpeg } from 'html-to-image';
 
+// Definición centralizada de la jornada mostrada
+const CURRENT_JOURNEY = 15;
+
 // Carga lazy del componente principal para mejorar performance
-const AperturaJornada14 = lazy(() => import('./imports/AperturaJornada14'));
+const AperturaJornada15 = lazy(() => import('./imports/AperturaJornada15'));
 
 // Componente de loading simple
 function LoadingSpinner() {
   return (
     <div className="w-[1080px] h-[1080px] flex items-center justify-center bg-gradient-to-br from-blue-600 via-green-500 to-yellow-400">
       <div className="text-white text-2xl font-bold animate-pulse">
-        Cargando Jornada 13...
+        {`Cargando Jornada ${CURRENT_JOURNEY}...`}
       </div>
     </div>
   );
@@ -45,7 +48,7 @@ export default function App() {
 
       const link = document.createElement('a');
       link.href = dataUrl;
-      link.download = 'jornada-13.jpg';
+      link.download = `jornada-${CURRENT_JOURNEY}.jpg`;
       link.click();
     } catch (error) {
       console.error('Error al exportar la imagen como JPG', error);
@@ -72,7 +75,7 @@ export default function App() {
           className="canvas-wrapper"
         >
           <Suspense fallback={<LoadingSpinner />}>
-            <AperturaJornada14 />
+            <AperturaJornada15 />
           </Suspense>
         </div>
       </div>

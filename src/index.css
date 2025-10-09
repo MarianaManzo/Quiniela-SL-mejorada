@@ -671,9 +671,60 @@
     border-color: var(--color-gray-300);
   }
 
-  .bg-\[\#f8d95b\] {
+.bg-\[\#f8d95b\] {
     background-color: #f8d95b;
   }
+
+/* Quiniela selection buttons */
+.puntaje-button {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background-color: #f8d95b;
+  color: #222222;
+  border: 1px solid transparent;
+  transition: background-color 180ms ease, color 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  cursor: pointer;
+}
+
+.puntaje-button:not([data-selected="true"]):hover {
+  background-color: #fde68a;
+}
+
+.puntaje-button[data-selected="true"] {
+  background-color: #000000;
+  color: #ffffff;
+  border-color: #f8d95b;
+  box-shadow: 0 0 0 2px rgba(248, 217, 91, 0.35);
+}
+
+.puntaje-button:focus-visible {
+  outline: 2px solid #f8d95b;
+  outline-offset: 2px;
+}
+
+.puntaje-button__badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background-color: #000000;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  border: 1px solid #f8d95b;
+}
 
   .bg-\[\#f766a1\] {
     background-color: #f766a1;
@@ -1045,6 +1096,7 @@
   --sidebar-accent-foreground: oklch(.205 0 0);
   --sidebar-border: oklch(.922 0 0);
   --sidebar-ring: oklch(.708 0 0);
+  --sl-surface-gradient: radial-gradient(circle at 15% 15%, rgba(246, 212, 51, 0.18), transparent 45%), #0f1013;
 }
 
 .dark {

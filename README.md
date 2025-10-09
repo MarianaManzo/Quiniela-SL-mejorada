@@ -9,3 +9,4 @@
 
   Run `npm run dev` to start the development server.
   # Quiniela-Somos-locales
+# Quiniela-SL-mejorada

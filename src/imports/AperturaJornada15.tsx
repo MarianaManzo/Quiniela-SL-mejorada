@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useCallback, useState } from 'react';
 
 import logoLigaBBVA from 'figma:asset/282fbfddfb13edc69252a49f15e9f9646a1d8ece.png';
 import logoSomosLocales from 'figma:asset/930d5de55d9fd27c0951aa3f3d28301d6e434476.png';
@@ -74,6 +74,8 @@ type MatchInfo = {
   stadium: string;
   broadcast: string;
 };
+
+type Selection = 'L' | 'E' | 'V';
 
 const MATCHES: MatchInfo[] = [
   {
@@ -200,16 +202,31 @@ function TeamSlot({ team }: { team: TeamCode }) {
   );
 }
 
-function Puntaje() {
+function Puntaje({ selected, onSelect }: { selected: Selection | null; onSelect: (value: Selection) => void }) {
   return (
     <div className="flex items-center gap-[8px] relative shrink-0">
-      {['L', 'E', 'V'].map((label) => (
-        <div key={label} className="bg-[#f8d95b] box-border flex items-center justify-center relative shrink-0 size-[52px] rounded">
-          <span className="font-['Antonio:Regular',_sans-serif] font-normal text-[#222222] text-[29px] tracking-[-0.56px] uppercase">
-            {label}
-          </span>
-        </div>
-      ))}
+      {(['L', 'E', 'V'] as Selection[]).map((label) => {
+        const isSelected = selected === label;
+        return (
+          <button
+            key={label}
+            type="button"
+            onClick={() => onSelect(label)}
+            aria-pressed={isSelected}
+            data-selected={isSelected ? 'true' : undefined}
+            className="puntaje-button"
+          >
+            <span className="puntaje-button__label font-['Antonio:Regular',_sans-serif] font-normal text-[29px] tracking-[-0.56px] uppercase">
+              {label}
+            </span>
+            {isSelected ? (
+              <span className="puntaje-button__badge">
+                ✓
+              </span>
+            ) : null}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -264,14 +281,14 @@ function MatchMeta({ stadium, broadcast }: Pick<MatchInfo, 'stadium' | 'broadcas
   );
 }
 
-function MatchRow({ match }: { match: MatchInfo }) {
+function MatchRow({ match, selected, onSelect }: { match: MatchInfo; selected: Selection | null; onSelect: (value: Selection) => void }) {
   return (
     <div className="bg-white relative rounded-[8px] shrink-0 w-full h-[79px]">
       <div className="flex flex-row items-center size-full">
         <div className="box-border content-stretch flex gap-[25px] items-center pl-0 pr-[8px] py-[4px] relative w-full">
           <MatchTime day={match.day} dateLabel={match.dateLabel} time={match.time} />
           <TeamSlot team={match.home} />
-          <Puntaje />
+          <Puntaje selected={selected} onSelect={onSelect} />
           <TeamSlot team={match.away} />
           <div className="flex-1 min-w-0" />
           <div className="flex-1 min-w-0">
@@ -327,13 +344,18 @@ function Frame34() {
   );
 }
 
-function Frame26() {
+function Frame26({ selections, onSelect }: { selections: Record<string, Selection | null>; onSelect: (matchId: string, value: Selection) => void }) {
   return (
     <div className="relative shrink-0 w-full">
       <div className="size-full">
         <div className="box-border content-stretch flex flex-col gap-[12px] items-start px-[32px] py-[10px] relative w-full">
           {MATCHES.map((match) => (
-            <MatchRow key={match.id} match={match} />
+            <MatchRow
+              key={match.id}
+              match={match}
+              selected={selections[match.id] ?? null}
+              onSelect={(value) => onSelect(match.id, value)}
+            />
           ))}
         </div>
       </div>
@@ -358,17 +380,28 @@ function PieDePagina() {
   );
 }
 
-function Frame35() {
+function Frame35({ selections, onSelect }: { selections: Record<string, Selection | null>; onSelect: (matchId: string, value: Selection) => void }) {
   return (
     <div className="absolute box-border content-stretch flex flex-col gap-[16px] items-start left-0 px-0 py-[32px] size-[1080px] top-0">
       <Frame34 />
-      <Frame26 />
+      <Frame26 selections={selections} onSelect={onSelect} />
       <PieDePagina />
     </div>
   );
 }
 
 export default function AperturaJornada15() {
+  const [selections, setSelections] = useState<Record<string, Selection | null>>(() =>
+    MATCHES.reduce<Record<string, Selection | null>>((acc, match) => {
+      acc[match.id] = null;
+      return acc;
+    }, {})
+  );
+
+  const handleSelect = useCallback((matchId: string, value: Selection) => {
+    setSelections((prev) => ({ ...prev, [matchId]: value }));
+  }, []);
+
   return (
     <div className="relative size-full" data-name="Apertura / JORNADA 15">
       <img
@@ -378,7 +411,7 @@ export default function AperturaJornada15() {
         loading="eager"
         decoding="async"
       />
-      <Frame35 />
+      <Frame35 selections={selections} onSelect={handleSelect} />
     </div>
   );
 }

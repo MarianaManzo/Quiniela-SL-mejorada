@@ -1,4 +1,5 @@
-import { ArrowRight } from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, ChevronDown, ChevronUp, Clock, AlertTriangle, Check } from "lucide-react";
 import { ROLE_LABELS, type UserProfile } from "./LoginScreen";
 import logoSomosLocales from "figma:asset/930d5de55d9fd27c0951aa3f3d28301d6e434476.png";
 import "../styles/dashboard.css";
@@ -12,39 +13,6 @@ const manifesto = [
   { id: "01", text: "Completa tu quiniela antes del cierre oficial de la jornada." },
   { id: "02", text: "Comparte la dinámica con tu familia y vive la pasión desde casa." },
   { id: "03", text: "Registra tus jugadas favoritas para potenciar tu instinto local." },
-];
-
-const principles = [
-  {
-    id: "01",
-    title: "Apoyar y alentar",
-    description: "Impulsamos el fútbol femenil apoyando a nuestro equipo en cada jornada.",
-  },
-  {
-    id: "02",
-    title: "Respetar a la afición",
-    description: "Honramos a quien vive la pasión como nosotros, dentro y fuera del estadio.",
-  },
-  {
-    id: "03",
-    title: "Celebrar el juego limpio",
-    description: "Nuestros pronósticos y comentarios elevan la conversación futbolera.",
-  },
-  {
-    id: "04",
-    title: "Cuidar instalaciones",
-    description: "El espacio que habitamos se mantiene impecable para la siguiente fecha.",
-  },
-  {
-    id: "05",
-    title: "Compartir la emoción",
-    description: "Invitamos a alguien nuevo a sentir la energía del balompié femenil.",
-  },
-  {
-    id: "06",
-    title: "Vibrar los 90 minutos",
-    description: "Cada quiniela es una excusa para seguir la liga completa, minuto a minuto.",
-  },
 ];
 
 const communityNotes = [
@@ -71,7 +39,157 @@ const ranking = [
   { id: 3, name: "Carolina Patiño", score: "104 pts" },
 ];
 
+interface TournamentSectionState {
+  id: string;
+  collapsed: boolean;
+}
+
+const tournamentSections = [
+  {
+    id: "regular",
+    appearance: "regular" as const,
+    title: "Torneo Regular",
+    subtitle: "Jornadas 1 a 17",
+    statusTags: [
+      { id: "progress", label: "10/17 completadas", tone: "progress" as const },
+    ],
+    cards: [
+      {
+        id: "j17",
+        code: "J17",
+        statusLabel: "Próximamente",
+        tone: "upcoming" as const,
+      },
+      {
+        id: "j16",
+        code: "J16",
+        statusLabel: "Próximamente",
+        tone: "upcoming" as const,
+      },
+      {
+        id: "j15",
+        code: "J15",
+        statusLabel: "En curso",
+        tone: "current" as const,
+        ctaLabel: "Participar",
+      },
+      {
+        id: "j14",
+        code: "J14",
+        statusLabel: "Enviado",
+        tone: "success" as const,
+      },
+      {
+        id: "j13",
+        code: "J13",
+        statusLabel: "Enviado",
+        tone: "success" as const,
+      },
+      {
+        id: "j12",
+        code: "J12",
+        statusLabel: "Enviado",
+        tone: "success" as const,
+      },
+      {
+        id: "j11",
+        code: "J11",
+        statusLabel: "Expirado",
+        tone: "warning" as const,
+      },
+      {
+        id: "j10",
+        code: "J10",
+        statusLabel: "Expirado",
+        tone: "warning" as const,
+      },
+      {
+        id: "j9",
+        code: "J09",
+        statusLabel: "Expirado",
+        tone: "warning" as const,
+      },
+      {
+        id: "j8",
+        code: "J08",
+        statusLabel: "Expirado",
+        tone: "warning" as const,
+      },
+      {
+        id: "j7",
+        code: "J07",
+        statusLabel: "Expirado",
+        tone: "warning" as const,
+      },
+      {
+        id: "j6",
+        code: "J06",
+        statusLabel: "Expirado",
+        tone: "warning" as const,
+      },
+      {
+        id: "j5",
+        code: "J05",
+        statusLabel: "Expirado",
+        tone: "warning" as const,
+      },
+      {
+        id: "j4",
+        code: "J04",
+        statusLabel: "Expirado",
+        tone: "warning" as const,
+      },
+      {
+        id: "j3",
+        code: "J03",
+        statusLabel: "Expirado",
+        tone: "warning" as const,
+      },
+      {
+        id: "j2",
+        code: "J02",
+        statusLabel: "Expirado",
+        tone: "warning" as const,
+      },
+      {
+        id: "j1",
+        code: "J01",
+        statusLabel: "Expirado",
+        tone: "warning" as const,
+      },
+    ],
+  },
+  {
+    id: "liguilla",
+    appearance: "elimination" as const,
+    title: "Liguilla",
+    subtitle: "4 jornadas por disputar",
+    statusTags: [
+      { id: "available", label: "Disponible pronto", tone: "neutral" as const },
+    ],
+    cards: [
+      { id: "cuartos", code: "C1", statusLabel: "Próximamente", tone: "upcoming" as const },
+      { id: "semis", code: "S1", statusLabel: "Próximamente", tone: "upcoming" as const },
+      { id: "final", code: "F1", statusLabel: "Próximamente", tone: "upcoming" as const },
+    ],
+  },
+];
+
 export function Dashboard({ user, onEnterQuiniela }: DashboardProps) {
+  const [sectionState, setSectionState] = useState<TournamentSectionState[]>(
+    tournamentSections.map((section) => ({ id: section.id, collapsed: false }))
+  );
+
+  const isSectionCollapsed = (sectionId: string) => sectionState.find((state) => state.id === sectionId)?.collapsed;
+
+  const toggleSection = (sectionId: string) => {
+    setSectionState((prev) =>
+      prev.map((entry) =>
+        entry.id === sectionId ? { ...entry, collapsed: !entry.collapsed } : entry
+      )
+    );
+  };
+
   return (
     <div className="dashboard-page">
       <section className="dashboard-section">
@@ -105,24 +223,95 @@ export function Dashboard({ user, onEnterQuiniela }: DashboardProps) {
         </div>
       </section>
 
-      <section className="dashboard-section">
-        <div>
-          <h2 className="section-title">Decálogo de la mejor afición</h2>
-          <p className="section-subtitle">
-            Creamos experiencias que contagian entusiasmo, respeto y apoyo incondicional a la liga femenil.
-          </p>
-        </div>
-        <div className="decalog-grid">
-          {principles.map((principle) => (
-            <article key={principle.id} className="decalog-item">
-              <span className="decalog-number">{principle.id}</span>
-              <h3 className="decalog-title">{principle.title}</h3>
-              <p className="decalog-text">{principle.description}</p>
+      <section className="dashboard-section tournament-panel">
+        <div className="tournament-panel__stack">
+          {tournamentSections.map((section) => {
+            const collapsed = Boolean(isSectionCollapsed(section.id));
+
+            return (
+              <article
+                key={section.id}
+                className="tournament-panel__block"
+                data-collapsed={collapsed}
+                data-scheme={section.appearance}
+              >
+                <header className="tournament-panel__header">
+                  <div className="tournament-panel__title-group">
+                    <h2 className="tournament-panel__title">{section.title}</h2>
+                    <p className="tournament-panel__subtitle">{section.subtitle}</p>
+                  </div>
+
+                  <div className="tournament-panel__header-actions">
+                    <div className="tournament-panel__tags">
+                      {section.statusTags.map((tag) => (
+                        <span key={tag.id} className="tournament-tag" data-tone={tag.tone}>
+                          {tag.label}
+                        </span>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      className="tournament-panel__action"
+                      onClick={() => toggleSection(section.id)}
+                      aria-label={collapsed ? "Expandir sección" : "Contraer sección"}
+                    >
+                      {collapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                    </button>
+                  </div>
+                </header>
+
+              <div className="tournament-panel__grid" data-hidden={collapsed}>
+                {section.cards.map((card) => {
+                  return (
+                    <article
+                      key={card.id}
+                      className="journey-card"
+                      data-tone={card.tone}
+                    >
+                      <span className="journey-card__code">{card.code}</span>
+                      <div className="journey-card__content">
+                        <span className="journey-card__status-tag" data-tone={card.tone}>
+                          <span className="journey-card__status-icon" aria-hidden="true">
+                            {card.tone === "success" ? (
+                              <Check size={14} />
+                            ) : card.tone === "warning" ? (
+                              <AlertTriangle size={14} />
+                            ) : card.tone === "upcoming" ? (
+                              <Clock size={14} />
+                            ) : (
+                              <ArrowRight size={14} />
+                            )}
+                          </span>
+                          <span>{card.statusLabel}</span>
+                        </span>
+                      </div>
+                      <div className="journey-card__actions">
+                        {card.ctaLabel ? (
+                          <button type="button" className="journey-card__cta">
+                            {card.ctaLabel}
+                          </button>
+                        ) : null}
+                        {card.tone !== "current" ? (
+                          <button type="button" className="journey-card__link">
+                            Ver
+                          </button>
+                        ) : null}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
             </article>
-          ))}
+          );
+          })}
+
+          <div className="tournament-panel__footer">
+            <button type="button" className="tournament-panel__see-more">
+              Ver todas las jornadas
+            </button>
+          </div>
         </div>
       </section>
-
       <div className="dashboard-spacer" />
     </div>
   );

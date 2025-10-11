@@ -1066,8 +1066,10 @@
   width: min(100%, 1080px);
   margin: 0 auto;
   padding-inline: 32px;
-  padding-bottom: 32px;
   overflow: visible;
+  height: var(--canvas-height, 1080px);
+  display: flex;
+  justify-content: center;
 }
 
 .canvas-shell .canvas-wrapper {

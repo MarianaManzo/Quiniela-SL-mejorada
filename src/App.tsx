@@ -35,11 +35,11 @@ export default function App() {
       return;
     }
 
-    const rect = shell.getBoundingClientRect();
-    const availableWidth = rect.width;
-    const availableHeight = rect.height;
-    const scale = Math.min(availableWidth / 1080, availableHeight / 1080, 1);
+    const availableWidth = shell.clientWidth - 64;
+    const scale = Math.min(availableWidth / 1080, 1);
+
     content.style.setProperty('--canvas-scale', scale.toString());
+    shell.style.setProperty('--canvas-height', `${1080 * scale}px`);
   }, []);
 
   useEffect(() => {
@@ -68,13 +68,10 @@ export default function App() {
     }
 
     const previousScale = node.style.getPropertyValue('--canvas-scale');
-    const computed = getComputedStyle(shell);
-    const paddingTop = parseFloat(computed.paddingTop) || 0;
-    const paddingBottom = parseFloat(computed.paddingBottom) || 0;
-    const paddingY = paddingTop + paddingBottom;
+    const previousHeight = shell.style.getPropertyValue('--canvas-height');
 
     node.style.setProperty('--canvas-scale', '1');
-    shell.style.height = `${1080 + paddingY}px`;
+    shell.style.setProperty('--canvas-height', '1080px');
 
     try {
       setIsDownloading(true);
@@ -105,7 +102,13 @@ export default function App() {
       } else {
         node.style.removeProperty('--canvas-scale');
       }
-      shell.style.height = '';
+
+      if (previousHeight) {
+        shell.style.setProperty('--canvas-height', previousHeight);
+      } else {
+        shell.style.removeProperty('--canvas-height');
+      }
+
       restoreCanvasScale();
       setIsDownloading(false);
     }

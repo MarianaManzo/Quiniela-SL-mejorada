@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { toJpeg } from 'html-to-image';
 import { Dashboard } from './components/Dashboard';
 import { LoginScreen, type UserProfile } from './components/LoginScreen';
@@ -24,8 +24,38 @@ function LoadingSpinner() {
 export default function App() {
   const [view, setView] = useState<'dashboard' | 'quiniela'>('dashboard');
   const [user, setUser] = useState<UserProfile | null>(null);
+  const canvasShellRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+
+  const restoreCanvasScale = useCallback(() => {
+    const shell = canvasShellRef.current;
+    const content = canvasRef.current;
+    if (!shell || !content) {
+      return;
+    }
+
+    const width = shell.offsetWidth;
+    const scale = Math.min(width / 1080, 1);
+    content.style.setProperty('--canvas-scale', scale.toString());
+  }, []);
+
+  useEffect(() => {
+    restoreCanvasScale();
+
+    const shell = canvasShellRef.current;
+    if (!shell) {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => {
+      restoreCanvasScale();
+    });
+
+    observer.observe(shell);
+
+    return () => observer.disconnect();
+  }, [restoreCanvasScale]);
 
   const handleDownload = useCallback(async () => {
     const node = canvasRef.current;
@@ -34,10 +64,12 @@ export default function App() {
       return;
     }
 
+    const previousScale = node.style.getPropertyValue('--canvas-scale');
+    node.style.setProperty('--canvas-scale', '1');
+
     try {
       setIsDownloading(true);
 
-      // Garantiza que las fuentes carguen antes de exportar
       if (typeof document !== 'undefined' && 'fonts' in document) {
         await (document as Document & { fonts: FontFaceSet }).fonts.ready;
       }
@@ -59,9 +91,15 @@ export default function App() {
       console.error('Error al exportar la imagen como JPG', error);
       window.alert('No se pudo descargar la imagen. Revisa la consola para más detalles.');
     } finally {
+      if (previousScale) {
+        node.style.setProperty('--canvas-scale', previousScale);
+      } else {
+        node.style.removeProperty('--canvas-scale');
+      }
+      restoreCanvasScale();
       setIsDownloading(false);
     }
-  }, [isDownloading]);
+  }, [isDownloading, restoreCanvasScale]);
 
   const handleSignOut = useCallback(() => {
     setIsDownloading(false);
@@ -120,13 +158,15 @@ export default function App() {
           </button>
         </div>
 
-        <div
-          ref={canvasRef}
-          className="canvas-wrapper"
-        >
-          <Suspense fallback={<LoadingSpinner />}>
-            <AperturaJornada15 />
-          </Suspense>
+        <div ref={canvasShellRef} className="canvas-shell">
+          <div
+            ref={canvasRef}
+            className="canvas-wrapper"
+          >
+            <Suspense fallback={<LoadingSpinner />}>
+              <AperturaJornada15 />
+            </Suspense>
+          </div>
         </div>
       </div>
     </div>

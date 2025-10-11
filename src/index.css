@@ -1058,6 +1058,21 @@
   overflow: hidden;
   background: #fff;
   box-shadow: 0 32px 60px -30px rgba(3, 2, 19, 0.65);
+  transform: scale(var(--canvas-scale, 1));
+  transform-origin: top left;
+}
+
+.canvas-shell {
+  position: relative;
+  width: min(100%, 1080px);
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.canvas-shell .canvas-wrapper {
+  position: absolute;
+  inset: 0;
 }
 
 :root {

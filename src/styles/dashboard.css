@@ -368,14 +368,13 @@
 .journey-card {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 22px 24px;
+  gap: 12px;
+  padding: 18px 20px;
   border-radius: 24px;
   border: 1.5px solid var(--sl-gray-200);
   background: #ffffff;
   box-shadow: 0 20px 46px -38px rgba(20, 20, 28, 0.35);
   transition: transform 140ms ease, box-shadow 140ms ease;
-  min-height: 136px;
 }
 
 .journey-card:hover {
@@ -384,10 +383,10 @@
 }
 
 .journey-card__header {
-  display: grid;
-  grid-template-columns: auto 1fr;
+  display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .journey-card__code {
@@ -408,35 +407,36 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 14px;
+  padding: 6px 12px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   border: 1px solid transparent;
-  justify-self: end;
 }
 
 .journey-card__status-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 999px;
 }
 
 .journey-card__actions {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 12px;
-  min-height: 40px;
+  margin-left: auto;
 }
 
 .journey-card__actions[data-empty="true"] {
-  visibility: hidden;
+  display: none;
 }
+
+
 
 .journey-card__cta {
   background: var(--so-yellow);
@@ -542,31 +542,6 @@
 .journey-card[data-tone="upcoming"] .journey-card__status-icon {
   background: rgba(20, 20, 28, 0.16);
   color: rgba(20, 20, 28, 0.55);
-}
-
-.tournament-panel__footer {
-  display: flex;
-  justify-content: center;
-  padding-top: 12px;
-}
-
-.tournament-panel__see-more {
-  border: 1px solid rgba(20, 20, 28, 0.14);
-  background: rgba(255, 255, 255, 0.94);
-  color: rgba(20, 20, 28, 0.74);
-  border-radius: 999px;
-  padding: 14px 32px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  font-size: 12px;
-  cursor: pointer;
-  transition: background 160ms ease, color 160ms ease, border 160ms ease;
-}
-
-.tournament-panel__see-more:hover {
-  background: rgba(246, 212, 51, 0.24);
-  border-color: rgba(246, 212, 51, 0.4);
-  color: var(--sl-black);
 }
 
 @media (max-width: 960px) {

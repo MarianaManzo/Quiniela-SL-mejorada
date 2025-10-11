@@ -329,21 +329,30 @@ export function Dashboard({ user, onEnterQuiniela }: DashboardProps) {
                           </span>
                           <span>{card.statusLabel}</span>
                         </span>
+                        {(() => {
+                          const canShowCTA = Boolean(card.ctaLabel && card.tone !== "success" && card.tone !== "upcoming" && card.tone !== "warning");
+                          const canShowView = card.tone === "success";
+
+                          if (!canShowCTA && !canShowView) {
+                            return null;
+                          }
+
+                          return (
+                            <div className="journey-card__actions" data-empty={!(canShowCTA || canShowView)}>
+                              {canShowCTA ? (
+                                <button type="button" className="journey-card__cta" data-tone={card.tone}>
+                                  {card.ctaLabel}
+                                </button>
+                              ) : null}
+                              {canShowView ? (
+                                <button type="button" className="journey-card__link journey-card__link--inline">
+                                  Ver
+                                </button>
+                              ) : null}
+                            </div>
+                          );
+                        })()}
                       </header>
-                      <div className="journey-card__actions" data-empty={
-                        !(card.ctaLabel || card.tone === "success")
-                      }>
-                        {card.ctaLabel ? (
-                          <button type="button" className="journey-card__cta">
-                            {card.ctaLabel}
-                          </button>
-                        ) : null}
-                        {card.tone === "success" ? (
-                          <button type="button" className="journey-card__link">
-                            Ver
-                          </button>
-                        ) : null}
-                      </div>
                     </article>
                   );
                 })}
@@ -352,11 +361,6 @@ export function Dashboard({ user, onEnterQuiniela }: DashboardProps) {
           );
           })}
 
-          <div className="tournament-panel__footer">
-            <button type="button" className="tournament-panel__see-more">
-              Ver todas las jornadas
-            </button>
-          </div>
         </div>
       </section>
     </div>

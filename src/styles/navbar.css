@@ -5,16 +5,17 @@
   background: rgba(15, 16, 19, 0.92);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid rgba(246, 212, 51, 0.16);
+  border-radius: 0 0 64px 64px;
 }
 
 .navbar__container {
-  width: min(1180px, calc(100% - 48px));
+  width: min(1180px, calc(100% - 64px));
   margin: 0 auto;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   column-gap: 24px;
-  padding: 18px 0;
+  padding: 18px 32px;
 }
 
 .navbar__brand {
@@ -91,6 +92,8 @@
   align-items: center;
   gap: 18px;
   flex-wrap: wrap;
+  justify-self: end;
+  justify-content: flex-end;
 }
 
 .navbar__controls {

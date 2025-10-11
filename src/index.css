@@ -72,7 +72,7 @@
     padding: 0;
   }
 
-  html, :host {
+  html, :host, .app-root {
     -webkit-text-size-adjust: 100%;
     tab-size: 4;
     line-height: 1.5;
@@ -80,10 +80,13 @@
     font-feature-settings: var(--default-font-feature-settings, normal);
     font-variation-settings: var(--default-font-variation-settings, normal);
     -webkit-tap-highlight-color: transparent;
+    background-color: #262623;
   }
 
-  body {
+  body, .app-body {
     line-height: inherit;
+    background-color: #262623;
+    color: #f8fafc;
   }
 
   hr {

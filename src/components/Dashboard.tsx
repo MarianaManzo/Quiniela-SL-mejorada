@@ -18,12 +18,6 @@ interface DashboardProps {
   onEnterQuiniela: () => void;
 }
 
-const manifesto = [
-  { id: "01", text: "Completa tu quiniela antes del cierre oficial de la jornada." },
-  { id: "02", text: "Comparte la dinámica con tu familia y vive la pasión desde casa." },
-  { id: "03", text: "Registra tus jugadas favoritas para potenciar tu instinto local." },
-];
-
 const communityNotes = [
   "Toda la pasión de la grada se siente en cada pronóstico.",
   "Prepara tus datos, suma intuición y juega con corazón local.",
@@ -36,16 +30,17 @@ const tips = [
   "Comparte tus picks en el grupo de la comunidad Somos Locales.",
 ];
 
-const upcomingJourneys = [
-  { id: "j15", title: "Jornada 15", meta: "Cierra 12 de octubre · 18:00 h", status: "En juego" },
-  { id: "j16", title: "Jornada 16", meta: "Inicia 20 de octubre", status: "Abre pronto" },
-  { id: "liguilla", title: "Liguilla", meta: "Calendario por confirmar", status: "Planeación" },
-];
-
 const ranking = [
   { id: 1, name: "Ana Martínez", score: "112 pts" },
   { id: 2, name: "Luisa Hernández", score: "108 pts" },
   { id: 3, name: "Carolina Patiño", score: "104 pts" },
+  { id: 4, name: "Jimena Torres", score: "99 pts" },
+  { id: 5, name: "María Fernanda Ruiz", score: "96 pts" },
+  { id: 6, name: "Diana Bautista", score: "94 pts" },
+  { id: 7, name: "Paola Guillén", score: "90 pts" },
+  { id: 8, name: "Renata Salcedo", score: "88 pts" },
+  { id: 9, name: "Alexa Campos", score: "85 pts" },
+  { id: 10, name: "Sofía Aguirre", score: "82 pts" },
 ];
 
 interface TournamentSectionState {
@@ -58,9 +53,8 @@ const tournamentSections = [
     id: "regular",
     appearance: "regular" as const,
     title: "Torneo Regular",
-    subtitle: "Jornadas 1 a 17",
     statusTags: [
-      { id: "progress", label: "10/17 completadas", tone: "progress" as const },
+      { id: "progress", label: "Jornadas (10/17)", tone: "progress" as const },
     ],
     cards: [
       {
@@ -80,7 +74,7 @@ const tournamentSections = [
       {
         id: "j15",
         code: "J15",
-        statusLabel: "Participar",
+        statusLabel: "En curso",
         meta: "Cierra 12 de octubre · 18:00 h",
         tone: "current" as const,
         ctaLabel: "Participar",
@@ -250,64 +244,28 @@ export function Dashboard({ user, onEnterQuiniela }: DashboardProps) {
             y celebremos cada gol juntas.
           </p>
 
-          <div className="hero-metrics" role="list">
-            {upcomingJourneys.map((journey) => (
-              <div key={journey.id} className="hero-metric" role="listitem">
-                <div className="hero-metric__header">
-                  <span className="hero-metric__title">{journey.title}</span>
-                  <span className="hero-metric__status">{journey.status}</span>
-                </div>
-                <p className="hero-metric__meta">{journey.meta}</p>
-              </div>
-            ))}
-          </div>
-
           <div className="hero-actions">
             <button type="button" className="btn btn-primary" onClick={onEnterQuiniela}>
               Participar en {activeJourney?.code ?? "la quiniela"}
               <ArrowRight size={18} />
             </button>
-            <button type="button" className="btn btn-secondary">
-              Ver calendario oficial
-            </button>
           </div>
         </div>
 
-        <aside className="hero-card" aria-labelledby="hero-card-title">
-          <div className="hero-card__brand">
-            <img src={logoSomosLocales} alt="Somos Locales" className="hero-card__logo" />
-            <span className="hero-card__brand-text">Comunidad {ROLE_LABELS[user.role]}</span>
-          </div>
-          <h2 id="hero-card-title" className="hero-card__title">
-            Checklist para tu jornada
-          </h2>
-          <ul className="hero-card__list">
-            {manifesto.map((item) => (
-              <li key={item.id} className="hero-card__item">
-                <span className="hero-card__number">{item.id}</span>
-                <span>{item.text}</span>
+        <aside className="hero-card hero-card--ranking" aria-labelledby="hero-card-title">
+          <span id="hero-card-title" className="hero-card__chip">
+            <Trophy size={16} aria-hidden="true" />
+            Pódium Somos Locales
+          </span>
+          <ul className="ranking-list ranking-list--featured">
+            {ranking.slice(0, 5).map((entry) => (
+              <li key={entry.id} className="ranking-item">
+                <span className="ranking-position">{entry.id}</span>
+                <span className="ranking-name">{entry.name}</span>
+                <span className="ranking-score">{entry.score}</span>
               </li>
             ))}
           </ul>
-
-          <div className="hero-card__divider" />
-
-          <div className="hero-card__ranking">
-            <div className="hero-card__ranking-header">
-              <Trophy size={18} aria-hidden="true" />
-              <span>Top afición</span>
-            </div>
-            <ul className="ranking-list">
-              {ranking.map((entry) => (
-                <li key={entry.id} className="ranking-item">
-                  <span className="ranking-position">{entry.id}</span>
-                  <span className="ranking-name">{entry.name}</span>
-                  <span className="ranking-score">{entry.score}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
           <p className="hero-card__note">Registro activo como {ROLE_LABELS[user.role]}.</p>
         </aside>
       </section>
@@ -327,7 +285,9 @@ export function Dashboard({ user, onEnterQuiniela }: DashboardProps) {
                 <header className="tournament-panel__header">
                   <div className="tournament-panel__title-group">
                     <h2 className="tournament-panel__title">{section.title}</h2>
-                    <p className="tournament-panel__subtitle">{section.subtitle}</p>
+                    <p className="tournament-panel__subtitle" data-hidden={Boolean(section.subtitle)}>
+                      {section.subtitle}
+                    </p>
                   </div>
 
                   <div className="tournament-panel__header-actions">
@@ -370,16 +330,19 @@ export function Dashboard({ user, onEnterQuiniela }: DashboardProps) {
                           <span>{card.statusLabel}</span>
                         </span>
                       </header>
-                      <p className="journey-card__meta">{card.meta}</p>
-                      <div className="journey-card__actions">
+                      <div className="journey-card__actions" data-empty={
+                        !(card.ctaLabel || card.tone === "success")
+                      }>
                         {card.ctaLabel ? (
                           <button type="button" className="journey-card__cta">
                             {card.ctaLabel}
                           </button>
                         ) : null}
-                        <button type="button" className="journey-card__link">
-                          Ver detalle
-                        </button>
+                        {card.tone === "success" ? (
+                          <button type="button" className="journey-card__link">
+                            Ver
+                          </button>
+                        ) : null}
                       </div>
                     </article>
                   );
@@ -396,7 +359,6 @@ export function Dashboard({ user, onEnterQuiniela }: DashboardProps) {
           </div>
         </div>
       </section>
-      <div className="dashboard-spacer" />
     </div>
   );
 }

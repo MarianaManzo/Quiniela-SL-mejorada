@@ -35,8 +35,10 @@ export default function App() {
       return;
     }
 
-    const width = shell.offsetWidth;
-    const scale = Math.min(width / 1080, 1);
+    const rect = shell.getBoundingClientRect();
+    const availableWidth = rect.width;
+    const availableHeight = rect.height;
+    const scale = Math.min(availableWidth / 1080, availableHeight / 1080, 1);
     content.style.setProperty('--canvas-scale', scale.toString());
   }, []);
 
@@ -59,13 +61,20 @@ export default function App() {
 
   const handleDownload = useCallback(async () => {
     const node = canvasRef.current;
+    const shell = canvasShellRef.current;
 
-    if (!node || isDownloading) {
+    if (!node || !shell || isDownloading) {
       return;
     }
 
     const previousScale = node.style.getPropertyValue('--canvas-scale');
+    const computed = getComputedStyle(shell);
+    const paddingTop = parseFloat(computed.paddingTop) || 0;
+    const paddingBottom = parseFloat(computed.paddingBottom) || 0;
+    const paddingY = paddingTop + paddingBottom;
+
     node.style.setProperty('--canvas-scale', '1');
+    shell.style.height = `${1080 + paddingY}px`;
 
     try {
       setIsDownloading(true);
@@ -96,6 +105,7 @@ export default function App() {
       } else {
         node.style.removeProperty('--canvas-scale');
       }
+      shell.style.height = '';
       restoreCanvasScale();
       setIsDownloading(false);
     }

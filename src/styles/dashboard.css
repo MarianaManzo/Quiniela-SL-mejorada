@@ -92,8 +92,13 @@
 .hero-actions {
   margin-top: 20px;
   display: flex;
-  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
   gap: 16px;
+}
+
+.hero-actions .btn-primary {
+  margin-left: auto;
 }
 
 @media (max-width: 640px) {
@@ -353,8 +358,8 @@
 
 .tournament-panel__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(2, minmax(480px, 1fr));
+  gap: 28px;
   transition: opacity 200ms ease;
 }
 
@@ -368,10 +373,10 @@
 .journey-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 18px 20px;
-  border-radius: 24px;
-  border: 1.5px solid var(--sl-gray-200);
+  gap: 16px;
+  padding: 24px 28px;
+  border-radius: 32px;
+  border: 2px solid var(--sl-gray-200);
   background: #ffffff;
   box-shadow: 0 20px 46px -38px rgba(20, 20, 28, 0.35);
   transition: transform 140ms ease, box-shadow 140ms ease;
@@ -385,19 +390,26 @@
 .journey-card__header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.journey-card__main {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
 }
 
 .journey-card__code {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 16px;
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
   font-family: 'Antonio', 'Albert Sans', sans-serif;
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 700;
   background: rgba(20, 20, 28, 0.08);
   color: var(--sl-black);
@@ -407,13 +419,15 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
+  padding: 10px 18px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   border: 1px solid transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .journey-card__status-icon {
@@ -430,6 +444,7 @@
   align-items: center;
   gap: 12px;
   margin-left: auto;
+  flex-shrink: 0;
 }
 
 .journey-card__actions[data-empty="true"] {
@@ -562,7 +577,7 @@
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 960px) {
   .tournament-panel__block {
     padding: 24px;
     gap: 24px;

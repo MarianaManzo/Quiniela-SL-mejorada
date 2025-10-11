@@ -314,44 +314,42 @@ export function Dashboard({ user, onEnterQuiniela }: DashboardProps) {
                   return (
                     <article key={card.id} className="journey-card" data-tone={card.tone}>
                       <header className="journey-card__header">
-                        <span className="journey-card__code">{card.code}</span>
-                        <span className="journey-card__status-tag" data-tone={card.tone}>
-                          <span className="journey-card__status-icon" aria-hidden="true">
-                            {card.tone === "success" ? (
-                              <Check size={14} />
-                            ) : card.tone === "warning" ? (
-                              <AlertTriangle size={14} />
-                            ) : card.tone === "upcoming" ? (
-                              <Clock size={14} />
-                            ) : (
-                              <CalendarClock size={14} />
-                            )}
+                        <div className="journey-card__main">
+                          <span className="journey-card__code">{card.code}</span>
+                          <span className="journey-card__status-tag" data-tone={card.tone}>
+                            <span className="journey-card__status-icon" aria-hidden="true">
+                              {card.tone === "success" ? (
+                                <Check size={14} />
+                              ) : card.tone === "warning" ? (
+                                <AlertTriangle size={14} />
+                              ) : card.tone === "upcoming" ? (
+                                <Clock size={14} />
+                              ) : (
+                                <CalendarClock size={14} />
+                              )}
+                            </span>
+                            <span>{card.statusLabel}</span>
                           </span>
-                          <span>{card.statusLabel}</span>
-                        </span>
-                        {(() => {
-                          const canShowCTA = Boolean(card.ctaLabel && card.tone !== "success" && card.tone !== "upcoming" && card.tone !== "warning");
-                          const canShowView = card.tone === "success";
-
-                          if (!canShowCTA && !canShowView) {
-                            return null;
-                          }
-
-                          return (
-                            <div className="journey-card__actions" data-empty={!(canShowCTA || canShowView)}>
-                              {canShowCTA ? (
-                                <button type="button" className="journey-card__cta" data-tone={card.tone}>
-                                  {card.ctaLabel}
-                                </button>
-                              ) : null}
-                              {canShowView ? (
-                                <button type="button" className="journey-card__link journey-card__link--inline">
-                                  Ver
-                                </button>
-                              ) : null}
-                            </div>
-                          );
-                        })()}
+                        </div>
+                        <div className="journey-card__actions" data-empty={
+                          !(card.ctaLabel || card.tone === "success")
+                        }>
+                          {card.ctaLabel ? (
+                            <button
+                              type="button"
+                              className="journey-card__cta"
+                              data-tone={card.tone}
+                              onClick={onEnterQuiniela}
+                            >
+                              {card.ctaLabel}
+                            </button>
+                          ) : null}
+                          {card.tone === "success" ? (
+                            <button type="button" className="journey-card__link journey-card__link--inline">
+                              Ver
+                            </button>
+                          ) : null}
+                        </div>
                       </header>
                     </article>
                   );

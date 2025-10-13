@@ -20,8 +20,8 @@
 
 .dashboard-page {
   min-height: 100vh;
-  background-color: #f6d433;
-  background-image: url('../assets/dashboard-background.svg');
+  background-color: #121212;
+  background-image: url('../assets/dashboard-background-dark.svg');
   background-repeat: no-repeat;
   background-position: center top;
   background-size: 100% auto;
@@ -181,13 +181,14 @@
   position: relative;
   padding: 32px 30px;
   border-radius: 32px;
-  background: #ffffff;
-  border: 1px solid var(--sl-gray-200);
-  box-shadow: 0 34px 80px -60px rgba(20, 20, 28, 0.25);
+  background: rgba(15, 16, 19, 0.92);
+  border: 1px solid rgba(246, 212, 51, 0.18);
+  box-shadow: 0 34px 80px -60px rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(14px);
   display: flex;
   flex-direction: column;
   gap: 16px;
-  color: var(--sl-black);
+  color: #f8f9ff;
 }
 
 .hero-card__chip {
@@ -196,8 +197,8 @@
   gap: 8px;
   padding: 10px 20px;
   border-radius: 18px;
-  background: rgba(255, 111, 169, 0.16);
-  color: rgba(162, 30, 97, 0.9);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.12em;
@@ -214,7 +215,7 @@
   font-family: 'Albert Sans', system-ui, sans-serif;
   font-size: 22px;
   font-weight: 700;
-  color: var(--sl-black);
+  color: #ffffff;
 }
 
 .hero-card--ranking {
@@ -238,7 +239,7 @@
   max-width: 560px;
   font-size: 16px;
   line-height: 1.7;
-  color: var(--so-text-muted);
+  color: rgba(248, 250, 252, 0.72);
 }
 
 .decalog-grid {

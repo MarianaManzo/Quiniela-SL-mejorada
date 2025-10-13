@@ -16,6 +16,7 @@ import "../styles/dashboard.css";
 interface DashboardProps {
   user: UserProfile;
   onEnterQuiniela: () => void;
+  onViewQuiniela?: (journeyCode: string) => void;
 }
 
 const communityNotes = [
@@ -213,7 +214,7 @@ const tournamentSections = [
   },
 ];
 
-export function Dashboard({ user, onEnterQuiniela }: DashboardProps) {
+export function Dashboard({ user, onEnterQuiniela, onViewQuiniela }: DashboardProps) {
   const [sectionState, setSectionState] = useState<TournamentSectionState[]>(
     tournamentSections.map((section) => ({ id: section.id, collapsed: false }))
   );
@@ -345,7 +346,11 @@ export function Dashboard({ user, onEnterQuiniela }: DashboardProps) {
                             </button>
                           ) : null}
                           {card.tone === "success" ? (
-                            <button type="button" className="journey-card__link journey-card__link--inline">
+                            <button
+                              type="button"
+                              className="journey-card__link journey-card__link--inline"
+                              onClick={() => onViewQuiniela?.(card.code)}
+                            >
                               Ver
                             </button>
                           ) : null}

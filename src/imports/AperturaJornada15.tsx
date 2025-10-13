@@ -1,4 +1,4 @@
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback } from 'react';
 
 import logoLigaBBVA from 'figma:asset/282fbfddfb13edc69252a49f15e9f9646a1d8ece.png';
 import logoSomosLocales from 'figma:asset/930d5de55d9fd27c0951aa3f3d28301d6e434476.png';
@@ -25,6 +25,14 @@ import logoSanLuis from 'figma:asset/f85cfbab493437f594dfc6f886252c0de830e6f9.pn
 import logoSantos from 'figma:asset/61cb24a2d36cb4e747ba5da4a26f82714694d300.png';
 import pachucaLogo from '../assets/pachuca.png';
 
+import {
+  MATCHES,
+  type MatchInfo,
+  type QuinielaSelections,
+  type Selection,
+  type TeamCode,
+} from '../quiniela/config';
+
 const LogoLigaBBVA = memo(() => (
   <img alt="Liga BBVA MX Femenil" className="h-full w-auto object-contain" src={logoLigaBBVA} loading="eager" />
 ));
@@ -41,7 +49,7 @@ const IconoTV = memo(() => (
   <img alt="Transmisión TV" className="w-8 h-8 object-contain opacity-50" src={iconoTV} loading="lazy" />
 ));
 
-const TEAM_LOGOS = {
+const TEAM_LOGOS: Record<TeamCode, string> = {
   QRO: logoQueretaro,
   PUM: logoPumas,
   JUA: logoJuarez,
@@ -60,115 +68,7 @@ const TEAM_LOGOS = {
   PAC: pachucaLogo,
   CHI: logoChivas,
   TIJ: logoTijuana,
-} as const;
-
-type TeamCode = keyof typeof TEAM_LOGOS;
-
-type MatchInfo = {
-  id: string;
-  day: 'VIERNES' | 'SÁBADO' | 'DOMINGO';
-  dateLabel: string;
-  time: string;
-  home: TeamCode;
-  away: TeamCode;
-  stadium: string;
-  broadcast: string;
 };
-
-type Selection = 'L' | 'E' | 'V';
-
-const MATCHES: MatchInfo[] = [
-  {
-    id: 'leo-pac',
-    day: 'VIERNES',
-    dateLabel: '10 OCT',
-    time: '17:00 HRS',
-    home: 'LEO',
-    away: 'PAC',
-    stadium: 'ESTADIO NOU CAMP',
-    broadcast: 'TUBI',
-  },
-  {
-    id: 'ame-tig',
-    day: 'VIERNES',
-    dateLabel: '10 OCT',
-    time: '19:00 HRS',
-    home: 'AME',
-    away: 'TIG',
-    stadium: 'CIUDAD DE LOS DEPORTES',
-    broadcast: 'LMXF YOUTUBE / VIX',
-  },
-  {
-    id: 'tij-mon',
-    day: 'VIERNES',
-    dateLabel: '10 OCT',
-    time: '21:00 HRS',
-    home: 'TIJ',
-    away: 'MON',
-    stadium: 'ESTADIO CALIENTE',
-    broadcast: 'TUBI',
-  },
-  {
-    id: 'pum-atl',
-    day: 'SÁBADO',
-    dateLabel: '11 OCT',
-    time: '12:00 HRS',
-    home: 'PUM',
-    away: 'ATL',
-    stadium: 'OLÍMPICO UNIVERSITARIO',
-    broadcast: 'LMXF YOUTUBE / VIX',
-  },
-  {
-    id: 'cru-san',
-    day: 'SÁBADO',
-    dateLabel: '11 OCT',
-    time: '15:45 HRS',
-    home: 'CRU',
-    away: 'SAN',
-    stadium: 'NORIA CANCHA 1',
-    broadcast: 'LMXF YOUTUBE / VIX',
-  },
-  {
-    id: 'nec-jua',
-    day: 'SÁBADO',
-    dateLabel: '11 OCT',
-    time: '19:00 HRS',
-    home: 'NEC',
-    away: 'JUA',
-    stadium: 'ESTADIO VICTORIA',
-    broadcast: 'LMXF YOUTUBE / VIX',
-  },
-  {
-    id: 'maz-qro',
-    day: 'SÁBADO',
-    dateLabel: '11 OCT',
-    time: '21:00 HRS',
-    home: 'MAZ',
-    away: 'QRO',
-    stadium: 'ESTADIO EL ENCANTO',
-    broadcast: 'TUBI',
-  },
-  {
-    id: 'pue-chi',
-    day: 'DOMINGO',
-    dateLabel: '12 OCT',
-    time: '11:00 HRS',
-    home: 'PUE',
-    away: 'CHI',
-    stadium: 'ESTADIO CUAUHTÉMOC',
-    broadcast: 'TUBI',
-  },
-  {
-    id: 'slu-tol',
-    day: 'DOMINGO',
-    dateLabel: '12 OCT',
-    time: '17:00 HRS',
-    home: 'SLU',
-    away: 'TOL',
-    stadium: 'ESTADIO ALFONSO LASTRAS',
-    broadcast: 'ESPN / DISNEY',
-  },
-];
 
 const TeamLogo = memo(({ teamName }: { teamName: TeamCode }) => {
   const logoSrc = TEAM_LOGOS[teamName];
@@ -202,7 +102,7 @@ function TeamSlot({ team }: { team: TeamCode }) {
   );
 }
 
-function Puntaje({ selected, onSelect }: { selected: Selection | null; onSelect: (value: Selection) => void }) {
+function Puntaje({ selected, onSelect, readOnly }: { selected: Selection | null; onSelect: (value: Selection) => void; readOnly: boolean }) {
   return (
     <div className="flex items-center gap-[8px] relative shrink-0">
       {(['L', 'E', 'V'] as Selection[]).map((label) => {
@@ -211,7 +111,12 @@ function Puntaje({ selected, onSelect }: { selected: Selection | null; onSelect:
           <button
             key={label}
             type="button"
-            onClick={() => onSelect(label)}
+            onClick={() => {
+              if (!readOnly) {
+                onSelect(label);
+              }
+            }}
+            disabled={readOnly}
             aria-pressed={isSelected}
             data-selected={isSelected ? 'true' : undefined}
             className="puntaje-button"
@@ -281,14 +186,14 @@ function MatchMeta({ stadium, broadcast }: Pick<MatchInfo, 'stadium' | 'broadcas
   );
 }
 
-function MatchRow({ match, selected, onSelect }: { match: MatchInfo; selected: Selection | null; onSelect: (value: Selection) => void }) {
+function MatchRow({ match, selected, onSelect, readOnly }: { match: MatchInfo; selected: Selection | null; onSelect: (value: Selection) => void; readOnly: boolean }) {
   return (
     <div className="bg-white relative rounded-[8px] shrink-0 w-full h-[79px]">
       <div className="flex flex-row items-center size-full">
         <div className="box-border content-stretch flex gap-[25px] items-center pl-0 pr-[8px] py-[4px] relative w-full">
           <MatchTime day={match.day} dateLabel={match.dateLabel} time={match.time} />
           <TeamSlot team={match.home} />
-          <Puntaje selected={selected} onSelect={onSelect} />
+          <Puntaje selected={selected} onSelect={onSelect} readOnly={readOnly} />
           <TeamSlot team={match.away} />
           <div className="flex-1 min-w-0" />
           <div className="flex-1 min-w-0">
@@ -344,7 +249,7 @@ function Frame34() {
   );
 }
 
-function Frame26({ selections, onSelect }: { selections: Record<string, Selection | null>; onSelect: (matchId: string, value: Selection) => void }) {
+function Frame26({ selections, onSelect, readOnly }: { selections: QuinielaSelections; onSelect: (matchId: string, value: Selection) => void; readOnly: boolean }) {
   return (
     <div className="relative shrink-0 w-full">
       <div className="size-full">
@@ -355,6 +260,7 @@ function Frame26({ selections, onSelect }: { selections: Record<string, Selectio
               match={match}
               selected={selections[match.id] ?? null}
               onSelect={(value) => onSelect(match.id, value)}
+              readOnly={readOnly}
             />
           ))}
         </div>
@@ -380,27 +286,33 @@ function PieDePagina() {
   );
 }
 
-function Frame35({ selections, onSelect }: { selections: Record<string, Selection | null>; onSelect: (matchId: string, value: Selection) => void }) {
+function Frame35({ selections, onSelect, readOnly }: { selections: QuinielaSelections; onSelect: (matchId: string, value: Selection) => void; readOnly: boolean }) {
   return (
     <div className="absolute box-border content-stretch flex flex-col gap-[16px] items-start left-0 px-0 py-[32px] size-[1080px] top-0">
       <Frame34 />
-      <Frame26 selections={selections} onSelect={onSelect} />
+      <Frame26 selections={selections} onSelect={onSelect} readOnly={readOnly} />
       <PieDePagina />
     </div>
   );
 }
 
-export default function AperturaJornada15() {
-  const [selections, setSelections] = useState<Record<string, Selection | null>>(() =>
-    MATCHES.reduce<Record<string, Selection | null>>((acc, match) => {
-      acc[match.id] = null;
-      return acc;
-    }, {})
-  );
+interface AperturaJornada15Props {
+  selections: QuinielaSelections;
+  onSelect: (matchId: string, value: Selection) => void;
+  isReadOnly?: boolean;
+}
 
-  const handleSelect = useCallback((matchId: string, value: Selection) => {
-    setSelections((prev) => ({ ...prev, [matchId]: value }));
-  }, []);
+export default function AperturaJornada15({ selections, onSelect, isReadOnly = false }: AperturaJornada15Props) {
+  const handleSelect = useCallback(
+    (matchId: string, value: Selection) => {
+      if (isReadOnly) {
+        return;
+      }
+
+      onSelect(matchId, value);
+    },
+    [onSelect, isReadOnly]
+  );
 
   return (
     <div className="relative size-full" data-name="Apertura / JORNADA 15">
@@ -411,7 +323,7 @@ export default function AperturaJornada15() {
         loading="eager"
         decoding="async"
       />
-      <Frame35 selections={selections} onSelect={handleSelect} />
+      <Frame35 selections={selections} onSelect={handleSelect} readOnly={isReadOnly} />
     </div>
   );
 }

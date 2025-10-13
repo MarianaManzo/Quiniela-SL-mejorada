@@ -5,7 +5,7 @@
   --so-charcoal-light: #1f1f1f;
   --so-stone: #f6f6f9;
   --so-gray: #d5d7e1;
-  --so-white: #ffffff;
+  --so-white: #fafaf9;
   --so-text-muted: rgba(18, 18, 18, 0.62);
 
   --sl-black: #141414;
@@ -62,7 +62,7 @@
 
 .quiniela-surface {
   min-height: 100vh;
-  background: #ffffff;
+  background: #fafaf9;
   display: flex;
   justify-content: center;
   padding: 48px 0 64px;
@@ -73,7 +73,7 @@
   font-size: clamp(36px, 6vw, 50px);
   line-height: 1.05;
   letter-spacing: -0.01em;
-  color: #ffffff;
+  color: #fafaf9;
 }
 
 .hero-text {
@@ -173,7 +173,7 @@
 }
 
 .btn-secondary:hover {
-  background: #ffffff;
+  background: #fafaf9;
   color: var(--sl-black);
   transform: translateY(-1px);
 }
@@ -216,7 +216,7 @@
   font-family: 'Albert Sans', system-ui, sans-serif;
   font-size: 22px;
   font-weight: 700;
-  color: #ffffff;
+  color: #fafaf9;
 }
 
 .hero-card--ranking {
@@ -266,7 +266,7 @@
 
 .tournament-panel__block {
   border-radius: 28px;
-  background: #ffffff;
+  background: #fafaf9;
   border: 1px solid var(--sl-gray-200);
   box-shadow: 0 32px 80px -60px rgba(20, 20, 28, 0.15);
   padding: 32px;
@@ -278,7 +278,7 @@
 
 .tournament-panel__block[data-scheme="regular"],
 .tournament-panel__block[data-scheme="elimination"] {
-  background: #ffffff;
+  background: #fafaf9;
   border-color: var(--sl-gray-200);
 }
 
@@ -407,7 +407,7 @@
   padding: 24px 28px;
   border-radius: 32px;
   border: 2px solid var(--sl-gray-200);
-  background: #ffffff;
+  background: #fafaf9;
   box-shadow: 0 20px 46px -38px rgba(20, 20, 28, 0.35);
   transition: transform 140ms ease, box-shadow 140ms ease;
 }
@@ -574,7 +574,7 @@
 }
 
 .journey-card[data-tone="upcoming"] {
-  background: #ffffff;
+  background: #fafaf9;
   border-color: var(--sl-gray-200);
 }
 
@@ -874,11 +874,11 @@
 .journey-card[data-tone="success"] .journey-card__link {
   background: #ff6fa9;
   border: none;
-  color: #ffffff;
+  color: #fafaf9;
   box-shadow: 0 16px 26px -20px rgba(255, 111, 169, 0.65);
 }
 
 .journey-card[data-tone="success"] .journey-card__link:hover {
   background: #ff4f90;
-  color: #ffffff;
+  color: #fafaf9;
 }

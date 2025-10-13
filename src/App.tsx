@@ -168,7 +168,7 @@ export default function App() {
         height: 1080,
         canvasWidth: 1080,
         canvasHeight: 1080,
-        backgroundColor: '#ffffff',
+        backgroundColor: '#fafaf9',
       });
 
       const link = document.createElement('a');

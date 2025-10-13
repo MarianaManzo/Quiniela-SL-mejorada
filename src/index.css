@@ -35,7 +35,7 @@
     --color-gray-300: oklch(.872 .01 258.338);
     --color-gray-600: oklch(.446 .03 256.802);
     --color-black: #000;
-    --color-white: #fff;
+    --color-white: #fafaf9;
     --spacing: .25rem;
     --text-xs: .75rem;
     --text-xs--line-height: calc(1 / .75);
@@ -708,7 +708,7 @@
 
 .puntaje-button[data-selected="true"] {
   background-color: #000000;
-  color: #ffffff;
+  color: #fafaf9;
   border-color: #f8d95b;
   box-shadow: 0 0 0 2px rgba(248, 217, 91, 0.35);
 }
@@ -729,7 +729,7 @@
   height: 20px;
   border-radius: 999px;
   background-color: #000000;
-  color: #ffffff;
+  color: #fafaf9;
   font-size: 13px;
   font-weight: 600;
   line-height: 1;
@@ -1039,7 +1039,7 @@
   border: none;
   border-radius: 9999px;
   background: #030213;
-  color: #fff;
+  color: #fafaf9;
   text-transform: none;
   letter-spacing: 0.08em;
   font-size: 16px;
@@ -1076,7 +1076,7 @@
 .back-button:hover {
   opacity: 1;
   background: #030213;
-  color: #ffffff;
+  color: #fafaf9;
 }
 
 
@@ -1104,7 +1104,7 @@
   border-radius: 50%;
   border: 1px solid rgba(3, 2, 19, 0.12);
   background: #030213;
-  color: #ffffff;
+  color: #fafaf9;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1129,7 +1129,7 @@
 }
 
 .share-icon {
-  background: #ffffff;
+  background: #fafaf9;
   color: #030213;
   border: 1px solid rgba(3, 2, 19, 0.26);
   box-shadow: 0 16px 34px -26px rgba(3, 2, 19, 0.4);
@@ -1233,7 +1233,7 @@
 
 .modal {
   width: min(420px, 100%);
-  background: #ffffff;
+  background: #fafaf9;
   border-radius: 24px;
   padding: 28px;
   display: flex;
@@ -1296,7 +1296,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
+  color: #fafaf9;
   cursor: pointer;
   transition: transform 150ms ease, box-shadow 150ms ease, filter 150ms ease;
 }
@@ -1456,16 +1456,16 @@
   transform: translate(-50%, -50%) scale(var(--canvas-scale));
   transform-origin: center;
   overflow: hidden;
-  background: #fff;
+  background: #fafaf9;
   border-radius: 18px;
   box-shadow: 0 32px 60px -30px rgba(3, 2, 19, 0.65);
 }
 
 :root {
   --font-size: 16px;
-  --background: #fff;
+  --background: #fafaf9;
   --foreground: oklch(.145 0 0);
-  --card: #fff;
+  --card: #fafaf9;
   --card-foreground: oklch(.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(.145 0 0);
@@ -1478,7 +1478,7 @@
   --accent: #e9ebef;
   --accent-foreground: #030213;
   --destructive: #d4183d;
-  --destructive-foreground: #fff;
+  --destructive-foreground: #fafaf9;
   --border: #0000001a;
   --input: transparent;
   --input-background: #f3f3f5;

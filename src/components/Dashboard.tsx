@@ -246,13 +246,6 @@ export function Dashboard({ user, onEnterQuiniela, onViewQuiniela, onViewPodium 
               Participar en {activeJourney?.code ?? "la quiniela"}
               <ArrowRight size={18} />
             </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => onViewPodium?.()}
-            >
-              Ver ranking completo
-            </button>
           </div>
         </div>
 
@@ -270,8 +263,8 @@ export function Dashboard({ user, onEnterQuiniela, onViewQuiniela, onViewPodium 
               </li>
             ))}
           </ul>
-          <button type="button" className="ranking-fullboard-button" onClick={() => onViewPodium?.()}>
-            Ver ranking completo →
+          <button type="button" className="btn btn-secondary ranking-fullboard-button" onClick={() => onViewPodium?.()}>
+            Ver ranking completo
           </button>
           <p className="hero-card__note">Registro activo como {ROLE_LABELS[user.role]}.</p>
         </aside>

@@ -33,7 +33,7 @@ const tips = [
   "Comparte tus picks en el grupo de la comunidad Somos Locales.",
 ];
 
-const ranking = TOP_RANKING.map((entry, index) => ({
+const ranking = TOP_RANKING.slice(0, 4).map((entry, index) => ({
   id: entry.id,
   name: entry.name,
   score: `${entry.points} pts`,
@@ -262,14 +262,17 @@ export function Dashboard({ user, onEnterQuiniela, onViewQuiniela, onViewPodium 
             Pódium Somos Locales
           </span>
           <ul className="ranking-list ranking-list--featured">
-            {ranking.slice(0, 5).map((entry) => (
+            {ranking.map((entry) => (
               <li key={entry.id} className="ranking-item">
-                <span className="ranking-position">{entry.id}</span>
+                <span className="ranking-position">{entry.position}</span>
                 <span className="ranking-name">{entry.name}</span>
                 <span className="ranking-score">{entry.score}</span>
               </li>
             ))}
           </ul>
+          <button type="button" className="ranking-fullboard-button" onClick={() => onViewPodium?.()}>
+            Ver ranking completo →
+          </button>
           <p className="hero-card__note">Registro activo como {ROLE_LABELS[user.role]}.</p>
         </aside>
       </section>

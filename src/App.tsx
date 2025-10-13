@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useRef, useState } from 'react';
 import { toJpeg } from 'html-to-image';
 import { Dashboard } from './components/Dashboard';
 import { LoginScreen, type UserProfile } from './components/LoginScreen';
@@ -28,37 +28,6 @@ export default function App() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const restoreCanvasScale = useCallback(() => {
-    const shell = canvasShellRef.current;
-    const content = canvasRef.current;
-    if (!shell || !content) {
-      return;
-    }
-
-    const availableWidth = shell.clientWidth - 64;
-    const scale = Math.min(availableWidth / 1080, 1);
-
-    content.style.setProperty('--canvas-scale', scale.toString());
-    shell.style.setProperty('--canvas-height', `${1080 * scale}px`);
-  }, []);
-
-  useEffect(() => {
-    restoreCanvasScale();
-
-    const shell = canvasShellRef.current;
-    if (!shell) {
-      return;
-    }
-
-    const observer = new ResizeObserver(() => {
-      restoreCanvasScale();
-    });
-
-    observer.observe(shell);
-
-    return () => observer.disconnect();
-  }, [restoreCanvasScale]);
-
   const handleDownload = useCallback(async () => {
     const node = canvasRef.current;
     const shell = canvasShellRef.current;
@@ -67,14 +36,15 @@ export default function App() {
       return;
     }
 
-    const previousScale = node.style.getPropertyValue('--canvas-scale');
-    const previousHeight = shell.style.getPropertyValue('--canvas-height');
-
-    node.style.setProperty('--canvas-scale', '1');
-    shell.style.setProperty('--canvas-height', '1080px');
+    const previousScale = shell.style.getPropertyValue('--canvas-scale');
 
     try {
       setIsDownloading(true);
+
+      shell.setAttribute('data-exporting', 'true');
+      shell.style.setProperty('--canvas-scale', '1');
+
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
       if (typeof document !== 'undefined' && 'fonts' in document) {
         await (document as Document & { fonts: FontFaceSet }).fonts.ready;
@@ -97,22 +67,17 @@ export default function App() {
       console.error('Error al exportar la imagen como JPG', error);
       window.alert('No se pudo descargar la imagen. Revisa la consola para más detalles.');
     } finally {
+      shell.removeAttribute('data-exporting');
+
       if (previousScale) {
-        node.style.setProperty('--canvas-scale', previousScale);
+        shell.style.setProperty('--canvas-scale', previousScale);
       } else {
-        node.style.removeProperty('--canvas-scale');
+        shell.style.removeProperty('--canvas-scale');
       }
 
-      if (previousHeight) {
-        shell.style.setProperty('--canvas-height', previousHeight);
-      } else {
-        shell.style.removeProperty('--canvas-height');
-      }
-
-      restoreCanvasScale();
       setIsDownloading(false);
     }
-  }, [isDownloading, restoreCanvasScale]);
+  }, [isDownloading]);
 
   const handleSignOut = useCallback(() => {
     setIsDownloading(false);
@@ -149,16 +114,9 @@ export default function App() {
             <button
               type="button"
               onClick={handleBackToDashboard}
-              className="inline-flex items-center gap-2 rounded-full border border-[#030213] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#030213] transition hover:bg-[#030213] hover:text-white"
+              className="download-button back-button font-['Albert_Sans:Bold',_sans-serif]"
             >
               ← Volver al dashboard
-            </button>
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="inline-flex items-center gap-2 rounded-full border border-[#030213] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#030213] transition hover:bg-[#030213] hover:text-white"
-            >
-              Cerrar sesión
             </button>
           </div>
           <button
@@ -172,13 +130,15 @@ export default function App() {
         </div>
 
         <div ref={canvasShellRef} className="canvas-shell">
-          <div
-            ref={canvasRef}
-            className="canvas-wrapper"
-          >
-            <Suspense fallback={<LoadingSpinner />}>
-              <AperturaJornada15 />
-            </Suspense>
+          <div className="canvas-stage">
+            <div
+              ref={canvasRef}
+              className="canvas-wrapper"
+            >
+              <Suspense fallback={<LoadingSpinner />}>
+                <AperturaJornada15 />
+              </Suspense>
+            </div>
           </div>
         </div>
       </div>

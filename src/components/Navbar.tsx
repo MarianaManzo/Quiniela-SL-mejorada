@@ -7,7 +7,6 @@ interface NavbarProps {
   user: UserProfile | null;
   currentView: "login" | "dashboard" | "quiniela";
   onNavigateToDashboard: () => void;
-  onNavigateToQuiniela: () => void;
   onSignOut?: () => void;
   onShowLogin?: () => void;
 }
@@ -26,7 +25,6 @@ export function Navbar({
   user,
   currentView,
   onNavigateToDashboard,
-  onNavigateToQuiniela,
   onSignOut,
   onShowLogin,
 }: NavbarProps) {
@@ -80,11 +78,6 @@ export function Navbar({
     setIsMenuOpen(false);
   };
 
-  const handleNavigateQuiniela = () => {
-    onNavigateToQuiniela();
-    setIsMenuOpen(false);
-  };
-
   const handleSignOutClick = () => {
     if (onSignOut) {
       onSignOut();
@@ -118,15 +111,6 @@ export function Navbar({
             disabled={!user}
           >
             Dashboard
-          </button>
-          <button
-            type="button"
-            className="navbar__link"
-            data-active={currentView === "quiniela"}
-            onClick={handleNavigateQuiniela}
-            disabled={!user}
-          >
-            Quiniela
           </button>
         </div>
 

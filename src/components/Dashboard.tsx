@@ -10,6 +10,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { ROLE_LABELS, type UserProfile } from "./LoginScreen";
+import { TOP_RANKING } from "../data/podium";
 import logoSomosLocales from "figma:asset/930d5de55d9fd27c0951aa3f3d28301d6e434476.png";
 import "../styles/dashboard.css";
 
@@ -17,6 +18,7 @@ interface DashboardProps {
   user: UserProfile;
   onEnterQuiniela: () => void;
   onViewQuiniela?: (journeyCode: string) => void;
+  onViewPodium?: () => void;
 }
 
 const communityNotes = [
@@ -31,18 +33,12 @@ const tips = [
   "Comparte tus picks en el grupo de la comunidad Somos Locales.",
 ];
 
-const ranking = [
-  { id: 1, name: "Ana Martínez", score: "112 pts" },
-  { id: 2, name: "Luisa Hernández", score: "108 pts" },
-  { id: 3, name: "Carolina Patiño", score: "104 pts" },
-  { id: 4, name: "Jimena Torres", score: "99 pts" },
-  { id: 5, name: "María Fernanda Ruiz", score: "96 pts" },
-  { id: 6, name: "Diana Bautista", score: "94 pts" },
-  { id: 7, name: "Paola Guillén", score: "90 pts" },
-  { id: 8, name: "Renata Salcedo", score: "88 pts" },
-  { id: 9, name: "Alexa Campos", score: "85 pts" },
-  { id: 10, name: "Sofía Aguirre", score: "82 pts" },
-];
+const ranking = TOP_RANKING.map((entry, index) => ({
+  id: entry.id,
+  name: entry.name,
+  score: `${entry.points} pts`,
+  position: index + 1,
+}));
 
 interface TournamentSectionState {
   id: string;
@@ -214,7 +210,7 @@ const tournamentSections = [
   },
 ];
 
-export function Dashboard({ user, onEnterQuiniela, onViewQuiniela }: DashboardProps) {
+export function Dashboard({ user, onEnterQuiniela, onViewQuiniela, onViewPodium }: DashboardProps) {
   const [sectionState, setSectionState] = useState<TournamentSectionState[]>(
     tournamentSections.map((section) => ({ id: section.id, collapsed: false }))
   );
@@ -249,6 +245,13 @@ export function Dashboard({ user, onEnterQuiniela, onViewQuiniela }: DashboardPr
             <button type="button" className="btn btn-primary" onClick={onEnterQuiniela}>
               Participar en {activeJourney?.code ?? "la quiniela"}
               <ArrowRight size={18} />
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => onViewPodium?.()}
+            >
+              Ver ranking completo
             </button>
           </div>
         </div>

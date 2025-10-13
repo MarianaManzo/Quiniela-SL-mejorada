@@ -5,7 +5,7 @@ import "../styles/navbar.css";
 
 interface NavbarProps {
   user: UserProfile | null;
-  currentView: "login" | "dashboard" | "quiniela";
+  currentView: "login" | "dashboard" | "quiniela" | "podium";
   onNavigateToDashboard: () => void;
   onSignOut?: () => void;
   onShowLogin?: () => void;

@@ -3,6 +3,7 @@ import { toJpeg } from 'html-to-image';
 import { Dashboard } from './components/Dashboard';
 import { LoginScreen, type UserProfile } from './components/LoginScreen';
 import { Navbar } from './components/Navbar';
+import { PodiumPage } from './components/PodiumPage';
 import {
   QUINIELA_STORAGE_KEY,
   createEmptySelections,
@@ -70,7 +71,7 @@ function LoadingSpinner() {
 }
 
 export default function App() {
-  const [view, setView] = useState<'dashboard' | 'quiniela'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'quiniela' | 'podium'>('dashboard');
   const [user, setUser] = useState<UserProfile | null>(null);
   const canvasShellRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -213,6 +214,11 @@ export default function App() {
   const handleEnterQuiniela = useCallback(() => {
     setView('quiniela');
     setIsReadOnlyView(false);
+  }, []);
+
+  const handleEnterPodium = useCallback(() => {
+    setIsReadOnlyView(false);
+    setView('podium');
   }, []);
 
   const handleSelectionChange = useCallback(
@@ -487,12 +493,29 @@ export default function App() {
             currentView={currentView}
             onNavigateToDashboard={handleBackToDashboard}
             onNavigateToQuiniela={handleEnterQuiniela}
-            onSignOut={handleSignOut}
+        onSignOut={handleSignOut}
+      />
+          <Dashboard
+            user={user}
+            onEnterQuiniela={handleEnterQuiniela}
+            onViewQuiniela={handleViewSubmission}
+            onViewPodium={handleEnterPodium}
           />
-          <Dashboard user={user} onEnterQuiniela={handleEnterQuiniela} onViewQuiniela={handleViewSubmission} />
         </div>
       ) : (
-        quinielaView
+        view === 'podium' ? (
+          <div className="dashboard-shell">
+            <Navbar
+              user={user}
+              currentView={currentView}
+              onNavigateToDashboard={handleBackToDashboard}
+              onSignOut={handleSignOut}
+            />
+            <PodiumPage onBack={handleBackToDashboard} />
+          </div>
+        ) : (
+          quinielaView
+        )
       )}
     </>
   );

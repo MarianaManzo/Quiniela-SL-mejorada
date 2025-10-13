@@ -224,17 +224,12 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-}
-
-.hero-card__note {
-  font-size: 13px;
-  color: rgba(248, 250, 252, 0.65);
+  align-items: flex-start;
 }
 
 .hero-card__note {
   font-size: 13px;
   color: rgba(20, 20, 28, 0.56);
-  margin-top: auto;
 }
 
 .section-title {
@@ -830,7 +825,34 @@
 
 .ranking-fullboard-button {
   margin-top: auto;
-  align-self: flex-start;
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 111, 169, 0.88);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 8px 0;
+  transition: color 140ms ease;
+}
+
+.ranking-fullboard-button::after {
+  content: "→";
+  font-size: 12px;
+  transition: transform 140ms ease;
+}
+
+.ranking-fullboard-button:hover {
+  color: #fafaf9;
+  background: transparent;
+}
+
+.ranking-fullboard-button:hover::after {
+  transform: translateX(4px);
 }
 
 .ranking-position {

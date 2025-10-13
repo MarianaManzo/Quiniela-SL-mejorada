@@ -266,7 +266,6 @@ export function Dashboard({ user, onEnterQuiniela, onViewQuiniela, onViewPodium 
           <button type="button" className="btn btn-secondary ranking-fullboard-button" onClick={() => onViewPodium?.()}>
             Ver ranking completo
           </button>
-          <p className="hero-card__note">Registro activo como {ROLE_LABELS[user.role]}.</p>
         </aside>
       </section>
 

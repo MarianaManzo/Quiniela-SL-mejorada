@@ -221,6 +221,9 @@
 
 .hero-card--ranking {
   gap: 14px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .hero-card__note {
@@ -812,7 +815,10 @@
 }
 
 .ranking-list--featured {
+  display: flex;
+  flex-direction: column;
   gap: 18px;
+  flex: 1;
 }
 
 .ranking-item {
@@ -823,7 +829,7 @@
 }
 
 .ranking-fullboard-button {
-  margin-top: 18px;
+  margin-top: auto;
   align-self: flex-start;
 }
 

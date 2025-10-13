@@ -481,7 +481,7 @@ export default function App() {
       ) : null}
       {toastBanner}
       {view === 'dashboard' ? (
-        <div className="dashboard-page">
+        <div className="dashboard-shell">
           <Navbar
             user={user}
             currentView={currentView}

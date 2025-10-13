@@ -57,6 +57,7 @@
   gap: 32px;
   grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
   align-items: stretch;
+  padding-bottom: 0;
 }
 
 .quiniela-surface {

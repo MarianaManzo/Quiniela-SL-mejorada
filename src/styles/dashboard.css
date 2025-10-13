@@ -20,7 +20,11 @@
 
 .dashboard-page {
   min-height: 100vh;
-  background: #f6d433 url('../assets/dashboard-background.svg') center/cover no-repeat fixed;
+  background-color: #f6d433;
+  background-image: url('../assets/dashboard-background.svg');
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: 100% auto;
   color: var(--so-white);
   font-family: 'Albert Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }

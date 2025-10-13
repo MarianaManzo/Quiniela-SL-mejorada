@@ -481,7 +481,7 @@ export default function App() {
       ) : null}
       {toastBanner}
       {view === 'dashboard' ? (
-        <>
+        <div className="dashboard-page">
           <Navbar
             user={user}
             currentView={currentView}
@@ -490,7 +490,7 @@ export default function App() {
             onSignOut={handleSignOut}
           />
           <Dashboard user={user} onEnterQuiniela={handleEnterQuiniela} onViewQuiniela={handleViewSubmission} />
-        </>
+        </div>
       ) : (
         quinielaView
       )}

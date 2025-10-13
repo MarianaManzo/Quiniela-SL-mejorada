@@ -35,6 +35,10 @@
   padding: 60px 0;
 }
 
+.dashboard-section.tournament-panel {
+  padding-top: 24px;
+}
+
 .dashboard-hero {
   display: grid;
   gap: 32px;

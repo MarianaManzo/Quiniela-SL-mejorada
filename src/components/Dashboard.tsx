@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
+  Flag,
   Trophy,
 } from "lucide-react";
 import { ROLE_LABELS, type UserProfile } from "./LoginScreen";
@@ -44,6 +45,8 @@ interface TournamentSectionState {
   id: string;
   collapsed: boolean;
 }
+
+const COLLAPSED_SECTIONS = new Set(["regular", "liguilla"]);
 
 const tournamentSections = [
   {
@@ -212,7 +215,10 @@ const tournamentSections = [
 
 export function Dashboard({ user, onEnterQuiniela, onViewQuiniela, onViewPodium }: DashboardProps) {
   const [sectionState, setSectionState] = useState<TournamentSectionState[]>(
-    tournamentSections.map((section) => ({ id: section.id, collapsed: false }))
+    tournamentSections.map((section) => ({
+      id: section.id,
+      collapsed: COLLAPSED_SECTIONS.has(section.id),
+    }))
   );
 
   const isSectionCollapsed = (sectionId: string) => sectionState.find((state) => state.id === sectionId)?.collapsed;
@@ -229,12 +235,19 @@ export function Dashboard({ user, onEnterQuiniela, onViewQuiniela, onViewPodium 
   const activeJourney = tournamentSections
     .find((section) => section.id === "regular")
     ?.cards.find((card) => card.tone === "current");
+  const activeJourneyNumber = activeJourney?.code ? activeJourney.code.replace(/[^0-9]/g, "") : "";
+  const participateLabel = activeJourney?.code
+    ? `Participa en jornada ${activeJourney.code}`
+    : "Participa en jornada";
 
   return (
     <div className="dashboard-page">
       <section className="dashboard-section dashboard-hero">
         <div className="hero-banner">
-          <span className="hero-badge">Somos Locales Quiniela</span>
+          <span className="hero-badge">
+            <Flag size={16} aria-hidden="true" />
+            Quiniela
+          </span>
           <h1 className="hero-title">Hola {firstName}, la quiniela te espera</h1>
           <p className="hero-text">
             Sumemos voz a la liga femenil con intuición y juego limpio. Completa tu pronóstico, compártelo con tu equipo
@@ -243,7 +256,7 @@ export function Dashboard({ user, onEnterQuiniela, onViewQuiniela, onViewPodium 
 
           <div className="hero-actions">
             <button type="button" className="btn btn-primary" onClick={onEnterQuiniela}>
-              Participar en {activeJourney?.code ?? "la quiniela"}
+              {participateLabel}
               <ArrowRight size={18} />
             </button>
           </div>
@@ -252,7 +265,7 @@ export function Dashboard({ user, onEnterQuiniela, onViewQuiniela, onViewPodium 
         <aside className="hero-card hero-card--ranking" aria-labelledby="hero-card-title">
           <span id="hero-card-title" className="hero-card__chip">
             <Trophy size={16} aria-hidden="true" />
-            Pódium Somos Locales
+            Pódium
           </span>
           <ul className="ranking-list ranking-list--featured">
             {ranking.map((entry) => (

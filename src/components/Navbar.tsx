@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { ROLE_LABELS, type UserProfile } from "./LoginScreen";
 import logoSomosLocales from "figma:asset/930d5de55d9fd27c0951aa3f3d28301d6e434476.png";
+import { LogOut } from "lucide-react";
 import "../styles/navbar.css";
 
 interface NavbarProps {
   user: UserProfile | null;
   currentView: "login" | "dashboard" | "quiniela" | "podium";
   onNavigateToDashboard: () => void;
+  onNavigateToPodium?: () => void;
+  onNavigateToQuiniela?: () => void;
   onSignOut?: () => void;
   onShowLogin?: () => void;
 }
@@ -25,6 +28,7 @@ export function Navbar({
   user,
   currentView,
   onNavigateToDashboard,
+  onNavigateToPodium,
   onSignOut,
   onShowLogin,
 }: NavbarProps) {
@@ -78,12 +82,30 @@ export function Navbar({
     setIsMenuOpen(false);
   };
 
+  const handleNavigatePodium = () => {
+    if (!user) {
+      return;
+    }
+
+    onNavigateToPodium?.();
+    setIsMenuOpen(false);
+  };
+
   const handleSignOutClick = () => {
     if (onSignOut) {
       onSignOut();
     }
     setIsMenuOpen(false);
     setIsUserMenuOpen(false);
+  };
+
+  const handleOpenProfileFromMenu = () => {
+    if (!user) {
+      return;
+    }
+
+    setIsMenuOpen(false);
+    setIsUserMenuOpen(true);
   };
 
   return (
@@ -112,6 +134,24 @@ export function Navbar({
           >
             Dashboard
           </button>
+          <button
+            type="button"
+            className="navbar__link"
+            data-active={currentView === "podium"}
+            onClick={handleNavigatePodium}
+            disabled={!user}
+          >
+            Pódium
+          </button>
+          {user && onSignOut ? (
+            <button
+              type="button"
+              className="navbar__link navbar__link--signout"
+              onClick={handleSignOutClick}
+            >
+              Cerrar sesión
+            </button>
+          ) : null}
         </div>
 
         <div className="navbar__controls">
@@ -132,16 +172,22 @@ export function Navbar({
                   <span className="navbar__profile-name">{user.name}</span>
                   <span className="navbar__profile-role">{ROLE_LABELS[user.role]}</span>
                 </div>
-                {onSignOut ? (
-                  <button type="button" className="navbar__profile-action" role="menuitem" onClick={handleSignOutClick}>
-                    Cerrar sesión
-                  </button>
-                ) : null}
               </div>
             </div>
           ) : (
             <span className="navbar__hint">Inicia sesión para acceder a la quiniela</span>
           )}
+
+          {user && onSignOut ? (
+            <button
+              type="button"
+              className="navbar__icon-button navbar__icon-button--signout"
+              onClick={handleSignOutClick}
+              aria-label="Cerrar sesión"
+            >
+              <LogOut size={18} />
+            </button>
+          ) : null}
 
           <button
             type="button"

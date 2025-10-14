@@ -236,8 +236,8 @@ export function Dashboard({ user, onEnterQuiniela, onViewQuiniela, onViewPodium 
     .find((section) => section.id === "regular")
     ?.cards.find((card) => card.tone === "current");
   const activeJourneyNumber = activeJourney?.code ? activeJourney.code.replace(/[^0-9]/g, "") : "";
-  const participateLabel = activeJourney?.code
-    ? `Participa en jornada ${activeJourney.code}`
+  const participateLabel = activeJourneyNumber
+    ? `Participa en jornada ${activeJourneyNumber}`
     : "Participa en jornada";
 
   return (

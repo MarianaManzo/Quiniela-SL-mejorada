@@ -1,5 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { toJpeg } from 'html-to-image';
+import { ArrowLeft } from 'lucide-react';
+import { toPng } from 'html-to-image';
 import { Dashboard } from './components/Dashboard';
 import { LoginScreen, type UserProfile } from './components/LoginScreen';
 import { Navbar } from './components/Navbar';
@@ -82,16 +83,20 @@ export default function App() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
   const toastTimeoutRef = useRef<number | null>(null);
+  const submitTooltipTimeoutRef = useRef<number | null>(null);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const shareDialogRef = useRef<HTMLDivElement>(null);
   const lastFocusedElementRef = useRef<HTMLElement | null>(null);
   const [isReadOnlyView, setIsReadOnlyView] = useState(false);
+  const [showSelectionErrors, setShowSelectionErrors] = useState(false);
+  const [showSubmitTooltip, setShowSubmitTooltip] = useState(false);
   const completedSelections = useMemo(
     () => Object.values(quinielaSelections).filter((value): value is Selection => value !== null).length,
     [quinielaSelections]
   );
   const totalMatches = useMemo(() => Object.keys(quinielaSelections).length, [quinielaSelections]);
-  const isSubmitDisabled = isSaving || completedSelections < totalMatches || isReadOnlyView;
+  const needsMoreSelections = completedSelections < totalMatches;
+  const isSubmitDisabled = isSaving || isReadOnlyView;
   const showToast = useCallback((message: string, tone: 'success' | 'error') => {
     if (typeof window === 'undefined') {
       setToast({ message, tone });
@@ -118,6 +123,30 @@ export default function App() {
     };
   }, []);
 
+  const hideSubmitTooltip = useCallback(() => {
+    if (typeof window !== 'undefined' && submitTooltipTimeoutRef.current) {
+      window.clearTimeout(submitTooltipTimeoutRef.current);
+      submitTooltipTimeoutRef.current = null;
+    }
+    setShowSubmitTooltip(false);
+  }, []);
+
+  const triggerSubmitTooltip = useCallback(() => {
+    if (typeof window === 'undefined') {
+      setShowSubmitTooltip(true);
+      return;
+    }
+
+    hideSubmitTooltip();
+    setShowSubmitTooltip(true);
+    submitTooltipTimeoutRef.current = window.setTimeout(() => {
+      setShowSubmitTooltip(false);
+      submitTooltipTimeoutRef.current = null;
+    }, 2600);
+  }, [hideSubmitTooltip]);
+
+  useEffect(() => () => hideSubmitTooltip(), [hideSubmitTooltip]);
+
   useEffect(() => {
     if (!user) {
       setQuinielaSelections(createEmptySelections());
@@ -125,37 +154,29 @@ export default function App() {
       setSaveError(null);
       setToast(null);
       setIsReadOnlyView(false);
+      setShowSelectionErrors(false);
+      hideSubmitTooltip();
       return;
     }
 
     const stored = loadSubmissionForUser(user.email);
-    if (stored) {
-      setQuinielaSelections({ ...stored.selections });
-      setLastSubmittedAt(stored.submittedAt);
-    } else {
-      setQuinielaSelections(createEmptySelections());
-      setLastSubmittedAt(null);
-    }
-
+    setQuinielaSelections(createEmptySelections());
+    setLastSubmittedAt(stored?.submittedAt ?? null);
     setSaveError(null);
     setIsReadOnlyView(false);
-  }, [user, createEmptySelections]);
+    setShowSelectionErrors(false);
+    hideSubmitTooltip();
+  }, [user, createEmptySelections, hideSubmitTooltip]);
 
   const handleDownload = useCallback(async () => {
     const node = canvasRef.current;
-    const shell = canvasShellRef.current;
 
-    if (!node || !shell || isDownloading) {
+    if (!node || isDownloading) {
       return;
     }
 
-    const previousScale = shell.style.getPropertyValue('--canvas-scale');
-
     try {
       setIsDownloading(true);
-
-      shell.setAttribute('data-exporting', 'true');
-      shell.style.setProperty('--canvas-scale', '1');
 
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
@@ -163,31 +184,71 @@ export default function App() {
         await (document as Document & { fonts: FontFaceSet }).fonts.ready;
       }
 
-      const dataUrl = await toJpeg(node, {
-        quality: 0.95,
+      const clone = node.cloneNode(true) as HTMLElement;
+      clone.style.position = 'static';
+      clone.style.transform = 'scale(1)';
+      clone.style.width = '1080px';
+      clone.style.height = '1080px';
+      clone.style.borderRadius = '0';
+      clone.style.background = '#fafaf9';
+
+      const sandbox = document.createElement('div');
+      sandbox.style.position = 'fixed';
+      sandbox.style.left = '-9999px';
+      sandbox.style.top = '0';
+      sandbox.style.width = '1080px';
+      sandbox.style.height = '1080px';
+      sandbox.style.zIndex = '-1';
+      sandbox.appendChild(clone);
+      document.body.appendChild(sandbox);
+
+      const pngDataUrl = await toPng(clone, {
         width: 1080,
         height: 1080,
         canvasWidth: 1080,
         canvasHeight: 1080,
+        pixelRatio: 2,
         backgroundColor: '#fafaf9',
+        cacheBust: true,
       });
 
+      const image = new Image();
+      const imageLoaded = new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = (event) => reject(event);
+      });
+      image.src = pngDataUrl;
+      await imageLoaded;
+
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width = 1080;
+      exportCanvas.height = 1080;
+      const context = exportCanvas.getContext('2d');
+      if (!context) {
+        throw new Error('No se pudo obtener el contexto del canvas para exportar.');
+      }
+      context.drawImage(image, 0, 0, exportCanvas.width, exportCanvas.height);
+
+      const blob = await new Promise<Blob | null>((resolve) =>
+        exportCanvas.toBlob((result) => resolve(result), 'image/jpeg', 0.98)
+      );
+
+      if (!blob) {
+        throw new Error('No se pudo generar el archivo JPEG.');
+      }
+
+      const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = dataUrl;
+      link.href = blobUrl;
       link.download = `jornada-${CURRENT_JOURNEY}.jpg`;
       link.click();
+      URL.revokeObjectURL(blobUrl);
+
+      document.body.removeChild(sandbox);
     } catch (error) {
       console.error('Error al exportar la imagen como JPG', error);
       window.alert('No se pudo descargar la imagen. Revisa la consola para más detalles.');
     } finally {
-      shell.removeAttribute('data-exporting');
-
-      if (previousScale) {
-        shell.style.setProperty('--canvas-scale', previousScale);
-      } else {
-        shell.style.removeProperty('--canvas-scale');
-      }
-
       setIsDownloading(false);
     }
   }, [isDownloading]);
@@ -203,23 +264,33 @@ export default function App() {
     setIsReadOnlyView(false);
     setUser(null);
     setView('dashboard');
-  }, [createEmptySelections]);
+    setShowSelectionErrors(false);
+    hideSubmitTooltip();
+  }, [createEmptySelections, hideSubmitTooltip]);
 
   const handleBackToDashboard = useCallback(() => {
     setIsDownloading(false);
     setView('dashboard');
     setIsReadOnlyView(false);
-  }, []);
+    setShowSelectionErrors(false);
+    hideSubmitTooltip();
+  }, [hideSubmitTooltip]);
 
   const handleEnterQuiniela = useCallback(() => {
-    setView('quiniela');
+    setQuinielaSelections(createEmptySelections());
+    setSaveError(null);
     setIsReadOnlyView(false);
-  }, []);
+    setShowSelectionErrors(false);
+    hideSubmitTooltip();
+    setView('quiniela');
+  }, [createEmptySelections, hideSubmitTooltip]);
 
   const handleEnterPodium = useCallback(() => {
     setIsReadOnlyView(false);
+    setShowSelectionErrors(false);
+    hideSubmitTooltip();
     setView('podium');
-  }, []);
+  }, [hideSubmitTooltip]);
 
   const handleSelectionChange = useCallback(
     (matchId: string, value: Selection) => {
@@ -227,10 +298,20 @@ export default function App() {
         return;
       }
 
-      setQuinielaSelections((prev) => ({ ...prev, [matchId]: value }));
+      setQuinielaSelections((prev) => {
+        const next = { ...prev, [matchId]: value };
+        if (showSelectionErrors || showSubmitTooltip) {
+          const allCompleted = Object.values(next).every((selection) => selection !== null);
+          if (allCompleted) {
+            setShowSelectionErrors(false);
+            hideSubmitTooltip();
+          }
+        }
+        return next;
+      });
       setSaveError(null);
     },
-    [isReadOnlyView]
+    [isReadOnlyView, showSelectionErrors, showSubmitTooltip, hideSubmitTooltip]
   );
 
   const handleSubmitQuiniela = useCallback(() => {
@@ -245,9 +326,11 @@ export default function App() {
       return;
     }
 
-    if (completedSelections < totalMatches) {
+    if (needsMoreSelections) {
       setSaveError('Completa todos los partidos antes de enviar.');
       showToast('Completa todos los partidos antes de enviar.', 'error');
+      setShowSelectionErrors(true);
+      triggerSubmitTooltip();
       return;
     }
 
@@ -264,6 +347,8 @@ export default function App() {
     try {
       persistSubmissionForUser(user.email, submission);
       setLastSubmittedAt(submission.submittedAt);
+      setShowSelectionErrors(false);
+      hideSubmitTooltip();
       showToast('Pronóstico enviado correctamente.', 'success');
     } catch (error) {
       console.error('Error al guardar la quiniela', error);
@@ -272,7 +357,7 @@ export default function App() {
     } finally {
       setIsSaving(false);
     }
-  }, [user, completedSelections, totalMatches, quinielaSelections, showToast, isReadOnlyView]);
+  }, [user, needsMoreSelections, quinielaSelections, showToast, isReadOnlyView, triggerSubmitTooltip, hideSubmitTooltip]);
 
   const handleViewSubmission = useCallback(
     (journeyCode: string) => {
@@ -294,8 +379,10 @@ export default function App() {
       setIsReadOnlyView(true);
       setView('quiniela');
       setSaveError(null);
+      setShowSelectionErrors(false);
+      hideSubmitTooltip();
     },
-    [user, showToast]
+    [user, showToast, hideSubmitTooltip]
   );
 
   const handleShareOpen = useCallback(() => {
@@ -319,12 +406,32 @@ export default function App() {
 
   const handleShareSelect = useCallback(
     (channel: 'whatsapp' | 'instagram') => {
-      const messages: Record<typeof channel, string> = {
-        whatsapp: 'Listo, abre WhatsApp para compartir.',
-        instagram: 'Listo, usa Instagram Stories para compartir.',
-      };
+      if (typeof window === 'undefined') {
+        handleShareClose();
+        return;
+      }
 
-      showToast(messages[channel], 'success');
+      const shareUrl = `${window.location.origin}${window.location.pathname}`;
+      const shareText = encodeURIComponent(
+        'Estoy jugando la Quiniela Somos Locales. ¡Únete y comparte tu pronóstico!'
+      );
+
+      if (channel === 'whatsapp') {
+        const whatsappUrl = `https://api.whatsapp.com/send?text=${shareText}%20${encodeURIComponent(shareUrl)}`;
+        window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+        showToast('Abriendo WhatsApp…', 'success');
+      } else {
+        const instagramIntent = 'instagram://story-camera';
+        const instagramWebFallback = 'https://www.instagram.com/';
+        const opened = window.open(instagramIntent, '_blank');
+        if (!opened) {
+          window.open(instagramWebFallback, '_blank', 'noopener,noreferrer');
+          showToast('Abriendo Instagram en el navegador…', 'success');
+        } else {
+          showToast('Abriendo Instagram…', 'success');
+        }
+      }
+
       handleShareClose();
     },
     [handleShareClose, showToast]
@@ -345,28 +452,28 @@ export default function App() {
   const toastBanner = toast ? (
     <div className="toast-container" role="status" aria-live="polite">
       <div className={`toast toast--${toast.tone}`}>
-        {toast.message}
+        <span className="toast__icon" aria-hidden="true">
+          {toast.tone === 'success' ? '✔︎' : '⚠︎'}
+        </span>
+        <span>{toast.message}</span>
       </div>
     </div>
   ) : null;
   const quinielaView = (
     <div className="quiniela-surface">
-      <div className="download-wrapper">
-        <div className="canvas-toolbar">
-          <button
-            type="button"
-            onClick={handleBackToDashboard}
-            className="download-button back-button font-['Albert_Sans:Bold',_sans-serif]"
-          >
-            <span className="button-icon" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="15 18 9 12 15 6" />
-                <line x1="9" y1="12" x2="21" y2="12" />
-              </svg>
-            </span>
-            Regresar
-          </button>
-          <div className="canvas-toolbar__actions">
+      <div className="canvas-frame">
+        <div className="canvas-frame__toolbar">
+          <div className="canvas-frame__group">
+            <button
+              type="button"
+              onClick={handleBackToDashboard}
+              className="icon-button back-button"
+              aria-label="Regresar al dashboard"
+            >
+              <ArrowLeft size={18} aria-hidden="true" />
+            </button>
+          </div>
+          <div className="canvas-frame__group">
             <button
               type="button"
               onClick={handleShareOpen}
@@ -398,37 +505,45 @@ export default function App() {
         </div>
 
         {saveError ? (
-          <span className="submission-status submission-status--error canvas-toolbar__error">{saveError}</span>
+          <span className="submission-status submission-status--error canvas-frame__alert">{saveError}</span>
         ) : null}
 
         <div ref={canvasShellRef} className="canvas-shell">
-          <div className="canvas-stage">
-            <div
-              ref={canvasRef}
-              className="canvas-wrapper"
-            >
-              <Suspense fallback={<LoadingSpinner />}>
-                <AperturaJornada15
-                  selections={quinielaSelections}
-                  onSelect={handleSelectionChange}
-                  isReadOnly={isReadOnlyView}
-                />
-              </Suspense>
-            </div>
+          <div
+            ref={canvasRef}
+            className="canvas-wrapper"
+          >
+            <Suspense fallback={<LoadingSpinner />}>
+          <AperturaJornada15
+            selections={quinielaSelections}
+            onSelect={handleSelectionChange}
+            isReadOnly={isReadOnlyView}
+            showSelectionErrors={showSelectionErrors}
+          />
+        </Suspense>
           </div>
         </div>
+      </div>
 
-        <div className="canvas-actions">
-          <div className="canvas-actions__buttons">
-            <button
-              type="button"
-              onClick={handleSubmitQuiniela}
-              disabled={isSubmitDisabled}
-              className="download-button submit-button font-['Albert_Sans:Bold',_sans-serif]"
-            >
-              {isSaving ? 'Enviando…' : 'Enviar'}
-            </button>
-          </div>
+      <div className="canvas-frame__footer">
+        <div
+          className="submit-button-wrapper"
+          data-visible={showSubmitTooltip ? 'true' : undefined}
+        >
+          <button
+            type="button"
+            onClick={handleSubmitQuiniela}
+            disabled={isSubmitDisabled}
+            aria-disabled={needsMoreSelections}
+            className="btn btn-primary submit-button"
+          >
+            {isSaving ? 'Enviando…' : 'Enviar'}
+          </button>
+          {showSubmitTooltip ? (
+            <div className="submit-button-tooltip" role="tooltip">
+              Completa la quiniela para continuar
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
@@ -437,9 +552,9 @@ export default function App() {
   return (
     <>
       {isShareOpen ? (
-        <div className="modal-backdrop" role="presentation" onClick={handleShareClose}>
+        <div className="modal-backdrop modal-backdrop--share" role="presentation" onClick={handleShareClose}>
           <div
-            className="modal"
+            className="modal modal--share"
             role="dialog"
             aria-modal="true"
             aria-labelledby="share-title"
@@ -464,9 +579,7 @@ export default function App() {
                 onClick={() => handleShareSelect('whatsapp')}
                 aria-label="Compartir en WhatsApp"
               >
-                <svg viewBox="0 0 24 24" role="img">
-                  <path d="M20.46 3.54A11.82 11.82 0 0 0 12 .5 11.94 11.94 0 0 0 .06 12.05a11.8 11.8 0 0 0 1.6 5.94L.1 23.5l5.7-1.48a11.9 11.9 0 0 0 5.63 1.43h.01A11.94 11.94 0 0 0 12 0h.05a11.9 11.9 0 0 0 8.41-3.54ZM12.06 21.4a10 10 0 0 1-5.1-1.4l-.36-.21-3.38.88.9-3.29-.23-.34a10 10 0 1 1 8.18 4.36Zm5.49-7.56c-.3-.15-1.77-.87-2.04-.97s-.47-.15-.67.15-.76.97-.93 1.17-.34.22-.64.07a8.14 8.14 0 0 1-2.39-1.48 9.17 9.17 0 0 1-1.69-2.12c-.18-.3 0-.46.13-.61s.3-.34.45-.52a2 2 0 0 0 .3-.52.57.57 0 0 0-.02-.54c-.07-.15-.67-1.6-.92-2.2s-.49-.5-.67-.51H8.4a1.12 1.12 0 0 0-.8.37 3.26 3.26 0 0 0-1 2.44 5.68 5.68 0 0 0 1.17 3.02 12.9 12.9 0 0 0 4.79 4.74 16.3 16.3 0 0 0 1.57.72 3.78 3.78 0 0 0 1.74.11 2.84 2.84 0 0 0 1.86-1.3 2.3 2.3 0 0 0 .16-1.3c-.07-.11-.27-.18-.57-.33Z" />
-                </svg>
+                <img src="/src/assets/share-whatsapp.svg" alt="WhatsApp" width="24" height="24" />
               </button>
               <button
                 type="button"
@@ -474,14 +587,9 @@ export default function App() {
                 onClick={() => handleShareSelect('instagram')}
                 aria-label="Compartir en Instagram Stories"
               >
-                <svg viewBox="0 0 24 24" role="img">
-                  <path d="M12 7.09A4.91 4.91 0 1 0 16.91 12 4.91 4.91 0 0 0 12 7.09Zm0 8.07A3.16 3.16 0 1 1 15.16 12 3.16 3.16 0 0 1 12 15.16Zm6.23-8.41a1.15 1.15 0 1 1-1.15-1.15 1.15 1.15 0 0 1 1.15 1.15Zm3.27 1.17a5.69 5.69 0 0 0-1.56-4 5.73 5.73 0 0 0-4-1.56c-1.58-.09-6.32-.09-7.9 0a5.72 5.72 0 0 0-4 1.56 5.69 5.69 0 0 0-1.56 4c-.09 1.58-.09 6.32 0 7.9a5.69 5.69 0 0 0 1.56 4 5.73 5.73 0 0 0 4 1.56c1.58.09 6.32.09 7.9 0a5.69 5.69 0 0 0 4-1.56 5.69 5.69 0 0 0 1.56-4c.09-1.58.09-6.31 0-7.89ZM20.57 18a3.38 3.38 0 0 1-1.9 1.9c-1.32.52-4.44.4-5.67.4s-4.36.11-5.67-.4A3.38 3.38 0 0 1 5.43 18c-.52-1.32-.4-4.44-.4-5.67s-.11-4.36.4-5.67a3.38 3.38 0 0 1 1.9-1.9c1.32-.52 4.44-.4 5.67-.4s4.36-.11 5.67.4a3.38 3.38 0 0 1 1.9 1.9c.52 1.32.4 4.44.4 5.67s.11 4.37-.4 5.67Z" />
-                </svg>
+                <img src="/src/assets/share-instagram.svg" alt="Instagram" width="24" height="24" />
               </button>
             </div>
-            <button type="button" className="modal__secondary" onClick={handleShareClose}>
-              Cerrar
-            </button>
           </div>
         </div>
       ) : null}
@@ -493,8 +601,9 @@ export default function App() {
             currentView={currentView}
             onNavigateToDashboard={handleBackToDashboard}
             onNavigateToQuiniela={handleEnterQuiniela}
-        onSignOut={handleSignOut}
-      />
+            onNavigateToPodium={handleEnterPodium}
+            onSignOut={handleSignOut}
+          />
           <Dashboard
             user={user}
             onEnterQuiniela={handleEnterQuiniela}
@@ -509,9 +618,10 @@ export default function App() {
               user={user}
               currentView={currentView}
               onNavigateToDashboard={handleBackToDashboard}
+              onNavigateToPodium={handleEnterPodium}
               onSignOut={handleSignOut}
             />
-            <PodiumPage onBack={handleBackToDashboard} />
+            <PodiumPage />
           </div>
         ) : (
           quinielaView

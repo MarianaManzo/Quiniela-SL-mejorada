@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useEffect } from 'react';
 
 import logoLigaBBVA from 'figma:asset/282fbfddfb13edc69252a49f15e9f9646a1d8ece.png';
 import logoSomosLocales from 'figma:asset/930d5de55d9fd27c0951aa3f3d28301d6e434476.png';
@@ -79,7 +79,7 @@ const TeamLogo = memo(({ teamName }: { teamName: TeamCode }) => {
         alt={`Logo ${teamName}`}
         className="w-full h-full object-contain"
         src={logoSrc}
-        loading="lazy"
+        loading="eager"
         decoding="async"
       />
     );
@@ -102,9 +102,25 @@ function TeamSlot({ team }: { team: TeamCode }) {
   );
 }
 
-function Puntaje({ selected, onSelect, readOnly }: { selected: Selection | null; onSelect: (value: Selection) => void; readOnly: boolean }) {
+function Puntaje({
+  selected,
+  onSelect,
+  readOnly,
+  showValidation,
+}: {
+  selected: Selection | null;
+  onSelect: (value: Selection) => void;
+  readOnly: boolean;
+  showValidation: boolean;
+}) {
+  const isInvalid = showValidation && selected === null;
+
   return (
-    <div className="flex items-center gap-[8px] relative shrink-0">
+    <div
+      className="puntaje-group flex items-center gap-[8px] relative shrink-0"
+      data-invalid={isInvalid ? 'true' : undefined}
+      aria-invalid={isInvalid}
+    >
       {(['L', 'E', 'V'] as Selection[]).map((label) => {
         const isSelected = selected === label;
         return (
@@ -186,14 +202,26 @@ function MatchMeta({ stadium, broadcast }: Pick<MatchInfo, 'stadium' | 'broadcas
   );
 }
 
-function MatchRow({ match, selected, onSelect, readOnly }: { match: MatchInfo; selected: Selection | null; onSelect: (value: Selection) => void; readOnly: boolean }) {
+function MatchRow({
+  match,
+  selected,
+  onSelect,
+  readOnly,
+  showValidation,
+}: {
+  match: MatchInfo;
+  selected: Selection | null;
+  onSelect: (value: Selection) => void;
+  readOnly: boolean;
+  showValidation: boolean;
+}) {
   return (
     <div className="bg-white relative rounded-[8px] shrink-0 w-full h-[79px]">
       <div className="flex flex-row items-center size-full">
         <div className="box-border content-stretch flex gap-[25px] items-center pl-0 pr-[8px] py-[4px] relative w-full">
           <MatchTime day={match.day} dateLabel={match.dateLabel} time={match.time} />
           <TeamSlot team={match.home} />
-          <Puntaje selected={selected} onSelect={onSelect} readOnly={readOnly} />
+          <Puntaje selected={selected} onSelect={onSelect} readOnly={readOnly} showValidation={showValidation} />
           <TeamSlot team={match.away} />
           <div className="flex-1 min-w-0" />
           <div className="flex-1 min-w-0">
@@ -249,7 +277,17 @@ function Frame34() {
   );
 }
 
-function Frame26({ selections, onSelect, readOnly }: { selections: QuinielaSelections; onSelect: (matchId: string, value: Selection) => void; readOnly: boolean }) {
+function Frame26({
+  selections,
+  onSelect,
+  readOnly,
+  showValidation,
+}: {
+  selections: QuinielaSelections;
+  onSelect: (matchId: string, value: Selection) => void;
+  readOnly: boolean;
+  showValidation: boolean;
+}) {
   return (
     <div className="relative shrink-0 w-full">
       <div className="size-full">
@@ -261,6 +299,7 @@ function Frame26({ selections, onSelect, readOnly }: { selections: QuinielaSelec
               selected={selections[match.id] ?? null}
               onSelect={(value) => onSelect(match.id, value)}
               readOnly={readOnly}
+              showValidation={showValidation}
             />
           ))}
         </div>
@@ -286,11 +325,21 @@ function PieDePagina() {
   );
 }
 
-function Frame35({ selections, onSelect, readOnly }: { selections: QuinielaSelections; onSelect: (matchId: string, value: Selection) => void; readOnly: boolean }) {
+function Frame35({
+  selections,
+  onSelect,
+  readOnly,
+  showValidation,
+}: {
+  selections: QuinielaSelections;
+  onSelect: (matchId: string, value: Selection) => void;
+  readOnly: boolean;
+  showValidation: boolean;
+}) {
   return (
     <div className="absolute box-border content-stretch flex flex-col gap-[16px] items-start left-0 px-0 py-[32px] size-[1080px] top-0">
       <Frame34 />
-      <Frame26 selections={selections} onSelect={onSelect} readOnly={readOnly} />
+      <Frame26 selections={selections} onSelect={onSelect} readOnly={readOnly} showValidation={showValidation} />
       <PieDePagina />
     </div>
   );
@@ -300,9 +349,27 @@ interface AperturaJornada15Props {
   selections: QuinielaSelections;
   onSelect: (matchId: string, value: Selection) => void;
   isReadOnly?: boolean;
+  showSelectionErrors?: boolean;
 }
 
-export default function AperturaJornada15({ selections, onSelect, isReadOnly = false }: AperturaJornada15Props) {
+export default function AperturaJornada15({
+  selections,
+  onSelect,
+  isReadOnly = false,
+  showSelectionErrors = false,
+}: AperturaJornada15Props) {
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    Object.values(TEAM_LOGOS).forEach((src) => {
+      const preloader = new Image();
+      preloader.decoding = 'async';
+      preloader.src = src;
+    });
+  }, []);
+
   const handleSelect = useCallback(
     (matchId: string, value: Selection) => {
       if (isReadOnly) {
@@ -323,7 +390,12 @@ export default function AperturaJornada15({ selections, onSelect, isReadOnly = f
         loading="eager"
         decoding="async"
       />
-      <Frame35 selections={selections} onSelect={handleSelect} readOnly={isReadOnly} />
+      <Frame35
+        selections={selections}
+        onSelect={handleSelect}
+        readOnly={isReadOnly}
+        showValidation={showSelectionErrors}
+      />
     </div>
   );
 }

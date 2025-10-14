@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Instagram, MessageCircle } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { Dashboard } from './components/Dashboard';
 import { LoginScreen, type UserProfile } from './components/LoginScreen';
@@ -175,14 +175,57 @@ export default function App() {
       return;
     }
 
+    const waitForFonts = async () => {
+      if (typeof document === 'undefined') {
+        return;
+      }
+
+      const fontFaceSet = (document as Document & { fonts?: FontFaceSet }).fonts;
+      if (!fontFaceSet) {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        return;
+      }
+
+      try {
+        await Promise.all([
+          fontFaceSet.load('400 16px "Antonio"'),
+          fontFaceSet.load('700 16px "Antonio"'),
+          fontFaceSet.load('400 16px "Albert Sans"'),
+          fontFaceSet.load('700 16px "Barlow Condensed"'),
+        ]);
+        await fontFaceSet.ready;
+      } catch (error) {
+        console.warn('No se pudieron precargar todas las fuentes antes de exportar.', error);
+      }
+    };
+
+    const waitForImages = async (root: HTMLElement) => {
+      const images = Array.from(root.querySelectorAll('img'));
+      await Promise.all(
+        images.map((img) => {
+          if (img.complete && img.naturalWidth !== 0) {
+            return Promise.resolve();
+          }
+          return new Promise<void>((resolve) => {
+            const handleResolve = () => {
+              img.removeEventListener('load', handleResolve);
+              img.removeEventListener('error', handleResolve);
+              resolve();
+            };
+            img.addEventListener('load', handleResolve, { once: true });
+            img.addEventListener('error', handleResolve, { once: true });
+          });
+        })
+      );
+    };
+
+    let sandbox: HTMLDivElement | null = null;
+
     try {
       setIsDownloading(true);
 
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-
-      if (typeof document !== 'undefined' && 'fonts' in document) {
-        await (document as Document & { fonts: FontFaceSet }).fonts.ready;
-      }
+      await waitForFonts();
 
       const clone = node.cloneNode(true) as HTMLElement;
       clone.style.position = 'static';
@@ -190,9 +233,19 @@ export default function App() {
       clone.style.width = '1080px';
       clone.style.height = '1080px';
       clone.style.borderRadius = '0';
-      clone.style.background = '#fafaf9';
 
-      const sandbox = document.createElement('div');
+      if (typeof window !== 'undefined') {
+        const computed = window.getComputedStyle(node);
+        clone.style.background = computed.background || '#fafaf9';
+        clone.style.backgroundColor = computed.backgroundColor || '#fafaf9';
+        clone.style.backgroundImage = computed.backgroundImage;
+        clone.style.backgroundSize = computed.backgroundSize;
+        clone.style.backgroundPosition = computed.backgroundPosition;
+        clone.style.backgroundRepeat = computed.backgroundRepeat;
+        clone.style.fontFamily = computed.fontFamily;
+      }
+
+      sandbox = document.createElement('div');
       sandbox.style.position = 'fixed';
       sandbox.style.left = '-9999px';
       sandbox.style.top = '0';
@@ -202,6 +255,8 @@ export default function App() {
       sandbox.appendChild(clone);
       document.body.appendChild(sandbox);
 
+      await waitForImages(clone);
+
       const pngDataUrl = await toPng(clone, {
         width: 1080,
         height: 1080,
@@ -210,9 +265,11 @@ export default function App() {
         pixelRatio: 2,
         backgroundColor: '#fafaf9',
         cacheBust: true,
+        useCORS: true,
       });
 
       const image = new Image();
+      image.crossOrigin = 'anonymous';
       const imageLoaded = new Promise<void>((resolve, reject) => {
         image.onload = () => resolve();
         image.onerror = (event) => reject(event);
@@ -243,12 +300,13 @@ export default function App() {
       link.download = `jornada-${CURRENT_JOURNEY}.jpg`;
       link.click();
       URL.revokeObjectURL(blobUrl);
-
-      document.body.removeChild(sandbox);
     } catch (error) {
       console.error('Error al exportar la imagen como JPG', error);
       window.alert('No se pudo descargar la imagen. Revisa la consola para más detalles.');
     } finally {
+      if (sandbox && sandbox.parentNode) {
+        sandbox.parentNode.removeChild(sandbox);
+      }
       setIsDownloading(false);
     }
   }, [isDownloading]);
@@ -612,7 +670,7 @@ export default function App() {
                 onClick={() => handleShareSelect('whatsapp')}
                 aria-label="Compartir en WhatsApp"
               >
-                <img src="/src/assets/share-whatsapp.svg" alt="WhatsApp" width="24" height="24" />
+                <MessageCircle size={24} strokeWidth={1.8} aria-hidden="true" />
               </button>
               <button
                 type="button"
@@ -620,7 +678,7 @@ export default function App() {
                 onClick={() => handleShareSelect('instagram')}
                 aria-label="Compartir en Instagram Stories"
               >
-                <img src="/src/assets/share-instagram.svg" alt="Instagram" width="24" height="24" />
+                <Instagram size={24} strokeWidth={1.6} aria-hidden="true" />
               </button>
             </div>
           </div>

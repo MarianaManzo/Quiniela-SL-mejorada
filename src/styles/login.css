@@ -106,33 +106,30 @@
   margin-top: 4px;
 }
 
-.login-quick-access {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border-radius: 16px;
-  border: 1px solid rgba(246, 212, 51, 0.35);
-  background: rgba(246, 212, 51, 0.08);
-  color: rgba(246, 212, 51, 0.88);
-  padding: 14px 18px;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  cursor: pointer;
-  transition: background 160ms ease, color 160ms ease, border 160ms ease;
-}
-
-.login-quick-access:hover {
-  background: rgba(246, 212, 51, 0.18);
-  border-color: rgba(246, 212, 51, 0.5);
-  color: #141419;
-}
-
 .login-submit {
   align-self: stretch;
   letter-spacing: 0.08em;
   text-transform: none;
+}
+
+.login-submit[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.login-toggle {
+  appearance: none;
+  border: none;
+  background: none;
+  color: rgba(248, 250, 252, 0.76);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: color 160ms ease;
+}
+
+.login-toggle:hover {
+  color: #f6d433;
 }
 
 .login-note {
@@ -184,6 +181,12 @@
   transform: translateY(-1px);
   border-color: rgba(246, 212, 51, 0.45);
   background: rgba(246, 212, 51, 0.12);
+}
+
+.login-social__button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .login-social__button img {

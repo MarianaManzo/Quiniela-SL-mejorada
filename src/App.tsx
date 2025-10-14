@@ -1,5 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ClipboardCheck, Instagram, MessageCircle } from 'lucide-react';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { toPng } from 'html-to-image';
 import { Dashboard } from './components/Dashboard';
 import { LoginScreen, type UserProfile } from './components/LoginScreen';
@@ -12,6 +13,7 @@ import {
   type QuinielaSubmission,
   type Selection,
 } from './quiniela/config';
+import { firebaseAuth } from './firebase';
 
 // Definición centralizada de la jornada mostrada
 const CURRENT_JOURNEY = 15;
@@ -74,6 +76,7 @@ function LoadingSpinner() {
 export default function App() {
   const [view, setView] = useState<'dashboard' | 'quiniela' | 'podium'>('dashboard');
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [authReady, setAuthReady] = useState(false);
   const canvasShellRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -123,6 +126,27 @@ export default function App() {
         window.clearTimeout(toastTimeoutRef.current);
       }
     };
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(firebaseAuth, (firebaseUser) => {
+      if (firebaseUser) {
+        const displayName = firebaseUser.displayName?.trim();
+        const email = firebaseUser.email ?? '';
+        const fallbackName = email ? email.split('@')[0] : 'Participante';
+        setUser({
+          name: displayName && displayName.length > 0 ? displayName : fallbackName,
+          email,
+          role: 'aficion',
+        });
+        setView((current) => (current === 'quiniela' || current === 'podium' ? current : 'dashboard'));
+      } else {
+        setUser(null);
+      }
+      setAuthReady(true);
+    });
+
+    return unsubscribe;
   }, []);
 
   useEffect(() => {
@@ -335,7 +359,7 @@ export default function App() {
     }
   }, [isDownloading, exportQuinielaSnapshot]);
 
-  const handleSignOut = useCallback(() => {
+  const handleSignOut = useCallback(async () => {
     setIsDownloading(false);
     setQuinielaSelections(createEmptySelections());
     setLastSubmittedAt(null);
@@ -344,11 +368,16 @@ export default function App() {
     setToast(null);
     setIsShareOpen(false);
     setIsReadOnlyView(false);
-    setUser(null);
-    setView('dashboard');
     setShowSelectionErrors(false);
     hideSubmitTooltip();
-  }, [createEmptySelections, hideSubmitTooltip]);
+
+    try {
+      await signOut(firebaseAuth);
+    } catch (error) {
+      console.error('No se pudo cerrar sesión en Firebase', error);
+      showToast('No pudimos cerrar sesión. Intenta de nuevo.', 'error');
+    }
+  }, [createEmptySelections, hideSubmitTooltip, showToast]);
 
   const handleBackToDashboard = useCallback(() => {
     setIsDownloading(false);
@@ -560,11 +589,14 @@ export default function App() {
     [exportQuinielaSnapshot, handleShareClose, isSharingImage, showToast]
   );
 
+  if (!authReady) {
+    return null;
+  }
+
   if (!user) {
     return (
       <LoginScreen
-        onLogin={(profile) => {
-          setUser(profile);
+        onLogin={(_profile) => {
           setView('dashboard');
         }}
       />

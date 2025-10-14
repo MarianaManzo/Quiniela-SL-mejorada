@@ -1,6 +1,15 @@
 import { FormEvent, useMemo, useState } from "react";
+import type { FirebaseError } from "firebase/app";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signInWithRedirect,
+  updateProfile,
+} from "firebase/auth";
 import logoSomosLocales from "figma:asset/930d5de55d9fd27c0951aa3f3d28301d6e434476.png";
 import "../styles/login.css";
+import { firebaseAuth, googleAuthProvider } from "../firebase";
 
 export interface UserProfile {
   name: string;
@@ -15,92 +24,178 @@ export const ROLE_LABELS: Record<UserProfile["role"], string> = {
 };
 
 interface LoginScreenProps {
-  onLogin: (user: UserProfile) => void;
+  onLogin?: (user: UserProfile) => void;
 }
 
+function getFirebaseErrorMessage(error: FirebaseError, mode: AuthMode) {
+  const messages: Record<string, string> = {
+    'auth/invalid-email': 'El correo no es válido.',
+    'auth/user-not-found': 'No encontramos una cuenta con ese correo.',
+    'auth/wrong-password': 'Contraseña incorrecta.',
+    'auth/email-already-in-use': 'Este correo ya está registrado.',
+    'auth/weak-password': 'La contraseña debe tener al menos 6 caracteres.',
+    'auth/popup-closed-by-user': 'La ventana de inicio de sesión se cerró antes de finalizar.',
+    'auth/cancelled-popup-request': 'Ya hay una ventana de inicio abierta.',
+    'auth/popup-blocked': 'El navegador bloqueó la ventana emergente. Intenta de nuevo.',
+  };
+
+  if (messages[error.code]) {
+    return messages[error.code];
+  }
+
+  return mode === 'register'
+    ? 'No pudimos crear tu cuenta. Intenta nuevamente.'
+    : 'No pudimos iniciar sesión. Revisa tus datos e intenta nuevamente.';
+}
+
+type AuthMode = 'login' | 'register';
+
 export function LoginScreen({ onLogin }: LoginScreenProps) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [mode, setMode] = useState<AuthMode>('login');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [formMessage, setFormMessage] = useState<string | null>(null);
-  const [touched, setTouched] = useState({ name: false, email: false });
+  const [touched, setTouched] = useState({ name: false, email: false, password: false });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const nameError = useMemo(() => {
+    if (mode === 'login') {
+      return null;
+    }
+
     const value = name.trim();
     if (!value) {
-      return "Ingresa tu nombre completo.";
+      return 'Ingresa tu nombre completo.';
     }
 
     if (value.length < 4) {
-      return "El nombre es demasiado corto.";
+      return 'El nombre es demasiado corto.';
     }
 
-    if (value.split(" ").filter(Boolean).length < 2) {
-      return "Escribe nombre y apellido.";
+    if (value.split(' ').filter(Boolean).length < 2) {
+      return 'Escribe nombre y apellido.';
     }
 
     return null;
-  }, [name]);
+  }, [name, mode]);
 
   const emailError = useMemo(() => {
     const value = email.trim();
     if (!value) {
-      return "Ingresa tu correo.";
+      return 'Ingresa tu correo.';
     }
 
     const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!EMAIL_PATTERN.test(value)) {
-      return "Escribe un correo válido.";
+      return 'Escribe un correo válido.';
     }
 
     return null;
   }, [email]);
 
-  const isFormValid = !nameError && !emailError;
+  const passwordError = useMemo(() => {
+    if (!password.trim()) {
+      return 'Ingresa tu contraseña.';
+    }
 
-  const handleQuickAccess = () => {
-    setFormMessage(null);
-    setTouched({ name: false, email: false });
-    onLogin({
-      name: "Invitada Somos Locales",
-      email: "demo@somoslocales.mx",
-      role: "invitado",
-    });
-  };
+    if (password.trim().length < 6) {
+      return 'La contraseña debe tener al menos 6 caracteres.';
+    }
 
-  const handleSocialLogin = (provider: "google" | "facebook") => {
-    const mockProfiles: Record<typeof provider, UserProfile> = {
-      google: {
-        name: "Usuario Google",
-        email: "google.user@somoslocales.mx",
-        role: "aficion",
-      },
-      facebook: {
-        name: "Fan Facebook",
-        email: "facebook.fan@somoslocales.mx",
-        role: "aficion",
-      },
-    };
+    return null;
+  }, [password]);
 
-    setFormMessage(null);
-    setTouched({ name: false, email: false });
-    onLogin(mockProfiles[provider]);
-  };
+  const isFormValid = (mode === 'login' || !nameError) && !emailError && !passwordError;
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setTouched({ name: true, email: true });
+    setTouched({ name: true, email: true, password: true });
 
     if (!isFormValid) {
-      setFormMessage("Revisa la información antes de continuar.");
+      setFormMessage('Revisa la información antes de continuar.');
       return;
     }
 
     setFormMessage(null);
-    onLogin({
-      name: name.trim(),
-      email: email.trim(),
-      role: "aficion",
-    });
+    setIsSubmitting(true);
+
+    try {
+      const emailTrimmed = email.trim();
+      const passwordTrimmed = password.trim();
+      const displayName = name.trim();
+      const shouldUpdateName = displayName.length > 0;
+
+      const credential =
+        mode === 'register'
+          ? await createUserWithEmailAndPassword(firebaseAuth, emailTrimmed, passwordTrimmed)
+          : await signInWithEmailAndPassword(firebaseAuth, emailTrimmed, passwordTrimmed);
+
+      if (mode === 'register' && shouldUpdateName) {
+        await updateProfile(credential.user, { displayName });
+      } else if (mode === 'login' && shouldUpdateName && !credential.user.displayName) {
+        await updateProfile(credential.user, { displayName });
+      }
+
+      const resolvedName = credential.user.displayName?.trim()
+        || (shouldUpdateName ? displayName : '')
+        || emailTrimmed.split('@')[0];
+
+      onLogin?.({
+        name: resolvedName,
+        email: credential.user.email ?? emailTrimmed,
+        role: 'aficion',
+      });
+
+      setFormMessage(null);
+    } catch (error) {
+      const firebaseError = error as FirebaseError;
+      setFormMessage(getFirebaseErrorMessage(firebaseError, mode));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setFormMessage(null);
+    setIsSubmitting(true);
+
+    try {
+      await signInWithPopup(firebaseAuth, googleAuthProvider);
+      const currentUser = firebaseAuth.currentUser;
+      if (currentUser) {
+        onLogin?.({
+          name: currentUser.displayName ?? currentUser.email ?? 'Participante',
+          email: currentUser.email ?? '',
+          role: 'aficion',
+        });
+      }
+    } catch (error) {
+      const firebaseError = error as FirebaseError;
+
+      if (firebaseError.code === 'auth/popup-blocked' || firebaseError.code === 'auth/popup-closed-by-user') {
+        try {
+          await signInWithRedirect(firebaseAuth, googleAuthProvider);
+          return;
+        } catch (redirectError) {
+          setFormMessage(getFirebaseErrorMessage(redirectError as FirebaseError, 'login'));
+        }
+      } else {
+        setFormMessage(getFirebaseErrorMessage(firebaseError, 'login'));
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const toggleMode = () => {
+    setMode((prev) => (prev === 'login' ? 'register' : 'login'));
+    setFormMessage(null);
+    setTouched({ name: false, email: false, password: false });
+    setPassword('');
+    if (mode === 'register') {
+      setName('');
+    }
   };
 
   return (
@@ -112,33 +207,35 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
         </div>
 
         <form className="login-form" onSubmit={handleSubmit}>
-          <div className="login-field">
-            <label className="login-label" htmlFor="login-name">
-              Nombre completo
-            </label>
-            <input
-              id="login-name"
-              className="login-input"
-              type="text"
-              placeholder="Ej. Mariana López"
-              value={name}
-              onChange={(event) => {
-                const nextValue = event.target.value;
-                setName(nextValue);
-                if (touched.name) {
-                  setFormMessage(null);
-                }
-              }}
-              onBlur={() => setTouched((prev) => ({ ...prev, name: true }))}
-              aria-invalid={touched.name && Boolean(nameError)}
-              data-invalid={touched.name && Boolean(nameError) ? "true" : undefined}
-            />
-            {touched.name && nameError ? (
-              <span className="login-field__error" role="alert">
-                {nameError}
-              </span>
-            ) : null}
-          </div>
+          {mode === 'register' ? (
+            <div className="login-field">
+              <label className="login-label" htmlFor="login-name">
+                Nombre completo
+              </label>
+              <input
+                id="login-name"
+                className="login-input"
+                type="text"
+                placeholder="Ej. Mariana López"
+                value={name}
+                onChange={(event) => {
+                  const nextValue = event.target.value;
+                  setName(nextValue);
+                  if (touched.name) {
+                    setFormMessage(null);
+                  }
+                }}
+                onBlur={() => setTouched((prev) => ({ ...prev, name: true }))}
+                aria-invalid={touched.name && Boolean(nameError)}
+                data-invalid={touched.name && Boolean(nameError) ? 'true' : undefined}
+              />
+              {touched.name && nameError ? (
+                <span className="login-field__error" role="alert">
+                  {nameError}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
 
           <div className="login-field">
             <label className="login-label" htmlFor="login-email">
@@ -159,7 +256,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
               }}
               onBlur={() => setTouched((prev) => ({ ...prev, email: true }))}
               aria-invalid={touched.email && Boolean(emailError)}
-              data-invalid={touched.email && Boolean(emailError) ? "true" : undefined}
+              data-invalid={touched.email && Boolean(emailError) ? 'true' : undefined}
             />
             {touched.email && emailError ? (
               <span className="login-field__error" role="alert">
@@ -168,12 +265,40 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
             ) : null}
           </div>
 
+          <div className="login-field">
+            <label className="login-label" htmlFor="login-password">
+              Contraseña
+            </label>
+            <input
+              id="login-password"
+              className="login-input"
+              type="password"
+              placeholder="Mínimo 6 caracteres"
+              value={password}
+              onChange={(event) => {
+                const nextValue = event.target.value;
+                setPassword(nextValue);
+                if (touched.password) {
+                  setFormMessage(null);
+                }
+              }}
+              onBlur={() => setTouched((prev) => ({ ...prev, password: true }))}
+              aria-invalid={touched.password && Boolean(passwordError)}
+              data-invalid={touched.password && Boolean(passwordError) ? 'true' : undefined}
+            />
+            {touched.password && passwordError ? (
+              <span className="login-field__error" role="alert">
+                {passwordError}
+              </span>
+            ) : null}
+          </div>
+
           <div className="login-actions">
-            <button type="button" className="login-quick-access" onClick={handleQuickAccess}>
-              Acceso rápido (demo)
+            <button type="submit" className="btn btn-primary login-submit" disabled={!isFormValid || isSubmitting}>
+              {isSubmitting ? 'Cargando…' : mode === 'register' ? 'Crear cuenta' : 'Entrar'}
             </button>
-            <button type="submit" className="btn btn-primary login-submit" disabled={!isFormValid}>
-              Entrar
+            <button type="button" className="login-toggle" onClick={toggleMode}>
+              {mode === 'login' ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
             </button>
             {formMessage ? <span className="login-note login-note--error" role="alert">{formMessage}</span> : null}
           </div>
@@ -182,13 +307,9 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
         <div className="login-social">
           <span className="login-social__title">O ingresa con</span>
           <div className="login-social__buttons">
-            <button type="button" className="login-social__button" onClick={() => handleSocialLogin("google")}>
+            <button type="button" className="login-social__button" onClick={handleGoogleLogin} disabled={isSubmitting}>
               <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
               Google
-            </button>
-            <button type="button" className="login-social__button" onClick={() => handleSocialLogin("facebook")}>
-              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/facebook.svg" alt="Facebook" />
-              Facebook
             </button>
           </div>
         </div>

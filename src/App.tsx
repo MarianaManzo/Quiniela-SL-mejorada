@@ -77,6 +77,7 @@ export default function App() {
   const canvasShellRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isSharingImage, setIsSharingImage] = useState(false);
   const [quinielaSelections, setQuinielaSelections] = useState<QuinielaSelections>(() => createEmptySelections());
   const [isSaving, setIsSaving] = useState(false);
   const [lastSubmittedAt, setLastSubmittedAt] = useState<string | null>(null);
@@ -168,11 +169,11 @@ export default function App() {
     hideSubmitTooltip();
   }, [user, createEmptySelections, hideSubmitTooltip]);
 
-  const handleDownload = useCallback(async () => {
+  const exportQuinielaSnapshot = useCallback(async () => {
     const node = canvasRef.current;
 
-    if (!node || isDownloading) {
-      return;
+    if (!node) {
+      throw new Error('No se encontró el contenedor de la quiniela para exportar.');
     }
 
     const waitForFonts = async () => {
@@ -222,8 +223,6 @@ export default function App() {
     let sandbox: HTMLDivElement | null = null;
 
     try {
-      setIsDownloading(true);
-
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       await waitForFonts();
 
@@ -294,6 +293,23 @@ export default function App() {
         throw new Error('No se pudo generar el archivo JPEG.');
       }
 
+      return blob;
+    } finally {
+      if (sandbox && sandbox.parentNode) {
+        sandbox.parentNode.removeChild(sandbox);
+      }
+    }
+  }, []);
+
+  const handleDownload = useCallback(async () => {
+    if (isDownloading) {
+      return;
+    }
+
+    try {
+      setIsDownloading(true);
+      const blob = await exportQuinielaSnapshot();
+
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;
@@ -304,12 +320,9 @@ export default function App() {
       console.error('Error al exportar la imagen como JPG', error);
       window.alert('No se pudo descargar la imagen. Revisa la consola para más detalles.');
     } finally {
-      if (sandbox && sandbox.parentNode) {
-        sandbox.parentNode.removeChild(sandbox);
-      }
       setIsDownloading(false);
     }
-  }, [isDownloading]);
+  }, [isDownloading, exportQuinielaSnapshot]);
 
   const handleSignOut = useCallback(() => {
     setIsDownloading(false);
@@ -463,69 +476,47 @@ export default function App() {
   }, []);
 
   const handleShareSelect = useCallback(
-    (channel: 'whatsapp' | 'instagram') => {
-      if (typeof window === 'undefined') {
-        handleShareClose();
+    async (channel: 'whatsapp' | 'instagram') => {
+      if (isSharingImage) {
         return;
       }
 
-      const shareUrl = `${window.location.origin}${window.location.pathname}`;
-      const shareText = encodeURIComponent(
-        'Estoy jugando la Quiniela Somos Locales. ¡Únete y comparte tu pronóstico!'
-      );
+      try {
+        setIsSharingImage(true);
 
-      if (channel === 'whatsapp') {
-        const whatsappUrl = `https://api.whatsapp.com/send?text=${shareText}%20${encodeURIComponent(shareUrl)}`;
-        window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-        showToast('Abriendo WhatsApp…', 'success');
-      } else {
-        const instagramIntent = 'instagram://story-camera';
-        const instagramWebFallback = `https://www.instagram.com/stories/share/?url=${encodeURIComponent(shareUrl)}`;
-        const userAgent = window.navigator.userAgent.toLowerCase();
-        const isIOS = /iphone|ipad|ipod/.test(userAgent);
-        const isAndroid = /android/.test(userAgent);
+        const blob = await exportQuinielaSnapshot();
+        const fileName = `quiniela-${CURRENT_JOURNEY}.jpg`;
+        const file = new File([blob], fileName, { type: 'image/jpeg' });
 
-        const openFallback = () => {
-          window.open(instagramWebFallback, '_blank', 'noopener,noreferrer');
-          showToast('No pudimos abrir la app de Instagram. Te llevamos al sitio web.', 'error');
-        };
-
-        if (!isIOS && !isAndroid) {
-          openFallback();
+        if (typeof navigator !== 'undefined' && 'canShare' in navigator && navigator.canShare?.({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'Quiniela Somos Locales',
+            text: 'Pronóstico generado con la Quiniela Somos Locales.',
+          });
+          showToast('Imagen compartida correctamente.', 'success');
+        } else if (navigator.clipboard?.write) {
+          const data = new ClipboardItem({ 'image/jpeg': blob });
+          await navigator.clipboard.write([data]);
+          showToast('Imagen copiada al portapapeles. Ábrela en Instagram o WhatsApp y pégala.', 'success');
         } else {
-          const fallbackTimer = window.setTimeout(openFallback, 900);
-
-          const clearFallback = () => {
-            window.clearTimeout(fallbackTimer);
-          };
-
-          if (isIOS) {
-            window.location.href = instagramIntent;
-            window.setTimeout(clearFallback, 1000);
-          } else {
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = instagramIntent;
-            document.body.appendChild(iframe);
-            window.setTimeout(() => {
-              document.body.removeChild(iframe);
-              clearFallback();
-            }, 1000);
-          }
-
-          try {
-            void window.navigator.clipboard?.writeText?.(shareUrl);
-          } catch (error) {
-            console.warn('No se pudo copiar la URL de la quiniela al portapapeles', error);
-          }
-
-          showToast('Intentando abrir Instagram…', 'success');
+          const blobUrl = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = fileName;
+          link.click();
+          URL.revokeObjectURL(blobUrl);
+          showToast('Descargamos la imagen para que la compartas manualmente.', 'success');
         }
+      } catch (error) {
+        console.error('No se pudo preparar la imagen para compartir', error);
+        showToast('No pudimos compartir la imagen. Intenta nuevamente.', 'error');
+      } finally {
+        setIsSharingImage(false);
+        handleShareClose();
       }
-
-      handleShareClose();
     },
-    [handleShareClose, showToast]
+    [exportQuinielaSnapshot, handleShareClose, isSharingImage, showToast]
   );
 
   if (!user) {
@@ -669,6 +660,8 @@ export default function App() {
                 className="share-target share-target--whatsapp"
                 onClick={() => handleShareSelect('whatsapp')}
                 aria-label="Compartir en WhatsApp"
+                disabled={isSharingImage}
+                aria-busy={isSharingImage}
               >
                 <MessageCircle size={24} strokeWidth={1.8} aria-hidden="true" />
               </button>
@@ -677,6 +670,8 @@ export default function App() {
                 className="share-target share-target--instagram"
                 onClick={() => handleShareSelect('instagram')}
                 aria-label="Compartir en Instagram Stories"
+                disabled={isSharingImage}
+                aria-busy={isSharingImage}
               >
                 <Instagram size={24} strokeWidth={1.6} aria-hidden="true" />
               </button>

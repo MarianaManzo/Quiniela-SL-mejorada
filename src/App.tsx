@@ -422,13 +422,46 @@ export default function App() {
         showToast('Abriendo WhatsApp…', 'success');
       } else {
         const instagramIntent = 'instagram://story-camera';
-        const instagramWebFallback = 'https://www.instagram.com/';
-        const opened = window.open(instagramIntent, '_blank');
-        if (!opened) {
+        const instagramWebFallback = `https://www.instagram.com/stories/share/?url=${encodeURIComponent(shareUrl)}`;
+        const userAgent = window.navigator.userAgent.toLowerCase();
+        const isIOS = /iphone|ipad|ipod/.test(userAgent);
+        const isAndroid = /android/.test(userAgent);
+
+        const openFallback = () => {
           window.open(instagramWebFallback, '_blank', 'noopener,noreferrer');
-          showToast('Abriendo Instagram en el navegador…', 'success');
+          showToast('No pudimos abrir la app de Instagram. Te llevamos al sitio web.', 'error');
+        };
+
+        if (!isIOS && !isAndroid) {
+          openFallback();
         } else {
-          showToast('Abriendo Instagram…', 'success');
+          const fallbackTimer = window.setTimeout(openFallback, 900);
+
+          const clearFallback = () => {
+            window.clearTimeout(fallbackTimer);
+          };
+
+          if (isIOS) {
+            window.location.href = instagramIntent;
+            window.setTimeout(clearFallback, 1000);
+          } else {
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = instagramIntent;
+            document.body.appendChild(iframe);
+            window.setTimeout(() => {
+              document.body.removeChild(iframe);
+              clearFallback();
+            }, 1000);
+          }
+
+          try {
+            void window.navigator.clipboard?.writeText?.(shareUrl);
+          } catch (error) {
+            console.warn('No se pudo copiar la URL de la quiniela al portapapeles', error);
+          }
+
+          showToast('Intentando abrir Instagram…', 'success');
         }
       }
 

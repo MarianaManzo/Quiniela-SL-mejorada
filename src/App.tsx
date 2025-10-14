@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Instagram, MessageCircle } from 'lucide-react';
+import { ArrowLeft, ClipboardCheck, Instagram, MessageCircle } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { Dashboard } from './components/Dashboard';
 import { LoginScreen, type UserProfile } from './components/LoginScreen';
@@ -476,7 +476,7 @@ export default function App() {
   }, []);
 
   const handleShareSelect = useCallback(
-    async (channel: 'whatsapp' | 'instagram') => {
+    async (channel: 'whatsapp' | 'instagram' | 'copy') => {
       if (isSharingImage) {
         return;
       }
@@ -487,6 +487,30 @@ export default function App() {
         const blob = await exportQuinielaSnapshot();
         const fileName = `quiniela-${CURRENT_JOURNEY}.jpg`;
         const file = new File([blob], fileName, { type: 'image/jpeg' });
+
+        if (channel === 'copy') {
+          const copySupported = navigator.clipboard?.write && typeof ClipboardItem !== 'undefined';
+
+          if (copySupported) {
+            try {
+              const data = new ClipboardItem({ 'image/jpeg': blob });
+              await navigator.clipboard.write([data]);
+              showToast('Imagen copiada al portapapeles. Pégala donde quieras.', 'success');
+              return;
+            } catch (error) {
+              console.warn('No se pudo copiar la imagen al portapapeles, usamos descarga como fallback.', error);
+            }
+          }
+
+          const blobUrl = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = fileName;
+          link.click();
+          URL.revokeObjectURL(blobUrl);
+          showToast('Descargamos la imagen porque el portapapeles no está disponible.', 'error');
+          return;
+        }
 
         if (typeof navigator !== 'undefined' && 'canShare' in navigator && navigator.canShare?.({ files: [file] })) {
           await navigator.share({
@@ -674,6 +698,16 @@ export default function App() {
                 aria-busy={isSharingImage}
               >
                 <Instagram size={24} strokeWidth={1.6} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className="share-target share-target--copy"
+                onClick={() => handleShareSelect('copy')}
+                aria-label="Copiar imagen al portapapeles"
+                disabled={isSharingImage}
+                aria-busy={isSharingImage}
+              >
+                <ClipboardCheck size={24} strokeWidth={1.6} aria-hidden="true" />
               </button>
             </div>
           </div>

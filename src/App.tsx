@@ -1,6 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ClipboardCheck, Instagram, MessageCircle } from 'lucide-react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
+import html2canvas from 'html2canvas';
 import { toPng } from 'html-to-image';
 import { Dashboard } from './components/Dashboard';
 import { LoginScreen, type UserProfile } from './components/LoginScreen';
@@ -255,11 +256,32 @@ export default function App() {
       );
     };
 
+    const isIOS = typeof navigator !== 'undefined' && /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
     let sandbox: HTMLDivElement | null = null;
 
     try {
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       await waitForFonts();
+
+      if (isIOS) {
+        await waitForImages(node);
+
+        const canvas = await html2canvas(node, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#fafaf9',
+        });
+
+        const pngBlob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob((result) => resolve(result), 'image/png', 0.92)
+        );
+
+        if (!pngBlob) {
+          throw new Error('No se pudo generar la imagen PNG.');
+        }
+
+        return { blob: pngBlob, mimeType: 'image/png', extension: 'png' as const };
+      }
 
       const clone = node.cloneNode(true) as HTMLElement;
       clone.style.position = 'static';
@@ -320,15 +342,15 @@ export default function App() {
       }
       context.drawImage(image, 0, 0, exportCanvas.width, exportCanvas.height);
 
-      const blob = await new Promise<Blob | null>((resolve) =>
+      const jpegBlob = await new Promise<Blob | null>((resolve) =>
         exportCanvas.toBlob((result) => resolve(result), 'image/jpeg', 0.98)
       );
 
-      if (!blob) {
+      if (!jpegBlob) {
         throw new Error('No se pudo generar el archivo JPEG.');
       }
 
-      return blob;
+      return { blob: jpegBlob, mimeType: 'image/jpeg', extension: 'jpg' as const };
     } finally {
       if (sandbox && sandbox.parentNode) {
         sandbox.parentNode.removeChild(sandbox);
@@ -343,12 +365,12 @@ export default function App() {
 
     try {
       setIsDownloading(true);
-      const blob = await exportQuinielaSnapshot();
+      const { blob, extension, mimeType } = await exportQuinielaSnapshot();
 
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.download = `jornada-${CURRENT_JOURNEY}.jpg`;
+      link.download = `jornada-${CURRENT_JOURNEY}.${extension}`;
       link.click();
       URL.revokeObjectURL(blobUrl);
     } catch (error) {
@@ -524,9 +546,9 @@ export default function App() {
       try {
         setIsSharingImage(true);
 
-        const blob = await exportQuinielaSnapshot();
-        const fileName = `quiniela-${CURRENT_JOURNEY}.jpg`;
-        const file = new File([blob], fileName, { type: 'image/jpeg' });
+        const { blob, extension, mimeType } = await exportQuinielaSnapshot();
+        const fileName = `quiniela-${CURRENT_JOURNEY}.${extension}`;
+        const file = new File([blob], fileName, { type: mimeType });
 
         if (channel === 'copy') {
           if (!isClipboardImageSupported) {
@@ -541,7 +563,7 @@ export default function App() {
           }
 
           try {
-            const data = new ClipboardItem({ 'image/jpeg': blob });
+            const data = new ClipboardItem({ [mimeType]: blob });
             await navigator.clipboard.write([data]);
             showToast('Imagen copiada al portapapeles. Pégala donde quieras.', 'success');
             return;
@@ -566,7 +588,7 @@ export default function App() {
           });
           showToast('Imagen compartida correctamente.', 'success');
         } else if (navigator.clipboard?.write) {
-          const data = new ClipboardItem({ 'image/jpeg': blob });
+          const data = new ClipboardItem({ [mimeType]: blob });
           await navigator.clipboard.write([data]);
           showToast('Imagen copiada al portapapeles. Ábrela en Instagram o WhatsApp y pégala.', 'success');
         } else {

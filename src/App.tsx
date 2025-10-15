@@ -604,41 +604,21 @@ export default function App() {
     []
   );
 
-  const downloadImageFallback = useCallback(
-    (blob: Blob, fileName: string) => {
-      if (typeof window === 'undefined') {
-        return;
-      }
+  const downloadImageFallback = useCallback((blob: Blob, fileName: string) => {
+    if (typeof window === 'undefined') {
+      return;
+    }
 
-      if (isIOSDevice) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const dataUrl = reader.result as string;
-          const newWindow = window.open(dataUrl, '_blank');
-          if (!newWindow) {
-            const tempLink = document.createElement('a');
-            tempLink.href = dataUrl;
-            tempLink.target = '_blank';
-            tempLink.rel = 'noopener';
-            tempLink.click();
-          }
-        };
-        reader.readAsDataURL(blob);
-        return;
-      }
-
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = fileName;
-      link.rel = 'noopener';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 0);
-    },
-    [isIOSDevice]
-  );
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = fileName;
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 0);
+  }, []);
 
   const handleShareSelect = useCallback(
     async (channel: 'whatsapp' | 'instagram') => {
@@ -671,7 +651,7 @@ export default function App() {
         }
 
         downloadImageFallback(blob, fileName);
-        showToast('Abrimos la imagen para que la compartas manualmente.', 'error');
+        showToast('Descargamos la imagen para que la compartas manualmente.', 'success');
       } catch (error) {
         console.error('No se pudo preparar la imagen para compartir', error);
         showToast('No pudimos compartir la imagen. Intenta nuevamente.', 'error');
@@ -715,7 +695,7 @@ export default function App() {
       }
 
       downloadImageFallback(blob, fileName);
-      showToast('Abrimos la imagen para que la compartas manualmente.', 'error');
+      showToast('Descargamos la imagen para que la compartas manualmente.', 'success');
     } catch (error) {
       console.error('No se pudo usar el menú de compartir nativo', error);
       showToast('No pudimos abrir el menú de compartir. Usa otra opción.', 'error');

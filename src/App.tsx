@@ -563,11 +563,90 @@ export default function App() {
     }
   }, []);
 
+  const tryNativeShare = useCallback(
+    async (file: File, blobUrl: string) => {
+      if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') {
+        return false;
+      }
+
+      if ('canShare' in navigator && navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({
+            title: 'Quiniela Somos Locales',
+            text: 'Pronóstico generado con la Quiniela Somos Locales.',
+            files: [file],
+          });
+          return true;
+        } catch (error) {
+          if ((error as DOMException)?.name === 'AbortError') {
+            return true;
+          }
+          console.warn('No se pudo compartir archivo directamente, intentamos con URL.', error);
+        }
+      }
+
+      try {
+        await navigator.share({
+          title: 'Quiniela Somos Locales',
+          text: 'Pronóstico generado con la Quiniela Somos Locales.',
+          url: blobUrl,
+        });
+        return true;
+      } catch (error) {
+        if ((error as DOMException)?.name === 'AbortError') {
+          return true;
+        }
+        console.warn('No se pudo compartir usando URL.', error);
+      }
+
+      return false;
+    },
+    []
+  );
+
+  const downloadImageFallback = useCallback(
+    (blob: Blob, fileName: string) => {
+      if (typeof window === 'undefined') {
+        return;
+      }
+
+      if (isIOSDevice) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result as string;
+          const newWindow = window.open(dataUrl, '_blank');
+          if (!newWindow) {
+            const tempLink = document.createElement('a');
+            tempLink.href = dataUrl;
+            tempLink.target = '_blank';
+            tempLink.rel = 'noopener';
+            tempLink.click();
+          }
+        };
+        reader.readAsDataURL(blob);
+        return;
+      }
+
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      link.rel = 'noopener';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 0);
+    },
+    [isIOSDevice]
+  );
+
   const handleShareSelect = useCallback(
     async (channel: 'whatsapp' | 'instagram') => {
       if (isSharingImage) {
         return;
       }
+
+      let blobUrl: string | null = null;
 
       try {
         setIsSharingImage(true);
@@ -575,36 +654,36 @@ export default function App() {
         const { blob, extension, mimeType } = await exportQuinielaSnapshot();
         const fileName = `quiniela-${CURRENT_JOURNEY}.${extension}`;
         const file = new File([blob], fileName, { type: mimeType });
+        blobUrl = URL.createObjectURL(blob);
 
-        if (typeof navigator !== 'undefined' && 'canShare' in navigator && navigator.canShare?.({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: 'Quiniela Somos Locales',
-            text: 'Pronóstico generado con la Quiniela Somos Locales.',
-          });
+        const shared = await tryNativeShare(file, blobUrl);
+
+        if (shared) {
           showToast('Imagen compartida correctamente.', 'success');
-        } else if (navigator.clipboard?.write) {
+          return;
+        }
+
+        if (navigator.clipboard?.write) {
           const data = new ClipboardItem({ [mimeType]: blob });
           await navigator.clipboard.write([data]);
           showToast('Imagen copiada al portapapeles. Ábrela en Instagram o WhatsApp y pégala.', 'success');
-        } else {
-          const blobUrl = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = blobUrl;
-          link.download = fileName;
-          link.click();
-          URL.revokeObjectURL(blobUrl);
-          showToast('Descargamos la imagen para que la compartas manualmente.', 'success');
+          return;
         }
+
+        downloadImageFallback(blob, fileName);
+        showToast('Abrimos la imagen para que la compartas manualmente.', 'error');
       } catch (error) {
         console.error('No se pudo preparar la imagen para compartir', error);
         showToast('No pudimos compartir la imagen. Intenta nuevamente.', 'error');
       } finally {
+        if (blobUrl) {
+          URL.revokeObjectURL(blobUrl);
+        }
         setIsSharingImage(false);
         handleShareClose();
       }
     },
-    [exportQuinielaSnapshot, handleShareClose, isSharingImage, showToast]
+    [downloadImageFallback, exportQuinielaSnapshot, handleShareClose, isSharingImage, showToast, tryNativeShare]
   );
 
   const handleShareButtonClick = useCallback(async () => {
@@ -619,49 +698,35 @@ export default function App() {
       return;
     }
 
+    let blobUrl: string | null = null;
+
     try {
       setIsSharingImage(true);
-      const { blob, extension, mimeType } = await exportQuinielaSnapshot();
+      const { blob, extension } = await exportQuinielaSnapshot();
       const fileName = `quiniela-${CURRENT_JOURNEY}.${extension}`;
       const file = new File([blob], fileName, { type: mimeType });
+      blobUrl = URL.createObjectURL(blob);
 
-      const canShareFiles = 'canShare' in navigator && navigator.canShare?.({ files: [file] });
+      const shared = await tryNativeShare(file, blobUrl);
 
-      if (canShareFiles) {
-        await navigator.share({
-          title: 'Quiniela Somos Locales',
-          text: 'Pronóstico generado con la Quiniela Somos Locales.',
-          files: [file],
-        });
+      if (shared) {
         showToast('Imagen compartida correctamente.', 'success');
         return;
       }
 
-      if (isIOSDevice) {
-        const blobUrl = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = fileName;
-        link.rel = 'noopener';
-        link.click();
-        URL.revokeObjectURL(blobUrl);
-        showToast('Descargamos la imagen para que la compartas desde Fotos.', 'success');
-        return;
-      }
-
-      await navigator.share({
-        title: 'Quiniela Somos Locales',
-        text: 'Pronóstico generado con la Quiniela Somos Locales.',
-      });
-      showToast('Compartimos la quiniela.', 'success');
+      downloadImageFallback(blob, fileName);
+      showToast('Abrimos la imagen para que la compartas manualmente.', 'error');
     } catch (error) {
       console.error('No se pudo usar el menú de compartir nativo', error);
       showToast('No pudimos abrir el menú de compartir. Usa otra opción.', 'error');
       handleShareOpen();
     } finally {
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
       setIsSharingImage(false);
     }
-  }, [exportQuinielaSnapshot, handleShareOpen, isIOSDevice, isSharingImage, showToast]);
+  }, [downloadImageFallback, exportQuinielaSnapshot, handleShareOpen, isSharingImage, showToast, tryNativeShare]);
 
   if (!authReady) {
     return null;

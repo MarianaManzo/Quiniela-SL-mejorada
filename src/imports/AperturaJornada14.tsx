@@ -5,7 +5,7 @@ import logoLigaBBVA from 'figma:asset/logo-liga-bbva.png';
 import logoSomosLocales from 'figma:asset/logo-somos-locales.png';
 import iconoEstadio from 'figma:asset/icono-estadio.png';
 import iconoTV from '../Icon/tv.svg';
-import backgroundImage from 'figma:asset/8f36f96feea030035ed7a4c3868a81ffe20a24c2.jpg';
+import backgroundImage from 'figma:asset/background.jpg';
 
 // Importaciones de logos de equipos
 import logoQueretaro from 'figma:asset/logo-queretaro.png';

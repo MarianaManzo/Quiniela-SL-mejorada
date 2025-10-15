@@ -17,7 +17,7 @@
         'next-themes@0.4.6': 'next-themes',
         'lucide-react@0.487.0': 'lucide-react',
         'input-otp@1.4.2': 'input-otp',
-        'figma:asset/8f36f96feea030035ed7a4c3868a81ffe20a24c2.jpg': path.resolve(__dirname, './src/assets/8f36f96feea030035ed7a4c3868a81ffe20a24c2.jpg'),
+        'figma:asset/background.jpg': path.resolve(__dirname, './src/assets/background.jpg'),
         'figma:asset/icono-estadio.png': path.resolve(__dirname, './src/assets/icono-estadio.png'),
         'figma:asset/logo-america.png': path.resolve(__dirname, './src/assets/logo-america.png'),
         'figma:asset/logo-atlas.png': path.resolve(__dirname, './src/assets/logo-atlas.png'),

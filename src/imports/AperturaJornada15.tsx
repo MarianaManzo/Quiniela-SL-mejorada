@@ -313,17 +313,40 @@ function PieDePagina({ participantName }: { participantName?: string | null }) {
     <div className="basis-0 grow min-h-px min-w-px opacity-[0.64] relative shrink-0 w-full">
       <div className="flex flex-row items-center size-full">
         <div className="box-border content-stretch flex font-['Barlow_Condensed:Bold',_sans-serif] items-center justify-between leading-[0] not-italic px-[32px] py-0 relative size-full text-[#222222] text-[28px] text-nowrap tracking-[1.68px]">
-          <div className="flex flex-col justify-center lowercase relative shrink-0 flex-1">
+          <div className="flex flex-col justify-center lowercase relative shrink-0">
             <p className="leading-[normal] text-nowrap whitespace-pre">@somoslocalesfemx</p>
           </div>
-          <div className="flex flex-col justify-center relative shrink-0">
-            <div className="rounded-[32px] border border-white/20 bg-[#0a0a0a] px-[56px] py-[18px] shadow-[0_24px_48px_-30px_rgba(0,0,0,0.75)]">
-              <p className="leading-[0] text-[30px] font-['Antonio',_sans-serif] uppercase tracking-[0.32em] text-[#fdfdfd]">
+          <div className="flex flex-col justify-center items-center flex-1">
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '34px',
+                padding: '5px 26px',
+                borderRadius: '999px',
+                border: '2px solid rgba(255, 255, 255, 0.4)',
+                background: '#0a0a0a',
+                boxShadow: '0 20px 40px -24px rgba(0, 0, 0, 0.6)',
+                maxWidth: '90%',
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: 'Antonio, sans-serif',
+                  letterSpacing: '0.3em',
+                  textTransform: 'uppercase',
+                  fontSize: '30px',
+                  lineHeight: 1,
+                  color: '#fdfdfd',
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {participantName?.trim() ? participantName.toUpperCase() : 'JUEGA LA QUINIELA'}
-              </p>
+              </span>
             </div>
           </div>
-          <div className="capitalize flex flex-col justify-center relative shrink-0 flex-1 items-end text-right">
+          <div className="capitalize flex flex-col justify-center relative shrink-0 text-right">
             <p className="leading-[normal] text-nowrap whitespace-pre">#tienesQueVivirlo</p>
           </div>
         </div>

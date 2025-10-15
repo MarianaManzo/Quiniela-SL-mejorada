@@ -1,31 +1,31 @@
 import { memo } from 'react';
 
 // Importaciones principales optimizadas
-import logoLigaBBVA from 'figma:asset/282fbfddfb13edc69252a49f15e9f9646a1d8ece.png';
-import logoSomosLocales from 'figma:asset/930d5de55d9fd27c0951aa3f3d28301d6e434476.png';
-import iconoEstadio from 'figma:asset/86e9cc8c38c10cd6e63afb3b899c4213d74da2b3.png';
-import iconoTV from 'figma:asset/e9ea8e4f142524f4ed30284ac75cceb1a6c7262b.png';
-import backgroundImage from 'figma:asset/8f36f96feea030035ed7a4c3868a81ffe20a24c2.png';
+import logoLigaBBVA from 'figma:asset/logo-liga-bbva.png';
+import logoSomosLocales from 'figma:asset/logo-somos-locales.png';
+import iconoEstadio from 'figma:asset/icono-estadio.png';
+import iconoTV from '../Icon/tv.svg';
+import backgroundImage from 'figma:asset/8f36f96feea030035ed7a4c3868a81ffe20a24c2.jpg';
 
 // Importaciones de logos de equipos
-import logoQueretaro from 'figma:asset/3bf9523da2b028168e26c4774584c76a97dc34f4.png';
-import logoPumas from 'figma:asset/e9105a3003b724d13cd04d16998f3f326dc6ede9.png';
-import logoJuarez from 'figma:asset/fdb12a073ccb4f9bae15eca8b74b33c19c06f67f.png';
-import logoTigres from 'figma:asset/45f08e41601121e0e833e07668ebd0f9e273d1ad.png';
-import logoTijuana from 'figma:asset/6bc6df4b362edc78070ba17c0d454fbd3897dc56.png';
-import logoToluca from 'figma:asset/e43cb135d15b47d08326dba23786233526c5396b.png';
-import logoAmerica from 'figma:asset/126f151340ec7816752f2253594d661b12ed0b20.png';
-import logoAtlas from 'figma:asset/63a990b2bf67cdc008cb463d6c036c2a03d4638f.png';
-import logoChivas from 'figma:asset/f5eeeaecc04c1098606abf832674806d283fc46a.png';
-import logoCruzAzul from 'figma:asset/30a1817f405754b1a9f0cea4450f771d653655e2.png';
-import logoLeon from 'figma:asset/5dd78c7f0aa3afce7b664e7e2d78dc30d26f7cd1.png';
-import logoMazatlan from 'figma:asset/3598835611a3f006d2ae95201055cf0551a91b8b.png';
-import logoNecaxa from 'figma:asset/4699fcc7d43d0d0918f17d6596dad6d8995f572e.png';
-import logoPachuca from 'figma:asset/73eaa3628b7059fc9979d741913bd96516feb34a.png';
-import logoPuebla from 'figma:asset/9ce063fc8d79c9b2ccd776183115bc3f1d5c25cf.png';
-import logoRayadas from 'figma:asset/c811f5ddc0575eba11c0b97d6cc20e4870d7edf0.png';
-import logoSanLuis from 'figma:asset/f85cfbab493437f594dfc6f886252c0de830e6f9.png';
-import logoSantos from 'figma:asset/61cb24a2d36cb4e747ba5da4a26f82714694d300.png';
+import logoQueretaro from 'figma:asset/logo-queretaro.png';
+import logoPumas from 'figma:asset/logo-pumas.png';
+import logoJuarez from 'figma:asset/logo-juarez.png';
+import logoTigres from 'figma:asset/logo-tigres.png';
+import logoTijuana from 'figma:asset/logo-tijuana.png';
+import logoToluca from 'figma:asset/logo-toluca.png';
+import logoAmerica from 'figma:asset/logo-america.png';
+import logoAtlas from 'figma:asset/logo-atlas.png';
+import logoChivas from 'figma:asset/logo-chivas.png';
+import logoCruzAzul from 'figma:asset/logo-cruz-azul.png';
+import logoLeon from 'figma:asset/logo-leon.png';
+import logoMazatlan from 'figma:asset/logo-mazatlan.png';
+import logoNecaxa from 'figma:asset/logo-necaxa.png';
+import logoPachuca from 'figma:asset/logo-pachuca.png';
+import logoPuebla from 'figma:asset/logo-puebla.png';
+import logoRayadas from 'figma:asset/logo-rayadas.png';
+import logoSanLuis from 'figma:asset/logo-san-luis.png';
+import logoSantos from 'figma:asset/logo-santos.png';
 
 // Componentes de iconos simples para reemplazar las imágenes
 // Componentes optimizados con lazy loading
@@ -41,7 +41,7 @@ const IconoEstadio = memo(() => (
   <img alt="Estadio" className="w-8 h-8 object-contain opacity-50" src={iconoEstadio} loading="lazy" />
 ));
 
-const IconoTV = memo(() => (
+const IconoTVImg = memo(() => (
   <img alt="Transmisión TV" className="w-8 h-8 object-contain opacity-50" src={iconoTV} loading="lazy" />
 ));
 
@@ -216,7 +216,7 @@ function Transmision() {
       </div>
       <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
         <div className="relative shrink-0 size-[32px]" data-name="tele">
-          <IconoTV />
+          <IconoTVImg />
         </div>
         <div className="flex flex-col font-['Antonio:Regular',_sans-serif] font-normal justify-center leading-[0] text-[21px] text-black tracking-[-0.735px] uppercase">
           <p className="leading-[normal]">TUBI</p>

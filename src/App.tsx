@@ -236,7 +236,7 @@ export default function App() {
       );
     };
 
-    const produceSnapshot = async (pixelRatio: number, quality: number): Promise<SnapshotResult> => {
+    const renderToCanvas = async (pixelRatio: number) => {
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       await waitForFonts();
 
@@ -252,7 +252,7 @@ export default function App() {
 
       if (typeof window !== 'undefined') {
         const computed = window.getComputedStyle(node);
-        clone.style.background = computed.background || '#fafAF9';
+        clone.style.background = computed.background || '#fafaf9';
         clone.style.backgroundColor = computed.backgroundColor || '#fafaf9';
         clone.style.backgroundImage = computed.backgroundImage;
         clone.style.backgroundSize = computed.backgroundSize;
@@ -306,15 +306,7 @@ export default function App() {
         context.fillRect(0, 0, canvas.width, canvas.height);
         context.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-        const jpegBlob = await new Promise<Blob | null>((resolve) =>
-          canvas.toBlob((result) => resolve(result), 'image/jpeg', quality)
-        );
-
-        if (!jpegBlob) {
-          throw new Error('No se pudo generar la imagen JPEG.');
-        }
-
-        return { blob: jpegBlob, mimeType: 'image/jpeg', extension: 'jpg' };
+        return canvas;
       } finally {
         if (sandbox.parentNode) {
           sandbox.parentNode.removeChild(sandbox);
@@ -322,52 +314,96 @@ export default function App() {
       }
     };
 
-    const basePixelRatio = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-    const candidateRatios = [Math.max(2.2, basePixelRatio * 1.8), Math.max(2.6, basePixelRatio * 2.2), 3.2, 3.8];
-    const qualitySteps = [0.92, 0.88, 0.84, 0.8, 0.72];
+    const canvasToBlob = async (canvas: HTMLCanvasElement, quality: number) =>
+      new Promise<Blob | null>((resolve) => canvas.toBlob((result) => resolve(result), 'image/jpeg', quality));
 
-    let lastResult: SnapshotResult | null = null;
+    const fitWithinBounds = async (canvas: HTMLCanvasElement) => {
+      let lowQuality = 0.6;
+      let highQuality = 0.96;
+      let bestFit: Blob | null = null;
 
-    for (const ratio of candidateRatios) {
-      const cappedRatio = Math.min(ratio, 4.2);
-
-      for (const quality of qualitySteps) {
-        lastResult = await produceSnapshot(cappedRatio, quality);
-
-        if (lastResult.blob.size < SNAPSHOT_MIN_SIZE_BYTES) {
+      for (let i = 0; i < 6; i += 1) {
+        const attemptQuality = (lowQuality + highQuality) / 2;
+        const candidate = await canvasToBlob(canvas, attemptQuality);
+        if (!candidate) {
           break;
         }
 
-        if (lastResult.blob.size <= SNAPSHOT_MAX_SIZE_BYTES) {
-          return lastResult;
+        if (candidate.size > SNAPSHOT_MAX_SIZE_BYTES) {
+          highQuality = attemptQuality;
+        } else if (candidate.size < SNAPSHOT_MIN_SIZE_BYTES) {
+          lowQuality = attemptQuality;
+          if (!bestFit || candidate.size > bestFit.size) {
+            bestFit = candidate;
+          }
+        } else {
+          return candidate;
         }
       }
-    }
 
-    if (!lastResult) {
-      throw new Error('No se pudo generar la imagen de la quiniela.');
-    }
-
-    if (lastResult.blob.size > SNAPSHOT_MAX_SIZE_BYTES) {
-      const fallbackRatio = Math.max(1.8, basePixelRatio * 1.6);
-      const fallbackQuality = 0.7;
-      const fallbackResult = await produceSnapshot(fallbackRatio, fallbackQuality);
-      if (fallbackResult.blob.size <= SNAPSHOT_MAX_SIZE_BYTES) {
-        return fallbackResult;
+      if (bestFit) {
+        return bestFit;
       }
-      lastResult = fallbackResult;
-    }
 
-    if (lastResult.blob.size < SNAPSHOT_MIN_SIZE_BYTES) {
-      const boostRatio = Math.min(4.5, (basePixelRatio || 1) * 3.4);
-      const boostedResult = await produceSnapshot(boostRatio, 0.92);
-      if (boostedResult.blob.size <= SNAPSHOT_MAX_SIZE_BYTES) {
-        return boostedResult;
+      const minimalQualityBlob = await canvasToBlob(canvas, lowQuality);
+      if (minimalQualityBlob) {
+        return minimalQualityBlob;
       }
-      lastResult = boostedResult;
+
+      throw new Error('No se pudo ajustar la calidad de la imagen.');
+    };
+
+    const basePixelRatio = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+    const candidateRatios = [Math.max(2.4, basePixelRatio * 2), Math.max(3, basePixelRatio * 2.4), 3.6];
+
+    let lastCanvas: HTMLCanvasElement | null = null;
+    let lastBlob: Blob | null = null;
+
+    for (const ratio of candidateRatios) {
+      const canvas = await renderToCanvas(Math.min(ratio, 4));
+      const blob = await fitWithinBounds(canvas);
+      if (blob.size >= SNAPSHOT_MIN_SIZE_BYTES && blob.size <= SNAPSHOT_MAX_SIZE_BYTES) {
+        return { blob, mimeType: 'image/jpeg', extension: 'jpg' };
+      }
+
+      lastCanvas = canvas;
+      lastBlob = blob;
+
+      if (blob.size > SNAPSHOT_MAX_SIZE_BYTES) {
+        break;
+      }
     }
 
-    return lastResult;
+    let canvasToResize = lastCanvas;
+
+    if (canvasToResize && lastBlob && lastBlob.size > SNAPSHOT_MAX_SIZE_BYTES) {
+      const scaleFactors = [0.92, 0.88];
+      for (const factor of scaleFactors) {
+        const scaledCanvas = document.createElement('canvas');
+        scaledCanvas.width = Math.round(SNAPSHOT_BASE_DIMENSION * factor);
+        scaledCanvas.height = Math.round(SNAPSHOT_BASE_DIMENSION * factor);
+        const scaledContext = scaledCanvas.getContext('2d');
+        if (!scaledContext || !canvasToResize) {
+          continue;
+        }
+        scaledContext.fillStyle = '#fafaf9';
+        scaledContext.fillRect(0, 0, scaledCanvas.width, scaledCanvas.height);
+        scaledContext.drawImage(canvasToResize, 0, 0, scaledCanvas.width, scaledCanvas.height);
+
+        const blob = await fitWithinBounds(scaledCanvas);
+        if (blob.size <= SNAPSHOT_MAX_SIZE_BYTES) {
+          return { blob, mimeType: 'image/jpeg', extension: 'jpg' };
+        }
+        canvasToResize = scaledCanvas;
+      }
+    }
+
+    if (canvasToResize) {
+      const blob = await fitWithinBounds(canvasToResize);
+      return { blob, mimeType: 'image/jpeg', extension: 'jpg' };
+    }
+
+    throw new Error('No se pudo generar la imagen de la quiniela.');
   }, []);
 
   const exportQuinielaSnapshot = useCallback(async () => {

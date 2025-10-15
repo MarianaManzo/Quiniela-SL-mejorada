@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ROLE_LABELS, type UserProfile } from "./LoginScreen";
-import logoSomosLocales from "figma:asset/930d5de55d9fd27c0951aa3f3d28301d6e434476.png";
+import logoSomosLocales from "figma:asset/logo-somos-locales.png";
 import { LogOut } from "lucide-react";
 import "../styles/navbar.css";
 

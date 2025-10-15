@@ -7,7 +7,7 @@ import imgCruzAzul from "figma:asset/30a1817f405754b1a9f0cea4450f771d653655e2.pn
 import imgLeon from "figma:asset/5dd78c7f0aa3afce7b664e7e2d78dc30d26f7cd1.png";
 import imgMazatlan from "figma:asset/3598835611a3f006d2ae95201055cf0551a91b8b.png";
 import imgNecaxa from "figma:asset/4699fcc7d43d0d0918f17d6596dad6d8995f572e.png";
-import imgPachuca from "figma:asset/73eaa3628b7059fc9979d741913bd96516feb34a.png";
+import imgPachuca from "figma:asset/logo-pachuca.png";
 import imgPuebla from "figma:asset/9ce063fc8d79c9b2ccd776183115bc3f1d5c25cf.png";
 import imgRayadas from "figma:asset/c811f5ddc0575eba11c0b97d6cc20e4870d7edf0.png";
 import imgSanLuis from "figma:asset/f85cfbab493437f594dfc6f886252c0de830e6f9.png";

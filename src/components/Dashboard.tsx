@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { ROLE_LABELS, type UserProfile } from "./LoginScreen";
 import { TOP_RANKING } from "../data/podium";
-import logoSomosLocales from "figma:asset/930d5de55d9fd27c0951aa3f3d28301d6e434476.png";
+import logoSomosLocales from "figma:asset/logo-somos-locales.png";
 import "../styles/dashboard.css";
 
 interface DashboardProps {

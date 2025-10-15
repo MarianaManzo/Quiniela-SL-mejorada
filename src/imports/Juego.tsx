@@ -1,7 +1,7 @@
 import imgTijuana from "figma:asset/bfcd42b510b890edc41631fab3d2ac8f984d1684.png";
 import imgQueretaro from "figma:asset/3bf9523da2b028168e26c4774584c76a97dc34f4.png";
-import imgEstadioIcono from "figma:asset/86e9cc8c38c10cd6e63afb3b899c4213d74da2b3.png";
-import imgTransmisionIcono from "figma:asset/e9ea8e4f142524f4ed30284ac75cceb1a6c7262b.png";
+import imgEstadioIcono from "figma:asset/icono-estadio.png";
+import imgTransmisionIcono from "../Icon/tv.svg";
 
 function DiaYHora() {
   return (
@@ -101,7 +101,7 @@ function Transimision() {
   return (
     <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full" data-name="transimision">
       <div className="relative shrink-0 size-[32px]" data-name="transmision icono">
-        <img alt="" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgTransmisionIcono} />
+        <img alt="Transmisión" className="absolute inset-0 max-w-none object-center object-contain pointer-events-none size-full opacity-50" src={imgTransmisionIcono} />
       </div>
       <div className="flex flex-col font-['Antonio:Regular',_sans-serif] font-normal h-[32px] justify-center leading-[0] relative shrink-0 text-[21px] text-black tracking-[-0.735px] uppercase w-[183px]">
         <p className="leading-[normal]">TUBI</p>

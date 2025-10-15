@@ -7,7 +7,7 @@ import {
   signInWithRedirect,
   updateProfile,
 } from "firebase/auth";
-import logoSomosLocales from "figma:asset/930d5de55d9fd27c0951aa3f3d28301d6e434476.png";
+import logoSomosLocales from "figma:asset/logo-somos-locales.png";
 import "../styles/login.css";
 import { firebaseAuth, googleAuthProvider } from "../firebase";
 

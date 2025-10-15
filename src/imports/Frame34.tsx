@@ -1,5 +1,5 @@
-import imgLogoLiga from "figma:asset/907ab2b7f7ed80755b8dc886174ab4ce8a67ae45.png";
-import imgSomosLocalesLogo from "figma:asset/f23c540069aa9320e3ed606fe0d8e391f4ca6bf7.png";
+import imgLogoLiga from "figma:asset/logo-liga-sec.png";
+import imgSomosLocalesLogo from "figma:asset/logo-somos-locales.png";
 
 function Frame32() {
   return (

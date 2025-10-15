@@ -263,26 +263,6 @@ export default function App() {
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       await waitForFonts();
 
-      if (isIOS) {
-        await waitForImages(node);
-
-        const canvas = await html2canvas(node, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: '#fafaf9',
-        });
-
-        const pngBlob = await new Promise<Blob | null>((resolve) =>
-          canvas.toBlob((result) => resolve(result), 'image/png', 0.92)
-        );
-
-        if (!pngBlob) {
-          throw new Error('No se pudo generar la imagen PNG.');
-        }
-
-        return { blob: pngBlob, mimeType: 'image/png', extension: 'png' as const };
-      }
-
       const clone = node.cloneNode(true) as HTMLElement;
       clone.style.position = 'static';
       clone.style.transform = 'scale(1)';
@@ -312,6 +292,48 @@ export default function App() {
       document.body.appendChild(sandbox);
 
       await waitForImages(clone);
+
+      if (isIOS) {
+        const iosCanvas = clone as HTMLElement;
+        const dataUrl = await toPng(iosCanvas, {
+          width: 1080,
+          height: 1080,
+          canvasWidth: 1080,
+          canvasHeight: 1080,
+          pixelRatio: 2,
+          backgroundColor: '#fafaf9',
+          cacheBust: true,
+          useCORS: true,
+        });
+
+        const iosImage = new Image();
+        iosImage.crossOrigin = 'anonymous';
+        const iosLoaded = new Promise<void>((resolve, reject) => {
+          iosImage.onload = () => resolve();
+          iosImage.onerror = (event) => reject(event);
+        });
+        iosImage.src = dataUrl;
+        await iosLoaded;
+
+        const iosCanvasEl = document.createElement('canvas');
+        iosCanvasEl.width = 1080;
+        iosCanvasEl.height = 1080;
+        const iosContext = iosCanvasEl.getContext('2d');
+        if (!iosContext) {
+          throw new Error('No se pudo obtener el contexto del canvas en iOS.');
+        }
+        iosContext.drawImage(iosImage, 0, 0, iosCanvasEl.width, iosCanvasEl.height);
+
+        const iosJpegBlob = await new Promise<Blob | null>((resolve) =>
+          iosCanvasEl.toBlob((result) => resolve(result), 'image/jpeg', 0.95)
+        );
+
+        if (!iosJpegBlob) {
+          throw new Error('No se pudo generar la imagen en iOS.');
+        }
+
+        return { blob: iosJpegBlob, mimeType: 'image/jpeg', extension: 'jpg' as const };
+      }
 
       const pngDataUrl = await toPng(clone, {
         width: 1080,

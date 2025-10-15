@@ -1,7 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Instagram, MessageCircle } from 'lucide-react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { toJpeg } from 'html-to-image';
+import { toPng } from 'html-to-image';
 import { Dashboard } from './components/Dashboard';
 import { LoginScreen, type UserProfile } from './components/LoginScreen';
 import { Navbar } from './components/Navbar';
@@ -21,7 +21,9 @@ const CURRENT_JOURNEY = 15;
 // Carga lazy del componente principal para mejorar performance
 const AperturaJornada15 = lazy(() => import('./imports/AperturaJornada15'));
 
-type SnapshotResult = { blob: Blob; mimeType: 'image/jpeg'; extension: 'jpg' };
+type SnapshotResult = { blob: Blob; mimeType: 'image/png'; extension: 'png' };
+const SNAPSHOT_MIN_SIZE_BYTES = 700 * 1024;
+const SNAPSHOT_BASE_DIMENSION = 1080;
 
 type StoredSubmissions = Record<string, QuinielaSubmission | (Omit<QuinielaSubmission, 'journey'> & { journey?: number })>;
 
@@ -103,6 +105,7 @@ export default function App() {
   const totalMatches = useMemo(() => Object.keys(quinielaSelections).length, [quinielaSelections]);
   const needsMoreSelections = completedSelections < totalMatches;
   const isSubmitDisabled = isSaving || isReadOnlyView;
+  const isBusy = isDownloading || isSharingImage || isSaving;
   const isIOSDevice = useMemo(() => {
     if (typeof navigator === 'undefined') {
       return false;
@@ -195,7 +198,6 @@ export default function App() {
     if (!node) {
       throw new Error('No se encontró el contenedor de la quiniela para exportar.');
     }
-
     const waitForFonts = async () => {
       if (typeof document === 'undefined') {
         return;
@@ -213,8 +215,8 @@ export default function App() {
       }
     };
 
-    const waitForImages = async () => {
-      const images = Array.from(node.querySelectorAll('img'));
+    const waitForImages = async (root: HTMLElement) => {
+      const images = Array.from(root.querySelectorAll('img'));
       await Promise.all(
         images.map((img) => {
           if (img.complete && img.naturalWidth !== 0) {
@@ -233,38 +235,85 @@ export default function App() {
       );
     };
 
-    const dataUrlToBlob = (dataUrl: string, mimeType: string) => {
-      const base64 = dataUrl.split(',')[1];
-      const byteCharacters = atob(base64);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i += 1) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
+    const produceSnapshot = async (pixelRatio: number): Promise<SnapshotResult> => {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      await waitForFonts();
+
+      const clone = node.cloneNode(true) as HTMLElement;
+      clone.style.position = 'static';
+      clone.style.transform = 'none';
+      clone.style.width = `${SNAPSHOT_BASE_DIMENSION}px`;
+      clone.style.height = `${SNAPSHOT_BASE_DIMENSION}px`;
+      clone.style.maxWidth = 'unset';
+      clone.style.maxHeight = 'unset';
+      clone.style.borderRadius = '0';
+      clone.style.overflow = 'hidden';
+
+      if (typeof window !== 'undefined') {
+        const computed = window.getComputedStyle(node);
+        clone.style.background = computed.background || '#fafAF9';
+        clone.style.backgroundColor = computed.backgroundColor || '#fafaf9';
+        clone.style.backgroundImage = computed.backgroundImage;
+        clone.style.backgroundSize = computed.backgroundSize;
+        clone.style.backgroundPosition = computed.backgroundPosition;
+        clone.style.backgroundRepeat = computed.backgroundRepeat;
+        clone.style.fontFamily = computed.fontFamily;
       }
-      const byteArray = new Uint8Array(byteNumbers);
-      return new Blob([byteArray], { type: mimeType });
+
+      const sandbox = document.createElement('div');
+      sandbox.style.position = 'fixed';
+      sandbox.style.left = '-2000px';
+      sandbox.style.top = '0';
+      sandbox.style.width = `${SNAPSHOT_BASE_DIMENSION}px`;
+      sandbox.style.height = `${SNAPSHOT_BASE_DIMENSION}px`;
+      sandbox.style.pointerEvents = 'none';
+      sandbox.style.zIndex = '-1';
+      sandbox.appendChild(clone);
+      document.body.appendChild(sandbox);
+
+      try {
+        await waitForImages(clone);
+
+        const dataUrl = await toPng(clone, {
+          width: SNAPSHOT_BASE_DIMENSION,
+          height: SNAPSHOT_BASE_DIMENSION,
+          canvasWidth: SNAPSHOT_BASE_DIMENSION,
+          canvasHeight: SNAPSHOT_BASE_DIMENSION,
+          pixelRatio,
+          backgroundColor: '#fafaf9',
+          cacheBust: true,
+          useCORS: true,
+        });
+
+        const response = await fetch(dataUrl);
+        const blob = await response.blob();
+
+        return { blob, mimeType: 'image/png', extension: 'png' };
+      } finally {
+        if (sandbox.parentNode) {
+          sandbox.parentNode.removeChild(sandbox);
+        }
+      }
     };
 
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    await Promise.all([waitForFonts(), waitForImages()]);
+    const basePixelRatio = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+    const candidateRatios = [Math.max(2.2, basePixelRatio * 2), Math.max(2.8, basePixelRatio * 2.6), 3.4, 4];
 
-    const pixelRatio = typeof window !== 'undefined'
-      ? Math.min(2.5, Math.max(1.6, window.devicePixelRatio || 2))
-      : 2;
+    let lastResult: SnapshotResult | null = null;
 
-    const dataUrl = await toJpeg(node, {
-      width: 1080,
-      height: 1080,
-      canvasWidth: 1080,
-      canvasHeight: 1080,
-      pixelRatio,
-      quality: 0.98,
-      backgroundColor: '#fafaf9',
-      cacheBust: false,
-      useCORS: true,
-    });
+    for (const ratio of candidateRatios) {
+      const cappedRatio = Math.min(ratio, 4.5);
+      lastResult = await produceSnapshot(cappedRatio);
+      if (lastResult.blob.size >= SNAPSHOT_MIN_SIZE_BYTES) {
+        return lastResult;
+      }
+    }
 
-    const blob = dataUrlToBlob(dataUrl, 'image/jpeg');
-    return { blob, mimeType: 'image/jpeg', extension: 'jpg' as const };
+    if (!lastResult) {
+      throw new Error('No se pudo generar la imagen de la quiniela.');
+    }
+
+    return lastResult;
   }, []);
 
   const exportQuinielaSnapshot = useCallback(async () => {
@@ -721,6 +770,12 @@ export default function App() {
 
   return (
     <>
+      {isBusy ? (
+        <div className="global-loading" role="status" aria-live="polite">
+          <div className="global-loading__spinner" aria-hidden="true" />
+          <span className="global-loading__label">Preparando tu quiniela…</span>
+        </div>
+      ) : null}
       {isShareOpen ? (
         <div className="modal-backdrop modal-backdrop--share" role="presentation" onClick={handleShareClose}>
           <div

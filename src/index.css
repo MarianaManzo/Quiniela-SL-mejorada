@@ -1704,3 +1704,43 @@ html {
     opacity: .5;
   }
 }
+
+.global-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: rgba(6, 7, 12, 0.72);
+  color: #fafaf9;
+  pointer-events: all;
+  backdrop-filter: blur(2px);
+}
+
+.global-loading__spinner {
+  width: 58px;
+  height: 58px;
+  border-radius: 999px;
+  border: 4px solid rgba(250, 250, 249, 0.25);
+  border-top-color: #f6d433;
+  animation: global-loading-spin 0.85s linear infinite;
+}
+
+.global-loading__label {
+  font-family: 'Antonio', sans-serif;
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+@keyframes global-loading-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}

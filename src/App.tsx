@@ -1,8 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Instagram, MessageCircle } from 'lucide-react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import html2canvas from 'html2canvas';
-import { toPng } from 'html-to-image';
+import { toJpeg } from 'html-to-image';
 import { Dashboard } from './components/Dashboard';
 import { LoginScreen, type UserProfile } from './components/LoginScreen';
 import { Navbar } from './components/Navbar';
@@ -21,6 +20,8 @@ const CURRENT_JOURNEY = 15;
 
 // Carga lazy del componente principal para mejorar performance
 const AperturaJornada15 = lazy(() => import('./imports/AperturaJornada15'));
+
+type SnapshotResult = { blob: Blob; mimeType: 'image/jpeg'; extension: 'jpg' };
 
 type StoredSubmissions = Record<string, QuinielaSubmission | (Omit<QuinielaSubmission, 'journey'> & { journey?: number })>;
 
@@ -85,16 +86,16 @@ export default function App() {
   const [quinielaSelections, setQuinielaSelections] = useState<QuinielaSelections>(() => createEmptySelections());
   const [isSaving, setIsSaving] = useState(false);
   const [lastSubmittedAt, setLastSubmittedAt] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
   const toastTimeoutRef = useRef<number | null>(null);
-  const submitTooltipTimeoutRef = useRef<number | null>(null);
+  const snapshotCacheRef = useRef<{ data: SnapshotResult | null; promise: Promise<SnapshotResult> | null }>(
+    { data: null, promise: null }
+  );
   const [isShareOpen, setIsShareOpen] = useState(false);
   const shareDialogRef = useRef<HTMLDivElement>(null);
   const lastFocusedElementRef = useRef<HTMLElement | null>(null);
   const [isReadOnlyView, setIsReadOnlyView] = useState(false);
   const [showSelectionErrors, setShowSelectionErrors] = useState(false);
-  const [showSubmitTooltip, setShowSubmitTooltip] = useState(false);
   const completedSelections = useMemo(
     () => Object.values(quinielaSelections).filter((value): value is Selection => value !== null).length,
     [quinielaSelections]
@@ -163,35 +164,12 @@ export default function App() {
     return unsubscribe;
   }, []);
 
-  const hideSubmitTooltip = useCallback(() => {
-    if (typeof window !== 'undefined' && submitTooltipTimeoutRef.current) {
-      window.clearTimeout(submitTooltipTimeoutRef.current);
-      submitTooltipTimeoutRef.current = null;
-    }
-    setShowSubmitTooltip(false);
-  }, []);
-
-  const triggerSubmitTooltip = useCallback(() => {
-    if (typeof window === 'undefined') {
-      setShowSubmitTooltip(true);
-      return;
-    }
-
-    hideSubmitTooltip();
-    setShowSubmitTooltip(true);
-    submitTooltipTimeoutRef.current = window.setTimeout(() => {
-      setShowSubmitTooltip(false);
-      submitTooltipTimeoutRef.current = null;
-    }, 2600);
-  }, [hideSubmitTooltip]);
-
-  useEffect(() => () => hideSubmitTooltip(), [hideSubmitTooltip]);
+  const hideSubmitTooltip = useCallback(() => {}, []);
 
   useEffect(() => {
     if (!user) {
       setQuinielaSelections(createEmptySelections());
       setLastSubmittedAt(null);
-      setSaveError(null);
       setToast(null);
       setIsReadOnlyView(false);
       setShowSelectionErrors(false);
@@ -202,13 +180,16 @@ export default function App() {
     const stored = loadSubmissionForUser(user.email);
     setQuinielaSelections(createEmptySelections());
     setLastSubmittedAt(stored?.submittedAt ?? null);
-    setSaveError(null);
     setIsReadOnlyView(false);
     setShowSelectionErrors(false);
     hideSubmitTooltip();
   }, [user, createEmptySelections, hideSubmitTooltip]);
 
-  const exportQuinielaSnapshot = useCallback(async () => {
+  useEffect(() => {
+    snapshotCacheRef.current = { data: null, promise: null };
+  }, [quinielaSelections, user?.name, isReadOnlyView]);
+
+  const generateSnapshot = useCallback(async (): Promise<SnapshotResult> => {
     const node = canvasRef.current;
 
     if (!node) {
@@ -222,25 +203,18 @@ export default function App() {
 
       const fontFaceSet = (document as Document & { fonts?: FontFaceSet }).fonts;
       if (!fontFaceSet) {
-        await new Promise((resolve) => setTimeout(resolve, 300));
         return;
       }
 
       try {
-        await Promise.all([
-          fontFaceSet.load('400 16px "Antonio"'),
-          fontFaceSet.load('700 16px "Antonio"'),
-          fontFaceSet.load('400 16px "Albert Sans"'),
-          fontFaceSet.load('700 16px "Barlow Condensed"'),
-        ]);
         await fontFaceSet.ready;
       } catch (error) {
         console.warn('No se pudieron precargar todas las fuentes antes de exportar.', error);
       }
     };
 
-    const waitForImages = async (root: HTMLElement) => {
-      const images = Array.from(root.querySelectorAll('img'));
+    const waitForImages = async () => {
+      const images = Array.from(node.querySelectorAll('img'));
       await Promise.all(
         images.map((img) => {
           if (img.complete && img.naturalWidth !== 0) {
@@ -259,129 +233,61 @@ export default function App() {
       );
     };
 
-    const isIOS = isIOSDevice;
-    let sandbox: HTMLDivElement | null = null;
-
-    try {
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      await waitForFonts();
-
-      const clone = node.cloneNode(true) as HTMLElement;
-      clone.style.position = 'static';
-      clone.style.transform = 'scale(1)';
-      clone.style.width = '1080px';
-      clone.style.height = '1080px';
-      clone.style.borderRadius = '0';
-
-      if (typeof window !== 'undefined') {
-        const computed = window.getComputedStyle(node);
-        clone.style.background = computed.background || '#fafaf9';
-        clone.style.backgroundColor = computed.backgroundColor || '#fafaf9';
-        clone.style.backgroundImage = computed.backgroundImage;
-        clone.style.backgroundSize = computed.backgroundSize;
-        clone.style.backgroundPosition = computed.backgroundPosition;
-        clone.style.backgroundRepeat = computed.backgroundRepeat;
-        clone.style.fontFamily = computed.fontFamily;
+    const dataUrlToBlob = (dataUrl: string, mimeType: string) => {
+      const base64 = dataUrl.split(',')[1];
+      const byteCharacters = atob(base64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i += 1) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
       }
+      const byteArray = new Uint8Array(byteNumbers);
+      return new Blob([byteArray], { type: mimeType });
+    };
 
-      sandbox = document.createElement('div');
-      sandbox.style.position = 'fixed';
-      sandbox.style.left = '-9999px';
-      sandbox.style.top = '0';
-      sandbox.style.width = '1080px';
-      sandbox.style.height = '1080px';
-      sandbox.style.zIndex = '-1';
-      sandbox.appendChild(clone);
-      document.body.appendChild(sandbox);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await Promise.all([waitForFonts(), waitForImages()]);
 
-      await waitForImages(clone);
+    const pixelRatio = typeof window !== 'undefined'
+      ? Math.min(2.5, Math.max(1.6, window.devicePixelRatio || 2))
+      : 2;
 
-      if (isIOS) {
-        const iosCanvas = clone as HTMLElement;
-        const dataUrl = await toPng(iosCanvas, {
-          width: 1080,
-          height: 1080,
-          canvasWidth: 1080,
-          canvasHeight: 1080,
-          pixelRatio: 2,
-          backgroundColor: '#fafaf9',
-          cacheBust: true,
-          useCORS: true,
-        });
+    const dataUrl = await toJpeg(node, {
+      width: 1080,
+      height: 1080,
+      canvasWidth: 1080,
+      canvasHeight: 1080,
+      pixelRatio,
+      quality: 0.98,
+      backgroundColor: '#fafaf9',
+      cacheBust: false,
+      useCORS: true,
+    });
 
-        const iosImage = new Image();
-        iosImage.crossOrigin = 'anonymous';
-        const iosLoaded = new Promise<void>((resolve, reject) => {
-          iosImage.onload = () => resolve();
-          iosImage.onerror = (event) => reject(event);
-        });
-        iosImage.src = dataUrl;
-        await iosLoaded;
+    const blob = dataUrlToBlob(dataUrl, 'image/jpeg');
+    return { blob, mimeType: 'image/jpeg', extension: 'jpg' as const };
+  }, []);
 
-        const iosCanvasEl = document.createElement('canvas');
-        iosCanvasEl.width = 1080;
-        iosCanvasEl.height = 1080;
-        const iosContext = iosCanvasEl.getContext('2d');
-        if (!iosContext) {
-          throw new Error('No se pudo obtener el contexto del canvas en iOS.');
-        }
-        iosContext.drawImage(iosImage, 0, 0, iosCanvasEl.width, iosCanvasEl.height);
+  const exportQuinielaSnapshot = useCallback(async () => {
+    const cached = snapshotCacheRef.current;
 
-        const iosJpegBlob = await new Promise<Blob | null>((resolve) =>
-          iosCanvasEl.toBlob((result) => resolve(result), 'image/jpeg', 0.95)
-        );
-
-        if (!iosJpegBlob) {
-          throw new Error('No se pudo generar la imagen en iOS.');
-        }
-
-        return { blob: iosJpegBlob, mimeType: 'image/jpeg', extension: 'jpg' as const };
-      }
-
-      const pngDataUrl = await toPng(clone, {
-        width: 1080,
-        height: 1080,
-        canvasWidth: 1080,
-        canvasHeight: 1080,
-        pixelRatio: 2,
-        backgroundColor: '#fafaf9',
-        cacheBust: true,
-        useCORS: true,
-      });
-
-      const image = new Image();
-      image.crossOrigin = 'anonymous';
-      const imageLoaded = new Promise<void>((resolve, reject) => {
-        image.onload = () => resolve();
-        image.onerror = (event) => reject(event);
-      });
-      image.src = pngDataUrl;
-      await imageLoaded;
-
-      const exportCanvas = document.createElement('canvas');
-      exportCanvas.width = 1080;
-      exportCanvas.height = 1080;
-      const context = exportCanvas.getContext('2d');
-      if (!context) {
-        throw new Error('No se pudo obtener el contexto del canvas para exportar.');
-      }
-      context.drawImage(image, 0, 0, exportCanvas.width, exportCanvas.height);
-
-      const jpegBlob = await new Promise<Blob | null>((resolve) =>
-        exportCanvas.toBlob((result) => resolve(result), 'image/jpeg', 0.98)
-      );
-
-      if (!jpegBlob) {
-        throw new Error('No se pudo generar el archivo JPEG.');
-      }
-
-      return { blob: jpegBlob, mimeType: 'image/jpeg', extension: 'jpg' as const };
-    } finally {
-      if (sandbox && sandbox.parentNode) {
-        sandbox.parentNode.removeChild(sandbox);
-      }
+    if (cached.data) {
+      return cached.data;
     }
-  }, [isIOSDevice]);
+
+    if (!cached.promise) {
+      cached.promise = generateSnapshot()
+        .then((result) => {
+          snapshotCacheRef.current = { data: result, promise: null };
+          return result;
+        })
+        .catch((error) => {
+          snapshotCacheRef.current = { data: null, promise: null };
+          throw error;
+        });
+    }
+
+    return cached.promise;
+  }, [generateSnapshot]);
 
   const handleDownload = useCallback(async () => {
     if (isDownloading) {
@@ -410,7 +316,6 @@ export default function App() {
     setIsDownloading(false);
     setQuinielaSelections(createEmptySelections());
     setLastSubmittedAt(null);
-    setSaveError(null);
     setIsSaving(false);
     setToast(null);
     setIsShareOpen(false);
@@ -436,7 +341,6 @@ export default function App() {
 
   const handleEnterQuiniela = useCallback(() => {
     setQuinielaSelections(createEmptySelections());
-    setSaveError(null);
     setIsReadOnlyView(false);
     setShowSelectionErrors(false);
     hideSubmitTooltip();
@@ -458,7 +362,7 @@ export default function App() {
 
       setQuinielaSelections((prev) => {
         const next = { ...prev, [matchId]: value };
-        if (showSelectionErrors || showSubmitTooltip) {
+        if (showSelectionErrors) {
           const allCompleted = Object.values(next).every((selection) => selection !== null);
           if (allCompleted) {
             setShowSelectionErrors(false);
@@ -467,9 +371,8 @@ export default function App() {
         }
         return next;
       });
-      setSaveError(null);
     },
-    [isReadOnlyView, showSelectionErrors, showSubmitTooltip, hideSubmitTooltip]
+    [isReadOnlyView, showSelectionErrors, hideSubmitTooltip]
   );
 
   const handleSubmitQuiniela = useCallback(() => {
@@ -479,21 +382,18 @@ export default function App() {
     }
 
     if (!user) {
-      setSaveError('Inicia sesión para enviar tu quiniela.');
       showToast('Inicia sesión para enviar tu quiniela.', 'error');
       return;
     }
 
     if (needsMoreSelections) {
-      setSaveError('Completa todos los partidos antes de enviar.');
       showToast('Completa todos los partidos antes de enviar.', 'error');
       setShowSelectionErrors(true);
-      triggerSubmitTooltip();
+      hideSubmitTooltip();
       return;
     }
 
     setIsSaving(true);
-    setSaveError(null);
 
     const submission: QuinielaSubmission = {
       user,
@@ -511,12 +411,11 @@ export default function App() {
       showToast('Pronóstico enviado correctamente.', 'success');
     } catch (error) {
       console.error('Error al guardar la quiniela', error);
-      setSaveError('No se pudo guardar tu quiniela. Intenta de nuevo.');
       showToast('No se pudo guardar tu quiniela. Intenta de nuevo.', 'error');
     } finally {
       setIsSaving(false);
     }
-  }, [user, needsMoreSelections, quinielaSelections, showToast, isReadOnlyView, triggerSubmitTooltip, hideSubmitTooltip]);
+  }, [user, needsMoreSelections, quinielaSelections, showToast, isReadOnlyView, hideSubmitTooltip]);
 
   const handleViewSubmission = useCallback(
     (journeyCode: string) => {
@@ -537,7 +436,6 @@ export default function App() {
       setLastSubmittedAt(stored.submittedAt);
       setIsReadOnlyView(true);
       setView('quiniela');
-      setSaveError(null);
       setShowSelectionErrors(false);
       hideSubmitTooltip();
     },
@@ -553,7 +451,10 @@ export default function App() {
     }
 
     setIsShareOpen(true);
-  }, []);
+    exportQuinielaSnapshot().catch((error) => {
+      console.warn('No se pudo preparar la imagen al abrir el modal de compartir.', error);
+    });
+  }, [exportQuinielaSnapshot]);
 
   const handleShareClose = useCallback(() => {
     setIsShareOpen(false);
@@ -644,10 +545,14 @@ export default function App() {
         }
 
         if (navigator.clipboard?.write) {
-          const data = new ClipboardItem({ [mimeType]: blob });
-          await navigator.clipboard.write([data]);
-          showToast('Imagen copiada al portapapeles. Ábrela en Instagram o WhatsApp y pégala.', 'success');
-          return;
+          try {
+            const data = new ClipboardItem({ [mimeType]: blob });
+            await navigator.clipboard.write([data]);
+            showToast('Imagen copiada al portapapeles. Ábrela en Instagram o WhatsApp y pégala.', 'success');
+            return;
+          } catch (clipboardError) {
+            console.warn('No se pudo copiar al portapapeles, usamos descarga como fallback.', clipboardError);
+          }
         }
 
         downloadImageFallback(blob, fileName);
@@ -682,7 +587,7 @@ export default function App() {
 
     try {
       setIsSharingImage(true);
-      const { blob, extension } = await exportQuinielaSnapshot();
+      const { blob, extension, mimeType } = await exportQuinielaSnapshot();
       const fileName = `quiniela-${CURRENT_JOURNEY}.${extension}`;
       const file = new File([blob], fileName, { type: mimeType });
       blobUrl = URL.createObjectURL(blob);
@@ -780,10 +685,6 @@ export default function App() {
           </div>
         </div>
 
-        {saveError ? (
-          <span className="submission-status submission-status--error canvas-frame__alert">{saveError}</span>
-        ) : null}
-
         <div ref={canvasShellRef} className="canvas-shell">
           <div
             ref={canvasRef}
@@ -803,10 +704,7 @@ export default function App() {
       </div>
 
       <div className="canvas-frame__footer">
-        <div
-          className="submit-button-wrapper"
-          data-visible={showSubmitTooltip ? 'true' : undefined}
-        >
+        <div className="submit-button-wrapper">
           <button
             type="button"
             onClick={handleSubmitQuiniela}
@@ -816,11 +714,6 @@ export default function App() {
           >
             {isSaving ? 'Enviando…' : isReadOnlyView ? 'Enviada' : 'Enviar'}
           </button>
-          {showSubmitTooltip ? (
-            <div className="submit-button-tooltip" role="tooltip">
-              Completa la quiniela para continuar
-            </div>
-          ) : null}
         </div>
       </div>
     </div>

@@ -195,6 +195,46 @@
   filter: brightness(0) invert(1);
 }
 
+.login-quick {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  text-align: center;
+  margin-top: 12px;
+}
+
+.login-quick__button {
+  appearance: none;
+  border: 1px solid rgba(246, 212, 51, 0.45);
+  background: rgba(246, 212, 51, 0.16);
+  color: #f6d433;
+  padding: 14px 20px;
+  border-radius: 16px;
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: transform 160ms ease, background 160ms ease, border 160ms ease;
+}
+
+.login-quick__button:hover:not([disabled]) {
+  transform: translateY(-1px);
+  background: rgba(246, 212, 51, 0.24);
+  border-color: rgba(246, 212, 51, 0.6);
+}
+
+.login-quick__button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.login-quick__note {
+  font-size: 12px;
+  color: rgba(248, 250, 252, 0.58);
+  letter-spacing: 0.05em;
+}
+
 @media (max-width: 520px) {
   .login-card {
     padding: 36px 28px;

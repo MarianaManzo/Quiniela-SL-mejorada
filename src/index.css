@@ -1100,6 +1100,21 @@
   height: 20px;
 }
 
+.icon-button.ios-download-button {
+  min-width: 140px;
+  height: 46px;
+  padding: 0 18px;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.icon-button.ios-download-button:disabled {
+  opacity: 0.55;
+}
+
 .share-icon {
   background: #fafaf9;
   color: #030213;

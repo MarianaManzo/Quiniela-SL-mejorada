@@ -25,6 +25,7 @@ export const ROLE_LABELS: Record<UserProfile["role"], string> = {
 
 interface LoginScreenProps {
   onLogin?: (user: UserProfile) => void;
+  onQuickAccess?: () => void;
 }
 
 function getFirebaseErrorMessage(error: FirebaseError, mode: AuthMode) {
@@ -50,7 +51,7 @@ function getFirebaseErrorMessage(error: FirebaseError, mode: AuthMode) {
 
 type AuthMode = 'login' | 'register';
 
-export function LoginScreen({ onLogin }: LoginScreenProps) {
+export function LoginScreen({ onLogin, onQuickAccess }: LoginScreenProps) {
   const [mode, setMode] = useState<AuthMode>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -313,6 +314,20 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
             </button>
           </div>
         </div>
+
+        {onQuickAccess ? (
+          <div className="login-quick">
+            <button
+              type="button"
+              className="login-quick__button"
+              onClick={onQuickAccess}
+              disabled={isSubmitting}
+            >
+              Acceso rápido (sin registro)
+            </button>
+            <span className="login-quick__note">Tus selecciones se guardan solo en este dispositivo.</span>
+          </div>
+        ) : null}
       </div>
     </div>
   );

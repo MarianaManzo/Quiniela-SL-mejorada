@@ -17,11 +17,22 @@ import { firebaseAuth } from './firebase';
 
 // Definición centralizada de la jornada mostrada
 const CURRENT_JOURNEY = 15;
+const DOWNLOAD_TEST_STORAGE_KEY = 'quiniela-download-test';
+const QUICK_ACCESS_STORAGE_KEY = 'quiniela-quick-access-profile';
+
+const createQuickAccessProfile = (): UserProfile => {
+  const uniqueSegment = Math.random().toString(36).slice(2, 8);
+  return {
+    name: 'Invitado rápido',
+    email: `invitado-${uniqueSegment}@quiniela.demo`,
+    role: 'invitado',
+  };
+};
 
 // Carga lazy del componente principal para mejorar performance
 const AperturaJornada15 = lazy(() => import('./imports/AperturaJornada15'));
 
-type SnapshotResult = { blob: Blob; mimeType: 'image/jpeg'; extension: 'jpg' };
+type SnapshotResult = { blob: Blob; mimeType: string; extension: string };
 const SNAPSHOT_MIN_SIZE_BYTES = 360 * 1024;
 const SNAPSHOT_MAX_SIZE_BYTES = 500 * 1024;
 const SNAPSHOT_BASE_DIMENSION = 1080;
@@ -126,6 +137,29 @@ export default function App() {
 
     return isClassicIOS || isIPadOS13OrNewer;
   }, []);
+  const [isDownloadTestMode, setIsDownloadTestMode] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const flagValue = params.get('downloadTest');
+      const enabled = flagValue === '1';
+
+      if (enabled) {
+        window.localStorage?.setItem(DOWNLOAD_TEST_STORAGE_KEY, '1');
+      } else {
+        window.localStorage?.removeItem(DOWNLOAD_TEST_STORAGE_KEY);
+      }
+
+      setIsDownloadTestMode(enabled);
+    } catch (error) {
+      console.warn('No se pudo inicializar el modo de prueba de descarga.', error);
+      setIsDownloadTestMode(false);
+    }
+  }, []);
   const getTimestamp = useCallback(
     () => (typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now()),
     []
@@ -172,6 +206,12 @@ export default function App() {
       }
     };
   }, []);
+  useEffect(() => {
+    if (!isDownloadTestMode) {
+      return;
+    }
+    showToast('Modo de prueba de descarga activo. Se generará un archivo TXT.', 'success');
+  }, [isDownloadTestMode, showToast]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(firebaseAuth, (firebaseUser) => {
@@ -195,6 +235,45 @@ export default function App() {
   }, []);
 
   const hideSubmitTooltip = useCallback(() => {}, []);
+  const handleQuickAccess = useCallback(() => {
+    let profile: UserProfile | null = null;
+
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = window.localStorage.getItem(QUICK_ACCESS_STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored) as Partial<UserProfile>;
+          if (parsed && typeof parsed.name === 'string' && typeof parsed.email === 'string') {
+            const role: UserProfile['role'] =
+              parsed.role === 'aficion' || parsed.role === 'staff' || parsed.role === 'invitado'
+                ? parsed.role
+                : 'invitado';
+            profile = { name: parsed.name, email: parsed.email, role };
+          }
+        }
+      } catch (error) {
+        console.warn('No se pudo recuperar el perfil de acceso rápido.', error);
+      }
+    }
+
+    if (!profile) {
+      profile = createQuickAccessProfile();
+      if (typeof window !== 'undefined') {
+        try {
+          window.localStorage.setItem(QUICK_ACCESS_STORAGE_KEY, JSON.stringify(profile));
+        } catch (error) {
+          console.warn('No se pudo guardar el perfil de acceso rápido.', error);
+        }
+      }
+    }
+
+    setUser(profile);
+    setView('dashboard');
+    setIsReadOnlyView(false);
+    setShowSelectionErrors(false);
+    hideSubmitTooltip();
+    showToast('Acceso rápido activado. ¡Disfruta la quiniela!', 'success');
+  }, [hideSubmitTooltip, showToast]);
 
   useEffect(() => {
     if (!user) {
@@ -239,6 +318,187 @@ export default function App() {
       reader.readAsDataURL(blob);
     });
   }, []);
+
+  const tryShareSnapshot = useCallback(async (snapshot: SnapshotResult, fileName: string) => {
+    if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') {
+      return false;
+    }
+
+    try {
+      const file = new File([snapshot.blob], fileName, { type: snapshot.mimeType });
+
+      if ('canShare' in navigator && navigator.canShare?.({ files: [file] }) === false) {
+        return false;
+      }
+
+      await navigator.share({
+        title: 'Quiniela Somos Locales',
+        text: 'Pronóstico generado con la Quiniela Somos Locales.',
+        files: [file],
+      });
+      return true;
+    } catch (error) {
+      if ((error as DOMException)?.name === 'AbortError') {
+        return true;
+      }
+      console.warn('No se pudo compartir el archivo desde la app instalada.', error);
+      return false;
+    }
+  }, []);
+
+  const openIOSDownloadTab = useCallback(async (snapshot: SnapshotResult) => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+
+    const iosWindowInstance = window.open('about:blank', '_blank');
+
+    if (!iosWindowInstance || iosWindowInstance.closed) {
+      showToast('Activa las ventanas emergentes para descargar el archivo.', 'error');
+      return false;
+    }
+
+    try {
+      iosWindowInstance.document.open();
+      iosWindowInstance.document.write(`
+        <!DOCTYPE html>
+        <html lang="es">
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <title>Preparando quiniela…</title>
+            <style>
+              body {
+                margin: 0;
+                padding: 24px;
+                background: #0f172a;
+                color: #e2e8f0;
+                font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                min-height: 100vh;
+              }
+              .status {
+                font-weight: 600;
+                margin-bottom: 12px;
+              }
+              .hint {
+                font-size: 13px;
+                color: rgba(226, 232, 240, 0.75);
+                margin: 0;
+              }
+            </style>
+          </head>
+          <body>
+            <div>
+              <p class="status">Preparando tu quiniela…</p>
+              <p class="hint">Esto puede tardar unos segundos.</p>
+            </div>
+          </body>
+        </html>
+      `);
+      iosWindowInstance.document.close();
+    } catch (error) {
+      console.warn('No se pudo inicializar la ventana de descarga para iOS.', error);
+    }
+
+    const dataUrl = await blobToDataURL(snapshot.blob);
+    const isImage = snapshot.mimeType.startsWith('image/');
+
+    const contentHtml = isImage
+      ? `
+        <!DOCTYPE html>
+        <html lang="es">
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <title>Quiniela lista</title>
+            <style>
+              body {
+                margin: 0;
+                padding: 20px;
+                background: #f8fafc;
+                color: #1f2937;
+                font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+                text-align: center;
+              }
+              img {
+                width: 100%;
+                height: auto;
+                display: block;
+                border-radius: 16px;
+                box-shadow: 0 18px 36px rgba(15, 23, 42, 0.24);
+              }
+              p {
+                margin-top: 18px;
+              }
+            </style>
+          </head>
+          <body>
+            <img src="${dataUrl}" alt="Quiniela lista para guardar" />
+            <p>Mantén presionado sobre la imagen y elige “Guardar imagen”.</p>
+          </body>
+        </html>
+      `
+      : `
+        <!DOCTYPE html>
+        <html lang="es">
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <title>Archivo listo</title>
+            <style>
+              body {
+                margin: 0;
+                padding: 24px;
+                background: #f8fafc;
+                color: #1f2937;
+                font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+                text-align: center;
+              }
+              a {
+                display: inline-block;
+                padding: 12px 20px;
+                border-radius: 12px;
+                background: #2563eb;
+                color: #fff;
+                font-weight: 600;
+                text-decoration: none;
+                letter-spacing: 0.02em;
+              }
+              p {
+                margin-top: 16px;
+              }
+            </style>
+          </head>
+          <body>
+            <h1>Archivo listo para descargar</h1>
+            <a href="${dataUrl}" download="quiniela-${CURRENT_JOURNEY}.${snapshot.extension}">Descargar quiniela-${CURRENT_JOURNEY}.${snapshot.extension}</a>
+            <p>Mantén presionado el botón y elige “Guardar en Archivos”.</p>
+          </body>
+        </html>
+      `;
+
+    try {
+      iosWindowInstance.document.open();
+      iosWindowInstance.document.write(contentHtml);
+      iosWindowInstance.document.close();
+      iosWindowInstance.focus();
+    } catch (renderError) {
+      console.warn('No se pudo renderizar la UI de descarga en iOS, usamos data URL directa.', renderError);
+      try {
+        const base64 = window.btoa(unescape(encodeURIComponent(contentHtml)));
+        iosWindowInstance.location.href = `data:text/html;base64,${base64}`;
+      } catch (fallbackError) {
+        console.warn('No se pudo usar data URL, redirigimos al archivo directamente.', fallbackError);
+        iosWindowInstance.location.href = dataUrl;
+      }
+    }
+
+    return true;
+  }, [blobToDataURL, showToast]);
 
   useEffect(() => {
     snapshotCacheRef.current = { data: null, promise: null };
@@ -487,65 +747,117 @@ export default function App() {
     setIsDownloading(true);
     startBusy('download');
 
-    let iosWindow: Window | null = null;
+    try {
+      let snapshot: SnapshotResult;
+
+      if (isDownloadTestMode) {
+        snapshot = {
+          blob: new Blob(
+            [
+              [
+                'Archivo de prueba generado para validar descargas en iOS.',
+                '',
+                'Puedes desactivar este modo quitando ?downloadTest=1 de la URL.',
+              ].join('\n'),
+            ],
+            { type: 'text/plain' }
+          ),
+          mimeType: 'text/plain',
+          extension: 'txt',
+        };
+      } else {
+        snapshot = snapshotCacheRef.current.data as SnapshotResult | null;
+        if (!snapshot) {
+          snapshot = await exportQuinielaSnapshot();
+          snapshotCacheRef.current = { data: snapshot, promise: null };
+        }
+      }
+
+      const fileName = `quiniela-${CURRENT_JOURNEY}.${snapshot.extension}`;
+
+      if (isIOSDevice) {
+        const isStandaloneDisplay = window.matchMedia?.('(display-mode: standalone)')?.matches || (window.navigator as any).standalone;
+        const isInApp = /(Instagram|FBAN|FBAV|Line|Twitter|TikTok|Pinterest|Snapchat)/i.test(navigator.userAgent);
+
+        if (isStandaloneDisplay) {
+          const shared = await tryShareSnapshot(snapshot, fileName);
+          if (shared) {
+            showToast('Archivo preparado correctamente.', 'success');
+          } else {
+            showToast('No pudimos compartir el archivo desde la app instalada. Abre la quiniela en Safari o usa el botón Compartir.', 'error');
+          }
+          return;
+        }
+
+        if (isInApp) {
+          showToast('Para descargar, abre esta página directamente en Safari.', 'error');
+          return;
+        }
+
+        const opened = await openIOSDownloadTab(snapshot);
+        if (opened) {
+          showToast('Archivo preparado correctamente.', 'success');
+        } else {
+          showToast('No pudimos abrir la descarga. Usa Safari para intentarlo nuevamente.', 'error');
+        }
+        return;
+      }
+
+      const blobUrl = URL.createObjectURL(snapshot.blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      link.rel = 'noopener';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 0);
+      showToast('Archivo preparado correctamente.', 'success');
+    } catch (error) {
+      console.error('Error al preparar el archivo para descargar', error);
+      showToast('No pudimos preparar el archivo. Intenta nuevamente.', 'error');
+    } finally {
+      setIsDownloading(false);
+      stopBusy('download');
+    }
+  }, [exportQuinielaSnapshot, isDownloadTestMode, isDownloading, isIOSDevice, openIOSDownloadTab, showToast, startBusy, stopBusy, tryShareSnapshot]);
+
+  const handleDownloadIOSForced = useCallback(async () => {
+    if (isDownloading) {
+      return;
+    }
+
+    setIsDownloading(true);
+    startBusy('download');
 
     try {
-      let snapshot = snapshotCacheRef.current.data;
+      let snapshot = snapshotCacheRef.current.data as SnapshotResult | null;
       if (!snapshot) {
         snapshot = await exportQuinielaSnapshot();
         snapshotCacheRef.current = { data: snapshot, promise: null };
       }
 
-      if (isIOSDevice) {
-        const isStandalone = window.matchMedia?.('(display-mode: standalone)')?.matches || (window.navigator as any).standalone;
-        const isInApp = /(Instagram|FBAN|FBAV|Line|Twitter|TikTok|Pinterest|Snapchat)/i.test(navigator.userAgent);
+      const fileName = `quiniela-${CURRENT_JOURNEY}.${snapshot.extension}`;
+      const shared = await tryShareSnapshot(snapshot, fileName);
+      if (shared) {
+        showToast('Archivo preparado correctamente.', 'success');
+        return;
+      }
 
-        if (isStandalone || isInApp) {
-          showToast('Para descargar, abre esta página directamente en Safari.', 'error');
-          return;
-        }
-
-        iosWindow = window.open('', '_blank');
-        if (!iosWindow) {
-          showToast('Activa las ventanas emergentes para descargar la imagen.', 'error');
-          return;
-        }
-
-        const dataUrl = await blobToDataURL(snapshot.blob);
-
-        iosWindow.document.write(`
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <img src="${dataUrl}" style="width:100%;height:auto;display:block;" />
-          <p style="font:15px/1.45 -apple-system,Helvetica,Arial;padding:16px;color:#4b5563;text-align:center;">
-            Mantén presionado sobre la imagen y elige “Guardar imagen”.
-          </p>
-        `);
-        iosWindow.document.close();
-        iosWindow.focus();
+      const opened = await openIOSDownloadTab(snapshot);
+      if (opened) {
+        showToast('Archivo preparado correctamente.', 'success');
       } else {
-        const blobUrl = URL.createObjectURL(snapshot.blob);
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = `quiniela-${CURRENT_JOURNEY}.${snapshot.extension}`;
-        link.rel = 'noopener';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.setTimeout(() => URL.revokeObjectURL(blobUrl), 0);
+        showToast('No pudimos abrir la descarga. Usa Safari para intentarlo de nuevo.', 'error');
       }
-
-      showToast('Imagen preparada correctamente.', 'success');
     } catch (error) {
-      console.error('Error al preparar la imagen para descargar', error);
-      showToast('No pudimos preparar la imagen. Intenta nuevamente.', 'error');
-      if (iosWindow) {
-        iosWindow.close();
-      }
+      console.error('Error al preparar el archivo para descarga iOS', error);
+      showToast('No pudimos preparar el archivo. Intenta nuevamente.', 'error');
     } finally {
       setIsDownloading(false);
       stopBusy('download');
     }
-  }, [exportQuinielaSnapshot, isDownloading, isIOSDevice, showToast, startBusy, stopBusy]);
+  }, [exportQuinielaSnapshot, isDownloading, openIOSDownloadTab, showToast, startBusy, stopBusy, tryShareSnapshot]);
 
   const handleSignOut = useCallback(async () => {
     setIsDownloading(false);
@@ -884,6 +1196,7 @@ export default function App() {
         onLogin={(_profile) => {
           setView('dashboard');
         }}
+        onQuickAccess={handleQuickAccess}
       />
     );
   }
@@ -923,6 +1236,15 @@ export default function App() {
               aria-busy={isSharingImage}
             >
               <Share2 size={20} strokeWidth={1.9} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadIOSForced}
+              disabled={isDownloading}
+              className="icon-button ios-download-button"
+              aria-label="Abrir descarga iOS"
+            >
+              Descargar iOS
             </button>
             <button
               type="button"

@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Optional: provide a sitemap URL when available
+# Sitemap: https://tu-dominio.com/sitemap.xml

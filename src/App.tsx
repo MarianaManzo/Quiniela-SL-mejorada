@@ -231,6 +231,15 @@ export default function App() {
     return () => window.clearInterval(interval);
   }, [busyState, getTimestamp]);
 
+  const blobToDataURL = useCallback((blob: Blob) => {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (event) => reject(event);
+      reader.readAsDataURL(blob);
+    });
+  }, []);
+
   useEffect(() => {
     snapshotCacheRef.current = { data: null, promise: null };
   }, [quinielaSelections, user?.name, isReadOnlyView]);
@@ -488,18 +497,21 @@ export default function App() {
       }
 
       if (isIOSDevice) {
+        const isStandalone = window.matchMedia?.('(display-mode: standalone)')?.matches || (window.navigator as any).standalone;
+        const isInApp = /(Instagram|FBAN|FBAV|Line|Twitter|TikTok|Pinterest|Snapchat)/i.test(navigator.userAgent);
+
+        if (isStandalone || isInApp) {
+          showToast('Para descargar, abre esta página directamente en Safari.', 'error');
+          return;
+        }
+
         iosWindow = window.open('', '_blank');
         if (!iosWindow) {
           showToast('Activa las ventanas emergentes para descargar la imagen.', 'error');
           return;
         }
 
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(snapshot!.blob);
-        });
+        const dataUrl = await blobToDataURL(snapshot.blob);
 
         iosWindow.document.write(`
           <meta name="viewport" content="width=device-width, initial-scale=1" />

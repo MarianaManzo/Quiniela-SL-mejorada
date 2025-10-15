@@ -314,9 +314,12 @@ function PieDePagina({ participantName }: { participantName?: string | null }) {
       <div className="flex flex-row items-center size-full">
         <div className="box-border content-stretch flex font-['Barlow_Condensed:Bold',_sans-serif] items-center justify-between leading-[0] not-italic px-[32px] py-0 relative size-full text-[#222222] text-[28px] text-nowrap tracking-[1.68px]">
           <div className="flex flex-col justify-center lowercase relative shrink-0">
-            <div className="bg-black/90 border border-white/25 rounded-[18px] px-[28px] py-[10px] text-white text-[20px] tracking-[0.2em] uppercase">
-              @{participantName?.trim() ? participantName.replace(/\s+/g, '').toLowerCase() : 'somoslocalesfemx'}
-            </div>
+            <p className="leading-[normal] text-nowrap whitespace-pre">@somoslocalesfemx</p>
+          </div>
+          <div className="flex flex-col justify-center relative shrink-0 text-center flex-1">
+            <p className="leading-[normal] text-[24px] text-[#1d1d1d] uppercase tracking-[1px]">
+              {participantName?.trim() ? participantName : 'Juega la quiniela'}
+            </p>
           </div>
           <div className="capitalize flex flex-col justify-center relative shrink-0">
             <p className="leading-[normal] text-nowrap whitespace-pre">#tienesQueVivirlo</p>

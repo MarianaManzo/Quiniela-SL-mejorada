@@ -302,7 +302,8 @@ export function Dashboard({ user, onEnterQuiniela, onViewQuiniela, onViewPodium 
             ))}
           </ul>
           <button type="button" className="btn btn-secondary ranking-fullboard-button" onClick={() => onViewPodium?.()}>
-            Ver ranking completo
+            <span>Ver ranking completo</span>
+            <ArrowRight size={18} aria-hidden="true" />
           </button>
         </aside>
       </section>

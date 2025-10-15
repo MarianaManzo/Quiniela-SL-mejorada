@@ -1103,18 +1103,17 @@
   transition: color 140ms ease;
 }
 
-.ranking-fullboard-button::after {
-  content: "→";
-  font-size: 12px;
-  transition: transform 140ms ease;
-}
-
 .ranking-fullboard-button:hover {
   color: #fafaf9;
   background: transparent;
 }
 
-.ranking-fullboard-button:hover::after {
+
+.ranking-fullboard-button svg {
+  transition: transform 140ms ease;
+}
+
+.ranking-fullboard-button:hover svg {
   transform: translateX(4px);
 }
 

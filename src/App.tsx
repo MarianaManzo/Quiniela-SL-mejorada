@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Instagram, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Download, Instagram, MessageCircle, Share2 } from 'lucide-react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { toPng } from 'html-to-image';
 import { Dashboard } from './components/Dashboard';
@@ -738,8 +738,9 @@ export default function App() {
         return;
       }
 
-      downloadImageFallback(blob, fileName);
-      showToast('Descargamos la imagen para que la compartas manualmente.', 'success');
+      snapshotCacheRef.current = { data: { blob, extension, mimeType }, promise: null };
+      handleShareOpen();
+      showToast('Tu imagen está lista. Elige dónde compartirla.', 'success');
     } catch (error) {
       console.error('No se pudo usar el menú de compartir nativo', error);
       showToast('No pudimos abrir el menú de compartir. Usa otra opción.', 'error');
@@ -788,7 +789,7 @@ export default function App() {
               className="icon-button back-button"
               aria-label="Regresar al dashboard"
             >
-              <ArrowLeft size={18} aria-hidden="true" />
+              <ArrowLeft size={20} aria-hidden="true" />
             </button>
           </div>
           <div className="canvas-frame__group">
@@ -800,13 +801,7 @@ export default function App() {
               disabled={isSharingImage}
               aria-busy={isSharingImage}
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="18" cy="5" r="3" />
-                <circle cx="6" cy="12" r="3" />
-                <circle cx="18" cy="19" r="3" />
-                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-              </svg>
+              <Share2 size={20} strokeWidth={1.9} aria-hidden="true" />
             </button>
             <button
               type="button"
@@ -815,11 +810,7 @@ export default function App() {
               className="icon-button download-icon"
               aria-label={isDownloading ? 'Generando JPG' : 'Descargar JPG'}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="3" x2="12" y2="15" />
-              </svg>
+              <Download size={20} strokeWidth={1.9} aria-hidden="true" />
             </button>
           </div>
         </div>

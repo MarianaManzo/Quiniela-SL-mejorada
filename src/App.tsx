@@ -625,19 +625,35 @@ export default function App() {
       const fileName = `quiniela-${CURRENT_JOURNEY}.${extension}`;
       const file = new File([blob], fileName, { type: mimeType });
 
-      const shareData: ShareData = {
-        title: 'Quiniela Somos Locales',
-        text: 'Pronóstico generado con la Quiniela Somos Locales.',
-      };
-
       const canShareFiles = 'canShare' in navigator && navigator.canShare?.({ files: [file] });
 
-      if (!('canShare' in navigator) || canShareFiles) {
-        shareData.files = [file];
+      if (canShareFiles) {
+        await navigator.share({
+          title: 'Quiniela Somos Locales',
+          text: 'Pronóstico generado con la Quiniela Somos Locales.',
+          files: [file],
+        });
+        showToast('Imagen compartida correctamente.', 'success');
+        return;
       }
 
-      await navigator.share(shareData);
-      showToast('Imagen compartida correctamente.', 'success');
+      if (isIOSDevice) {
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = fileName;
+        link.rel = 'noopener';
+        link.click();
+        URL.revokeObjectURL(blobUrl);
+        showToast('Descargamos la imagen para que la compartas desde Fotos.', 'success');
+        return;
+      }
+
+      await navigator.share({
+        title: 'Quiniela Somos Locales',
+        text: 'Pronóstico generado con la Quiniela Somos Locales.',
+      });
+      showToast('Compartimos la quiniela.', 'success');
     } catch (error) {
       console.error('No se pudo usar el menú de compartir nativo', error);
       showToast('No pudimos abrir el menú de compartir. Usa otra opción.', 'error');
@@ -645,7 +661,7 @@ export default function App() {
     } finally {
       setIsSharingImage(false);
     }
-  }, [exportQuinielaSnapshot, handleShareOpen, isSharingImage, showToast]);
+  }, [exportQuinielaSnapshot, handleShareOpen, isIOSDevice, isSharingImage, showToast]);
 
   if (!authReady) {
     return null;

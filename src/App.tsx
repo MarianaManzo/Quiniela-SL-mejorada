@@ -94,6 +94,11 @@ export default function App() {
   const snapshotCacheRef = useRef<{ data: SnapshotResult | null; promise: Promise<SnapshotResult> | null }>(
     { data: null, promise: null }
   );
+  const [busyState, setBusyState] = useState<{ type: 'share' | 'download' | null; startedAt: number | null }>({
+    type: null,
+    startedAt: null,
+  });
+  const [busyElapsed, setBusyElapsed] = useState(0);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const shareDialogRef = useRef<HTMLDivElement>(null);
   const lastFocusedElementRef = useRef<HTMLElement | null>(null);
@@ -106,7 +111,7 @@ export default function App() {
   const totalMatches = useMemo(() => Object.keys(quinielaSelections).length, [quinielaSelections]);
   const needsMoreSelections = completedSelections < totalMatches;
   const isSubmitDisabled = isSaving || isReadOnlyView;
-  const isBusy = isDownloading || isSharingImage || isSaving;
+  const isBusy = Boolean(busyState.type) || isSaving;
   const isIOSDevice = useMemo(() => {
     if (typeof navigator === 'undefined') {
       return false;
@@ -121,6 +126,27 @@ export default function App() {
 
     return isClassicIOS || isIPadOS13OrNewer;
   }, []);
+  const getTimestamp = useCallback(
+    () => (typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now()),
+    []
+  );
+
+  const startBusy = useCallback((type: 'share' | 'download') => {
+    setBusyState({ type, startedAt: getTimestamp() });
+  }, [getTimestamp]);
+
+  const stopBusy = useCallback((type?: 'share' | 'download') => {
+    setBusyState((prev) => {
+      if (!prev.type) {
+        return prev;
+      }
+      if (type && prev.type !== type) {
+        return prev;
+      }
+      return { type: null, startedAt: null };
+    });
+  }, []);
+
   const showToast = useCallback((message: string, tone: 'success' | 'error') => {
     if (typeof window === 'undefined') {
       setToast({ message, tone });
@@ -188,6 +214,22 @@ export default function App() {
     setShowSelectionErrors(false);
     hideSubmitTooltip();
   }, [user, createEmptySelections, hideSubmitTooltip]);
+
+  useEffect(() => {
+    if (!busyState.type || busyState.startedAt == null || typeof window === 'undefined') {
+      setBusyElapsed(0);
+      return;
+    }
+
+    const start = busyState.startedAt;
+    setBusyElapsed((getTimestamp() - start) / 1000);
+
+    const interval = window.setInterval(() => {
+      setBusyElapsed((getTimestamp() - start) / 1000);
+    }, 120);
+
+    return () => window.clearInterval(interval);
+  }, [busyState, getTimestamp]);
 
   useEffect(() => {
     snapshotCacheRef.current = { data: null, promise: null };
@@ -434,6 +476,7 @@ export default function App() {
     }
 
     try {
+      startBusy('download');
       setIsDownloading(true);
       const { blob, extension, mimeType } = await exportQuinielaSnapshot();
 
@@ -448,8 +491,9 @@ export default function App() {
       window.alert('No se pudo descargar la imagen. Revisa la consola para más detalles.');
     } finally {
       setIsDownloading(false);
+      stopBusy('download');
     }
-  }, [isDownloading, exportQuinielaSnapshot]);
+  }, [exportQuinielaSnapshot, isDownloading, startBusy, stopBusy]);
 
   const handleSignOut = useCallback(async () => {
     setIsDownloading(false);
@@ -669,6 +713,7 @@ export default function App() {
       let blobUrl: string | null = null;
 
       try {
+        startBusy('share');
         setIsSharingImage(true);
 
         const { blob, extension, mimeType } = await exportQuinielaSnapshot();
@@ -680,6 +725,7 @@ export default function App() {
 
         if (shared) {
           showToast('Imagen compartida correctamente.', 'success');
+          stopBusy('share');
           return;
         }
 
@@ -688,14 +734,17 @@ export default function App() {
             const data = new ClipboardItem({ [mimeType]: blob });
             await navigator.clipboard.write([data]);
             showToast('Imagen copiada al portapapeles. Ábrela en Instagram o WhatsApp y pégala.', 'success');
+            stopBusy('share');
             return;
           } catch (clipboardError) {
             console.warn('No se pudo copiar al portapapeles, usamos descarga como fallback.', clipboardError);
+            showToast('No pudimos copiar la imagen. Intenta nuevamente.', 'error');
           }
         }
-
-        downloadImageFallback(blob, fileName);
-        showToast('Descargamos la imagen para que la compartas manualmente.', 'success');
+        snapshotCacheRef.current = { data: { blob, extension, mimeType }, promise: null };
+        stopBusy('share');
+        handleShareOpen();
+        showToast('Tu imagen está lista. Elige dónde compartirla.', 'success');
       } catch (error) {
         console.error('No se pudo preparar la imagen para compartir', error);
         showToast('No pudimos compartir la imagen. Intenta nuevamente.', 'error');
@@ -704,10 +753,11 @@ export default function App() {
           URL.revokeObjectURL(blobUrl);
         }
         setIsSharingImage(false);
+        stopBusy('share');
         handleShareClose();
       }
     },
-    [downloadImageFallback, exportQuinielaSnapshot, handleShareClose, isSharingImage, showToast, tryNativeShare]
+    [exportQuinielaSnapshot, handleShareClose, handleShareOpen, isSharingImage, showToast, startBusy, stopBusy, tryNativeShare]
   );
 
   const handleShareButtonClick = useCallback(async () => {
@@ -719,12 +769,28 @@ export default function App() {
 
     if (!canUseNativeShare) {
       handleShareOpen();
+      startBusy('share');
+      setIsSharingImage(true);
+
+      try {
+        const snapshot = await exportQuinielaSnapshot();
+        snapshotCacheRef.current = { data: snapshot, promise: null };
+        showToast('Tu imagen está lista. Elige dónde compartirla.', 'success');
+      } catch (error) {
+        console.error('No se pudo preparar la imagen para compartir', error);
+        showToast('No pudimos preparar la imagen. Intenta nuevamente.', 'error');
+        setIsShareOpen(false);
+      } finally {
+        setIsSharingImage(false);
+        stopBusy('share');
+      }
       return;
     }
 
     let blobUrl: string | null = null;
 
     try {
+      startBusy('share');
       setIsSharingImage(true);
       const { blob, extension, mimeType } = await exportQuinielaSnapshot();
       const fileName = `quiniela-${CURRENT_JOURNEY}.${extension}`;
@@ -735,10 +801,12 @@ export default function App() {
 
       if (shared) {
         showToast('Imagen compartida correctamente.', 'success');
+        stopBusy('share');
         return;
       }
 
       snapshotCacheRef.current = { data: { blob, extension, mimeType }, promise: null };
+      stopBusy('share');
       handleShareOpen();
       showToast('Tu imagen está lista. Elige dónde compartirla.', 'success');
     } catch (error) {
@@ -750,8 +818,9 @@ export default function App() {
         URL.revokeObjectURL(blobUrl);
       }
       setIsSharingImage(false);
+      stopBusy('share');
     }
-  }, [downloadImageFallback, exportQuinielaSnapshot, handleShareOpen, isSharingImage, showToast, tryNativeShare]);
+  }, [exportQuinielaSnapshot, handleShareOpen, isSharingImage, showToast, startBusy, stopBusy, tryNativeShare]);
 
   if (!authReady) {
     return null;
@@ -849,12 +918,20 @@ export default function App() {
     </div>
   );
 
+  const busyLabel = busyState.type === 'download'
+    ? `Descargando imagen (${busyElapsed.toFixed(1)} s)`
+    : busyState.type === 'share'
+      ? `Preparando opciones de compartir (${busyElapsed.toFixed(1)} s)`
+      : isSaving
+        ? 'Guardando tu quiniela…'
+        : 'Preparando…';
+
   return (
     <>
       {isBusy ? (
         <div className="global-loading" role="status" aria-live="polite">
           <div className="global-loading__spinner" aria-hidden="true" />
-          <span className="global-loading__label">Preparando tu quiniela…</span>
+          <span className="global-loading__label">{busyLabel}</span>
         </div>
       ) : null}
       {isShareOpen ? (

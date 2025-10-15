@@ -349,13 +349,6 @@
   margin-left: auto;
 }
 
-@media (max-width: 640px) {
-  .hero-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-}
-
 .btn {
   display: inline-flex;
   align-items: center;
@@ -373,6 +366,28 @@
   color: var(--sl-black);
 }
 
+.btn__label {
+  display: inline;
+}
+
+.btn__label--mobile {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn__label--desktop {
+    display: none;
+  }
+
+  .btn__label--mobile {
+    display: inline;
+  }
+}
 .btn:focus-visible {
   outline: 2px solid var(--so-yellow);
   outline-offset: 4px;
@@ -720,6 +735,14 @@
   box-shadow: 0 18px 34px -22px rgba(246, 212, 51, 0.55);
 }
 
+.journey-card__cta-label {
+  display: inline;
+}
+
+.journey-card__cta-label--mobile {
+  display: none;
+}
+
 .journey-card__cta:hover {
   transform: translateY(-2px);
   box-shadow: 0 22px 42px -24px rgba(246, 212, 51, 0.65);
@@ -865,6 +888,20 @@
 
   .journey-card {
     padding: 20px;
+  }
+}
+
+@media (max-width: 640px) {
+  .journey-card[data-tone="current"] .journey-card__status-tag {
+    display: none;
+  }
+
+  .journey-card__cta-label--desktop {
+    display: none;
+  }
+
+  .journey-card__cta-label--mobile {
+    display: inline;
   }
 }
 

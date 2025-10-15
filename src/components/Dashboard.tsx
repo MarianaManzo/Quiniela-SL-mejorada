@@ -46,15 +46,38 @@ interface TournamentSectionState {
   collapsed: boolean;
 }
 
+type JourneyTone = "current" | "success" | "warning" | "upcoming";
+
+interface JourneyCard {
+  id: string;
+  code: string;
+  statusLabel: string;
+  meta: string;
+  tone: JourneyTone;
+  ctaLabel?: string;
+  ctaMobileLabel?: string;
+}
+
+type StatusTagTone = "progress" | "neutral";
+
+interface TournamentSection {
+  id: string;
+  appearance: "regular" | "elimination";
+  title: string;
+  subtitle?: string;
+  statusTags: { id: string; label: string; tone: StatusTagTone }[];
+  cards: JourneyCard[];
+}
+
 const COLLAPSED_SECTIONS = new Set(["regular", "liguilla"]);
 
-const tournamentSections = [
+const tournamentSections: TournamentSection[] = [
   {
     id: "regular",
-    appearance: "regular" as const,
+    appearance: "regular",
     title: "Torneo Regular",
     statusTags: [
-      { id: "progress", label: "Jornadas (10/17)", tone: "progress" as const },
+      { id: "progress", label: "Jornadas (10/17)", tone: "progress" },
     ],
     cards: [
       {
@@ -62,130 +85,131 @@ const tournamentSections = [
         code: "J17",
         statusLabel: "Próximamente",
         meta: "Publicamos el rol de juegos el 28 de octubre",
-        tone: "upcoming" as const,
+        tone: "upcoming",
       },
       {
         id: "j16",
         code: "J16",
         statusLabel: "Próximamente",
         meta: "Inicia el 20 de octubre",
-        tone: "upcoming" as const,
+        tone: "upcoming",
       },
       {
         id: "j15",
         code: "J15",
         statusLabel: "En curso",
         meta: "Cierra 12 de octubre · 18:00 h",
-        tone: "current" as const,
+        tone: "current",
         ctaLabel: "Participar",
+        ctaMobileLabel: "Participa",
       },
       {
         id: "j14",
         code: "J14",
         statusLabel: "Enviado",
         meta: "Pronóstico enviado el 05 de octubre",
-        tone: "success" as const,
+        tone: "success",
       },
       {
         id: "j13",
         code: "J13",
         statusLabel: "Enviado",
         meta: "Resultado final publicado",
-        tone: "success" as const,
+        tone: "success",
       },
       {
         id: "j12",
         code: "J12",
         statusLabel: "Enviado",
         meta: "Tu pronóstico quedó registrado",
-        tone: "success" as const,
+        tone: "success",
       },
       {
         id: "j11",
         code: "J11",
         statusLabel: "Expirado",
         meta: "Cerró el 18 de septiembre",
-        tone: "warning" as const,
+        tone: "warning",
       },
       {
         id: "j10",
         code: "J10",
         statusLabel: "Expirado",
         meta: "Cerró el 11 de septiembre",
-        tone: "warning" as const,
+        tone: "warning",
       },
       {
         id: "j9",
         code: "J09",
         statusLabel: "Expirado",
         meta: "Repasa los resultados finales",
-        tone: "warning" as const,
+        tone: "warning",
       },
       {
         id: "j8",
         code: "J08",
         statusLabel: "Expirado",
         meta: "Cerró el 28 de agosto",
-        tone: "warning" as const,
+        tone: "warning",
       },
       {
         id: "j7",
         code: "J07",
         statusLabel: "Expirado",
         meta: "Cerró el 21 de agosto",
-        tone: "warning" as const,
+        tone: "warning",
       },
       {
         id: "j6",
         code: "J06",
         statusLabel: "Expirado",
         meta: "Cerró el 14 de agosto",
-        tone: "warning" as const,
+        tone: "warning",
       },
       {
         id: "j5",
         code: "J05",
         statusLabel: "Expirado",
         meta: "Cerró el 7 de agosto",
-        tone: "warning" as const,
+        tone: "warning",
       },
       {
         id: "j4",
         code: "J04",
         statusLabel: "Expirado",
         meta: "Cerró el 31 de julio",
-        tone: "warning" as const,
+        tone: "warning",
       },
       {
         id: "j3",
         code: "J03",
         statusLabel: "Expirado",
         meta: "Cerró el 24 de julio",
-        tone: "warning" as const,
+        tone: "warning",
       },
       {
         id: "j2",
         code: "J02",
         statusLabel: "Expirado",
         meta: "Cerró el 17 de julio",
-        tone: "warning" as const,
+        tone: "warning",
       },
       {
         id: "j1",
         code: "J01",
         statusLabel: "Expirado",
         meta: "Cerró el 10 de julio",
-        tone: "warning" as const,
+        tone: "warning",
       },
     ],
   },
   {
     id: "liguilla",
-    appearance: "elimination" as const,
+    appearance: "elimination",
     title: "Liguilla",
     subtitle: "4 jornadas por disputar",
     statusTags: [
-      { id: "available", label: "Disponible pronto", tone: "neutral" as const },
+      { id: "available", label: "Disponible pronto", tone: "neutral" },
     ],
     cards: [
       {
@@ -193,21 +217,21 @@ const tournamentSections = [
         code: "C1",
         statusLabel: "Próximamente",
         meta: "Publicamos llaves el 5 de noviembre",
-        tone: "upcoming" as const,
+        tone: "upcoming",
       },
       {
         id: "semis",
         code: "S1",
         statusLabel: "Próximamente",
         meta: "Se define tras cuartos",
-        tone: "upcoming" as const,
+        tone: "upcoming",
       },
       {
         id: "final",
         code: "F1",
         statusLabel: "Próximamente",
         meta: "La gran final se confirma en diciembre",
-        tone: "upcoming" as const,
+        tone: "upcoming",
       },
     ],
   },
@@ -256,7 +280,8 @@ export function Dashboard({ user, onEnterQuiniela, onViewQuiniela, onViewPodium 
 
           <div className="hero-actions">
             <button type="button" className="btn btn-primary" onClick={onEnterQuiniela}>
-              {participateLabel}
+              <span className="btn__label btn__label--desktop">{participateLabel}</span>
+              <span className="btn__label btn__label--mobile">Participa</span>
               <ArrowRight size={18} />
             </button>
           </div>
@@ -353,7 +378,12 @@ export function Dashboard({ user, onEnterQuiniela, onViewQuiniela, onViewPodium 
                               data-tone={card.tone}
                               onClick={onEnterQuiniela}
                             >
-                              {card.ctaLabel}
+                              <span className="journey-card__cta-label journey-card__cta-label--desktop">
+                                {card.ctaLabel}
+                              </span>
+                              <span className="journey-card__cta-label journey-card__cta-label--mobile">
+                                {card.ctaMobileLabel ?? card.ctaLabel}
+                              </span>
                             </button>
                           ) : null}
                           {card.tone === "success" ? (

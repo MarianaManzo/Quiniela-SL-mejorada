@@ -701,9 +701,9 @@
 
 .puntaje-button:disabled {
   cursor: not-allowed;
-  opacity: 0.55;
-  background-color: #f8f0c0;
-  color: rgba(34, 34, 34, 0.6);
+  opacity: 1;
+  background-color: #f8d95b;
+  color: #222222;
 }
 
 .puntaje-button[data-selected="true"] {

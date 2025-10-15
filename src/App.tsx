@@ -499,6 +499,7 @@ export default function App() {
       setLastSubmittedAt(submission.submittedAt);
       setShowSelectionErrors(false);
       hideSubmitTooltip();
+      setIsReadOnlyView(true);
       showToast('Pronóstico enviado correctamente.', 'success');
     } catch (error) {
       console.error('Error al guardar la quiniela', error);
@@ -747,10 +748,10 @@ export default function App() {
             type="button"
             onClick={handleSubmitQuiniela}
             disabled={isSubmitDisabled}
-            aria-disabled={needsMoreSelections}
+            aria-disabled={needsMoreSelections || isReadOnlyView}
             className="btn btn-primary submit-button"
           >
-            {isSaving ? 'Enviando…' : 'Enviar'}
+            {isSaving ? 'Enviando…' : isReadOnlyView ? 'Enviada' : 'Enviar'}
           </button>
           {showSubmitTooltip ? (
             <div className="submit-button-tooltip" role="tooltip">

@@ -475,25 +475,65 @@ export default function App() {
       return;
     }
 
-    try {
-      startBusy('download');
-      setIsDownloading(true);
-      const { blob, extension, mimeType } = await exportQuinielaSnapshot();
+    setIsDownloading(true);
+    startBusy('download');
 
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = `jornada-${CURRENT_JOURNEY}.${extension}`;
-      link.click();
-      URL.revokeObjectURL(blobUrl);
+    let iosWindow: Window | null = null;
+
+    try {
+      let snapshot = snapshotCacheRef.current.data;
+      if (!snapshot) {
+        snapshot = await exportQuinielaSnapshot();
+        snapshotCacheRef.current = { data: snapshot, promise: null };
+      }
+
+      if (isIOSDevice) {
+        iosWindow = window.open('', '_blank');
+        if (!iosWindow) {
+          showToast('Activa las ventanas emergentes para descargar la imagen.', 'error');
+          return;
+        }
+
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(snapshot!.blob);
+        });
+
+        iosWindow.document.write(`
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <img src="${dataUrl}" style="width:100%;height:auto;display:block;" />
+          <p style="font:15px/1.45 -apple-system,Helvetica,Arial;padding:16px;color:#4b5563;text-align:center;">
+            Mantén presionado sobre la imagen y elige “Guardar imagen”.
+          </p>
+        `);
+        iosWindow.document.close();
+        iosWindow.focus();
+      } else {
+        const blobUrl = URL.createObjectURL(snapshot.blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = `quiniela-${CURRENT_JOURNEY}.${snapshot.extension}`;
+        link.rel = 'noopener';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.setTimeout(() => URL.revokeObjectURL(blobUrl), 0);
+      }
+
+      showToast('Imagen preparada correctamente.', 'success');
     } catch (error) {
-      console.error('Error al exportar la imagen como JPG', error);
-      window.alert('No se pudo descargar la imagen. Revisa la consola para más detalles.');
+      console.error('Error al preparar la imagen para descargar', error);
+      showToast('No pudimos preparar la imagen. Intenta nuevamente.', 'error');
+      if (iosWindow) {
+        iosWindow.close();
+      }
     } finally {
       setIsDownloading(false);
       stopBusy('download');
     }
-  }, [exportQuinielaSnapshot, isDownloading, startBusy, stopBusy]);
+  }, [exportQuinielaSnapshot, isDownloading, isIOSDevice, showToast, startBusy, stopBusy]);
 
   const handleSignOut = useCallback(async () => {
     setIsDownloading(false);

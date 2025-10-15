@@ -21,9 +21,9 @@ const CURRENT_JOURNEY = 15;
 // Carga lazy del componente principal para mejorar performance
 const AperturaJornada15 = lazy(() => import('./imports/AperturaJornada15'));
 
-type SnapshotResult = { blob: Blob; mimeType: 'image/png'; extension: 'png' };
-const SNAPSHOT_MIN_SIZE_BYTES = 700 * 1024;
-const SNAPSHOT_MAX_SIZE_BYTES = 1024 * 1024;
+type SnapshotResult = { blob: Blob; mimeType: 'image/jpeg'; extension: 'jpg' };
+const SNAPSHOT_MIN_SIZE_BYTES = 360 * 1024;
+const SNAPSHOT_MAX_SIZE_BYTES = 500 * 1024;
 const SNAPSHOT_BASE_DIMENSION = 1080;
 
 type StoredSubmissions = Record<string, QuinielaSubmission | (Omit<QuinielaSubmission, 'journey'> & { journey?: number })>;
@@ -236,7 +236,7 @@ export default function App() {
       );
     };
 
-    const produceSnapshot = async (pixelRatio: number): Promise<SnapshotResult> => {
+    const produceSnapshot = async (pixelRatio: number, quality: number): Promise<SnapshotResult> => {
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       await waitForFonts();
 
@@ -286,10 +286,35 @@ export default function App() {
           useCORS: true,
         });
 
-        const response = await fetch(dataUrl);
-        const blob = await response.blob();
+        const image = new Image();
+        image.crossOrigin = 'anonymous';
+        const imageLoaded = new Promise<void>((resolve, reject) => {
+          image.onload = () => resolve();
+          image.onerror = (event) => reject(event);
+        });
+        image.src = dataUrl;
+        await imageLoaded;
 
-        return { blob, mimeType: 'image/png', extension: 'png' };
+        const canvas = document.createElement('canvas');
+        canvas.width = SNAPSHOT_BASE_DIMENSION;
+        canvas.height = SNAPSHOT_BASE_DIMENSION;
+        const context = canvas.getContext('2d');
+        if (!context) {
+          throw new Error('No se pudo obtener el contexto del canvas.');
+        }
+        context.fillStyle = '#fafaf9';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+        const jpegBlob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob((result) => resolve(result), 'image/jpeg', quality)
+        );
+
+        if (!jpegBlob) {
+          throw new Error('No se pudo generar la imagen JPEG.');
+        }
+
+        return { blob: jpegBlob, mimeType: 'image/jpeg', extension: 'jpg' };
       } finally {
         if (sandbox.parentNode) {
           sandbox.parentNode.removeChild(sandbox);
@@ -298,42 +323,48 @@ export default function App() {
     };
 
     const basePixelRatio = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-    const candidateRatios = [Math.max(2.2, basePixelRatio * 2), Math.max(2.8, basePixelRatio * 2.6), 3.4, 4, 4.5];
+    const candidateRatios = [Math.max(2.2, basePixelRatio * 1.8), Math.max(2.6, basePixelRatio * 2.2), 3.2, 3.8];
+    const qualitySteps = [0.92, 0.88, 0.84, 0.8, 0.72];
 
     let lastResult: SnapshotResult | null = null;
 
     for (const ratio of candidateRatios) {
-      const cappedRatio = Math.min(ratio, 5);
-      lastResult = await produceSnapshot(cappedRatio);
+      const cappedRatio = Math.min(ratio, 4.2);
 
-      if (lastResult.blob.size < SNAPSHOT_MIN_SIZE_BYTES) {
-        continue;
-      }
+      for (const quality of qualitySteps) {
+        lastResult = await produceSnapshot(cappedRatio, quality);
 
-      if (lastResult.blob.size <= SNAPSHOT_MAX_SIZE_BYTES) {
-        return lastResult;
-      }
-
-      const reductionSteps = [0.92, 0.85];
-      for (const factor of reductionSteps) {
-        const adjustedRatio = Math.max(2, cappedRatio * factor);
-        const adjustedResult = await produceSnapshot(adjustedRatio);
-        if (
-          adjustedResult.blob.size >= SNAPSHOT_MIN_SIZE_BYTES &&
-          adjustedResult.blob.size <= SNAPSHOT_MAX_SIZE_BYTES
-        ) {
-          return adjustedResult;
+        if (lastResult.blob.size < SNAPSHOT_MIN_SIZE_BYTES) {
+          break;
         }
-        lastResult = adjustedResult;
-      }
 
-      if (lastResult.blob.size <= SNAPSHOT_MAX_SIZE_BYTES) {
-        return lastResult;
+        if (lastResult.blob.size <= SNAPSHOT_MAX_SIZE_BYTES) {
+          return lastResult;
+        }
       }
     }
 
     if (!lastResult) {
       throw new Error('No se pudo generar la imagen de la quiniela.');
+    }
+
+    if (lastResult.blob.size > SNAPSHOT_MAX_SIZE_BYTES) {
+      const fallbackRatio = Math.max(1.8, basePixelRatio * 1.6);
+      const fallbackQuality = 0.7;
+      const fallbackResult = await produceSnapshot(fallbackRatio, fallbackQuality);
+      if (fallbackResult.blob.size <= SNAPSHOT_MAX_SIZE_BYTES) {
+        return fallbackResult;
+      }
+      lastResult = fallbackResult;
+    }
+
+    if (lastResult.blob.size < SNAPSHOT_MIN_SIZE_BYTES) {
+      const boostRatio = Math.min(4.5, (basePixelRatio || 1) * 3.4);
+      const boostedResult = await produceSnapshot(boostRatio, 0.92);
+      if (boostedResult.blob.size <= SNAPSHOT_MAX_SIZE_BYTES) {
+        return boostedResult;
+      }
+      lastResult = boostedResult;
     }
 
     return lastResult;

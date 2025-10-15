@@ -308,13 +308,18 @@ function Frame26({
   );
 }
 
-function PieDePagina() {
+function PieDePagina({ participantName }: { participantName?: string | null }) {
   return (
     <div className="basis-0 grow min-h-px min-w-px opacity-[0.64] relative shrink-0 w-full">
       <div className="flex flex-row items-center size-full">
         <div className="box-border content-stretch flex font-['Barlow_Condensed:Bold',_sans-serif] items-center justify-between leading-[0] not-italic px-[32px] py-0 relative size-full text-[#222222] text-[28px] text-nowrap tracking-[1.68px]">
           <div className="flex flex-col justify-center lowercase relative shrink-0">
             <p className="leading-[normal] text-nowrap whitespace-pre">@somoslocalesfemx</p>
+          </div>
+          <div className="flex flex-col justify-center relative shrink-0 text-center flex-1">
+            <p className="leading-[normal] text-[24px] text-[#1d1d1d] uppercase tracking-[1px]">
+              {participantName?.trim() ? participantName : 'Juega la quiniela'}
+            </p>
           </div>
           <div className="capitalize flex flex-col justify-center relative shrink-0">
             <p className="leading-[normal] text-nowrap whitespace-pre">#tienesQueVivirlo</p>
@@ -330,17 +335,19 @@ function Frame35({
   onSelect,
   readOnly,
   showValidation,
+  participantName,
 }: {
   selections: QuinielaSelections;
   onSelect: (matchId: string, value: Selection) => void;
   readOnly: boolean;
   showValidation: boolean;
+  participantName?: string | null;
 }) {
   return (
     <div className="absolute box-border content-stretch flex flex-col gap-[16px] items-start left-0 px-0 py-[32px] size-[1080px] top-0">
       <Frame34 />
       <Frame26 selections={selections} onSelect={onSelect} readOnly={readOnly} showValidation={showValidation} />
-      <PieDePagina />
+      <PieDePagina participantName={participantName} />
     </div>
   );
 }
@@ -350,6 +357,7 @@ interface AperturaJornada15Props {
   onSelect: (matchId: string, value: Selection) => void;
   isReadOnly?: boolean;
   showSelectionErrors?: boolean;
+  participantName?: string | null;
 }
 
 export default function AperturaJornada15({
@@ -357,6 +365,7 @@ export default function AperturaJornada15({
   onSelect,
   isReadOnly = false,
   showSelectionErrors = false,
+  participantName,
 }: AperturaJornada15Props) {
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -395,6 +404,7 @@ export default function AperturaJornada15({
         onSelect={handleSelect}
         readOnly={isReadOnly}
         showValidation={showSelectionErrors}
+        participantName={participantName}
       />
     </div>
   );

@@ -669,12 +669,13 @@ export default function App() {
             className="canvas-wrapper"
           >
             <Suspense fallback={<LoadingSpinner />}>
-          <AperturaJornada15
-            selections={quinielaSelections}
-            onSelect={handleSelectionChange}
-            isReadOnly={isReadOnlyView}
-            showSelectionErrors={showSelectionErrors}
-          />
+            <AperturaJornada15
+              selections={quinielaSelections}
+              onSelect={handleSelectionChange}
+              isReadOnly={isReadOnlyView}
+              showSelectionErrors={showSelectionErrors}
+              participantName={user?.name}
+            />
         </Suspense>
           </div>
         </div>

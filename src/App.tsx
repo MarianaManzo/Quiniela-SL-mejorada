@@ -103,6 +103,12 @@ export default function App() {
   const totalMatches = useMemo(() => Object.keys(quinielaSelections).length, [quinielaSelections]);
   const needsMoreSelections = completedSelections < totalMatches;
   const isSubmitDisabled = isSaving || isReadOnlyView;
+  const isIOSDevice = useMemo(() => {
+    if (typeof navigator === 'undefined') {
+      return false;
+    }
+    return /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
+  }, []);
   const showToast = useCallback((message: string, tone: 'success' | 'error') => {
     if (typeof window === 'undefined') {
       setToast({ message, tone });
@@ -256,7 +262,7 @@ export default function App() {
       );
     };
 
-    const isIOS = typeof navigator !== 'undefined' && /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
+    const isIOS = isIOSDevice;
     let sandbox: HTMLDivElement | null = null;
 
     try {
@@ -378,7 +384,7 @@ export default function App() {
         sandbox.parentNode.removeChild(sandbox);
       }
     }
-  }, []);
+  }, [isIOSDevice]);
 
   const handleDownload = useCallback(async () => {
     if (isDownloading) {
@@ -630,8 +636,54 @@ export default function App() {
         handleShareClose();
       }
     },
-    [exportQuinielaSnapshot, handleShareClose, isSharingImage, showToast]
+    [exportQuinielaSnapshot, handleShareClose, isClipboardImageSupported, isSharingImage, showToast]
   );
+
+  const handleShareButtonClick = useCallback(async () => {
+    if (!isIOSDevice) {
+      handleShareOpen();
+      return;
+    }
+
+    if (isSharingImage) {
+      return;
+    }
+
+    try {
+      setIsSharingImage(true);
+      const { blob, extension, mimeType } = await exportQuinielaSnapshot();
+      const fileName = `quiniela-${CURRENT_JOURNEY}.${extension}`;
+      const file = new File([blob], fileName, { type: mimeType });
+
+      const canShareFiles = typeof navigator !== 'undefined' &&
+        'canShare' in navigator && navigator.canShare?.({ files: [file] });
+
+      if (typeof navigator !== 'undefined' && 'share' in navigator && canShareFiles) {
+        await navigator.share({
+          title: 'Quiniela Somos Locales',
+          text: 'Pronóstico generado con la Quiniela Somos Locales.',
+          files: [file],
+        });
+        showToast('Imagen compartida correctamente.', 'success');
+        return;
+      }
+
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      link.rel = 'noopener';
+      link.click();
+      URL.revokeObjectURL(blobUrl);
+      showToast('Descargamos la imagen para que la compartas desde Fotos.', 'success');
+    } catch (error) {
+      console.error('No se pudo compartir desde iOS', error);
+      showToast('No pudimos abrir el menú de compartir en iOS.', 'error');
+      handleShareOpen();
+    } finally {
+      setIsSharingImage(false);
+    }
+  }, [exportQuinielaSnapshot, handleShareOpen, isIOSDevice, isSharingImage, showToast]);
 
   if (!authReady) {
     return null;
@@ -675,9 +727,11 @@ export default function App() {
           <div className="canvas-frame__group">
             <button
               type="button"
-              onClick={handleShareOpen}
+              onClick={handleShareButtonClick}
               className="icon-button share-icon"
               aria-label="Compartir"
+              disabled={isSharingImage}
+              aria-busy={isSharingImage}
             >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="18" cy="5" r="3" />

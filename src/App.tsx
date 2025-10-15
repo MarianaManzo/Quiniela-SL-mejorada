@@ -23,6 +23,7 @@ const AperturaJornada15 = lazy(() => import('./imports/AperturaJornada15'));
 
 type SnapshotResult = { blob: Blob; mimeType: 'image/png'; extension: 'png' };
 const SNAPSHOT_MIN_SIZE_BYTES = 700 * 1024;
+const SNAPSHOT_MAX_SIZE_BYTES = 1024 * 1024;
 const SNAPSHOT_BASE_DIMENSION = 1080;
 
 type StoredSubmissions = Record<string, QuinielaSubmission | (Omit<QuinielaSubmission, 'journey'> & { journey?: number })>;
@@ -297,14 +298,36 @@ export default function App() {
     };
 
     const basePixelRatio = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-    const candidateRatios = [Math.max(2.2, basePixelRatio * 2), Math.max(2.8, basePixelRatio * 2.6), 3.4, 4];
+    const candidateRatios = [Math.max(2.2, basePixelRatio * 2), Math.max(2.8, basePixelRatio * 2.6), 3.4, 4, 4.5];
 
     let lastResult: SnapshotResult | null = null;
 
     for (const ratio of candidateRatios) {
-      const cappedRatio = Math.min(ratio, 4.5);
+      const cappedRatio = Math.min(ratio, 5);
       lastResult = await produceSnapshot(cappedRatio);
-      if (lastResult.blob.size >= SNAPSHOT_MIN_SIZE_BYTES) {
+
+      if (lastResult.blob.size < SNAPSHOT_MIN_SIZE_BYTES) {
+        continue;
+      }
+
+      if (lastResult.blob.size <= SNAPSHOT_MAX_SIZE_BYTES) {
+        return lastResult;
+      }
+
+      const reductionSteps = [0.92, 0.85];
+      for (const factor of reductionSteps) {
+        const adjustedRatio = Math.max(2, cappedRatio * factor);
+        const adjustedResult = await produceSnapshot(adjustedRatio);
+        if (
+          adjustedResult.blob.size >= SNAPSHOT_MIN_SIZE_BYTES &&
+          adjustedResult.blob.size <= SNAPSHOT_MAX_SIZE_BYTES
+        ) {
+          return adjustedResult;
+        }
+        lastResult = adjustedResult;
+      }
+
+      if (lastResult.blob.size <= SNAPSHOT_MAX_SIZE_BYTES) {
         return lastResult;
       }
     }

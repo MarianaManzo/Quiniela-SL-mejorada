@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ClipboardCheck, Instagram, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Instagram, MessageCircle } from 'lucide-react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import html2canvas from 'html2canvas';
 import { toPng } from 'html-to-image';
@@ -82,7 +82,6 @@ export default function App() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSharingImage, setIsSharingImage] = useState(false);
-  const [isClipboardImageSupported, setIsClipboardImageSupported] = useState(false);
   const [quinielaSelections, setQuinielaSelections] = useState<QuinielaSelections>(() => createEmptySelections());
   const [isSaving, setIsSaving] = useState(false);
   const [lastSubmittedAt, setLastSubmittedAt] = useState<string | null>(null);
@@ -154,16 +153,6 @@ export default function App() {
     });
 
     return unsubscribe;
-  }, []);
-
-  useEffect(() => {
-    if (typeof navigator === 'undefined') {
-      setIsClipboardImageSupported(false);
-      return;
-    }
-
-    const supported = typeof ClipboardItem !== 'undefined' && Boolean(navigator.clipboard?.write);
-    setIsClipboardImageSupported(supported);
   }, []);
 
   const hideSubmitTooltip = useCallback(() => {
@@ -566,7 +555,7 @@ export default function App() {
   }, []);
 
   const handleShareSelect = useCallback(
-    async (channel: 'whatsapp' | 'instagram' | 'copy') => {
+    async (channel: 'whatsapp' | 'instagram') => {
       if (isSharingImage) {
         return;
       }
@@ -577,36 +566,6 @@ export default function App() {
         const { blob, extension, mimeType } = await exportQuinielaSnapshot();
         const fileName = `quiniela-${CURRENT_JOURNEY}.${extension}`;
         const file = new File([blob], fileName, { type: mimeType });
-
-        if (channel === 'copy') {
-          if (!isClipboardImageSupported) {
-            const blobUrl = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = blobUrl;
-            link.download = fileName;
-            link.click();
-            URL.revokeObjectURL(blobUrl);
-            showToast('Tu dispositivo no soporta copiar imágenes. La descargamos para ti.', 'error');
-            return;
-          }
-
-          try {
-            const data = new ClipboardItem({ [mimeType]: blob });
-            await navigator.clipboard.write([data]);
-            showToast('Imagen copiada al portapapeles. Pégala donde quieras.', 'success');
-            return;
-          } catch (error) {
-            console.warn('No se pudo copiar la imagen al portapapeles, usamos descarga como fallback.', error);
-            const blobUrl = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = blobUrl;
-            link.download = fileName;
-            link.click();
-            URL.revokeObjectURL(blobUrl);
-            showToast('No pudimos copiar la imagen. La descargamos para que la compartas.', 'error');
-            return;
-          }
-        }
 
         if (typeof navigator !== 'undefined' && 'canShare' in navigator && navigator.canShare?.({ files: [file] })) {
           await navigator.share({
@@ -636,7 +595,7 @@ export default function App() {
         handleShareClose();
       }
     },
-    [exportQuinielaSnapshot, handleShareClose, isClipboardImageSupported, isSharingImage, showToast]
+    [exportQuinielaSnapshot, handleShareClose, isSharingImage, showToast]
   );
 
   const handleShareButtonClick = useCallback(async () => {
@@ -847,18 +806,6 @@ export default function App() {
               >
                 <Instagram size={24} strokeWidth={1.6} aria-hidden="true" />
               </button>
-              {isClipboardImageSupported ? (
-                <button
-                  type="button"
-                  className="share-target share-target--copy"
-                  onClick={() => handleShareSelect('copy')}
-                  aria-label="Copiar imagen al portapapeles"
-                  disabled={isSharingImage}
-                  aria-busy={isSharingImage}
-                >
-                  <ClipboardCheck size={24} strokeWidth={1.6} aria-hidden="true" />
-                </button>
-              ) : null}
             </div>
           </div>
         </div>

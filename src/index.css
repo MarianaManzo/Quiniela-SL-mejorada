@@ -1298,7 +1298,8 @@
 .share-target svg {
   width: 36px;
   height: 36px;
-  fill: currentColor;
+  fill: none;
+  stroke: currentColor;
 }
 
 .share-target--whatsapp {
@@ -1307,12 +1308,6 @@
 
 .share-target--instagram {
   background: linear-gradient(45deg, #feda75, #fa7e1e, #d62976, #962fbf, #4f5bd5);
-}
-
-.share-target--copy {
-  background: rgba(15, 16, 19, 0.9);
-  color: #f6d433;
-  border: 1px solid rgba(246, 212, 51, 0.4);
 }
 
 .share-target:hover {

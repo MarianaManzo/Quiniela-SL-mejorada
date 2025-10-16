@@ -1,30 +1,5 @@
 import { memo, useCallback, useEffect } from 'react';
 
-import logoLigaBBVA from 'figma:asset/logo-liga-bbva.png';
-import logoSomosLocales from 'figma:asset/logo-somos-locales.png';
-import iconoEstadio from 'figma:asset/icono-estadio.png';
-import iconoTV from '../Icon/tv.svg';
-import backgroundImage from 'figma:asset/background.jpg';
-
-import logoQueretaro from 'figma:asset/logo-queretaro.png';
-import logoPumas from 'figma:asset/logo-pumas.png';
-import logoJuarez from 'figma:asset/logo-juarez.png';
-import logoTigres from 'figma:asset/logo-tigres.png';
-import logoTijuana from 'figma:asset/logo-tijuana.png';
-import logoToluca from 'figma:asset/logo-toluca.png';
-import logoAmerica from 'figma:asset/logo-america.png';
-import logoAtlas from 'figma:asset/logo-atlas.png';
-import logoChivas from 'figma:asset/logo-chivas.png';
-import logoCruzAzul from 'figma:asset/logo-cruz-azul.png';
-import logoLeon from 'figma:asset/logo-leon.png';
-import logoMazatlan from 'figma:asset/logo-mazatlan.png';
-import logoNecaxa from 'figma:asset/logo-necaxa.png';
-import logoPuebla from 'figma:asset/logo-puebla.png';
-import logoRayadas from 'figma:asset/logo-rayadas.png';
-import logoSanLuis from 'figma:asset/logo-san-luis.png';
-import logoSantos from 'figma:asset/logo-santos.png';
-import pachucaLogo from '../assets/logo-pachuca.png';
-
 import {
   MATCHES,
   type MatchInfo,
@@ -32,46 +7,31 @@ import {
   type Selection,
   type TeamCode,
 } from '../quiniela/config';
+import {
+  DEFAULT_QUINIELA_ASSETS,
+  type QuinielaAssetBundle,
+} from '../quiniela/assets';
 
-const LogoLigaBBVA = memo(() => (
-  <img alt="Liga BBVA MX Femenil" className="h-full w-auto object-contain" src={logoLigaBBVA} loading="eager" />
+type LayoutVariant = 'default' | 'export';
+
+const LogoLigaBBVA = memo(({ assets }: { assets: QuinielaAssetBundle }) => (
+  <img alt="Liga BBVA MX Femenil" className="h-full w-auto object-contain" src={assets.logos.ligaBBVA} loading="eager" />
 ));
 
-const LogoSomosLocales = memo(() => (
-  <img alt="Somos Locales" className="w-full h-full object-contain" src={logoSomosLocales} loading="eager" />
+const LogoSomosLocales = memo(({ assets }: { assets: QuinielaAssetBundle }) => (
+  <img alt="Somos Locales" className="w-full h-full object-contain" src={assets.logos.somosLocales} loading="eager" />
 ));
 
-const IconoEstadio = memo(() => (
-  <img alt="Estadio" className="w-8 h-8 object-contain opacity-50" src={iconoEstadio} loading="lazy" />
+const IconoEstadio = memo(({ assets }: { assets: QuinielaAssetBundle }) => (
+  <img alt="Estadio" className="w-8 h-8 object-contain opacity-50" src={assets.icons.estadio} loading="eager" />
 ));
 
-const IconoTVImg = memo(() => (
-  <img alt="Transmisión TV" className="w-8 h-8 object-contain opacity-50" src={iconoTV} loading="lazy" />
+const IconoTVImg = memo(({ assets }: { assets: QuinielaAssetBundle }) => (
+  <img alt="Transmisión TV" className="w-8 h-8 object-contain opacity-50" src={assets.icons.tv} loading="eager" />
 ));
 
-const TEAM_LOGOS: Record<TeamCode, string> = {
-  QRO: logoQueretaro,
-  PUM: logoPumas,
-  JUA: logoJuarez,
-  TIG: logoTigres,
-  NEC: logoNecaxa,
-  ATL: logoAtlas,
-  PUE: logoPuebla,
-  CRU: logoCruzAzul,
-  SLU: logoSanLuis,
-  MAZ: logoMazatlan,
-  TOL: logoToluca,
-  AME: logoAmerica,
-  LEO: logoLeon,
-  SAN: logoSantos,
-  MON: logoRayadas,
-  PAC: pachucaLogo,
-  CHI: logoChivas,
-  TIJ: logoTijuana,
-};
-
-const TeamLogo = memo(({ teamName }: { teamName: TeamCode }) => {
-  const logoSrc = TEAM_LOGOS[teamName];
+const TeamLogo = memo(({ teamName, assets }: { teamName: TeamCode; assets: QuinielaAssetBundle }) => {
+  const logoSrc = assets.teamLogos[teamName];
 
   if (logoSrc) {
     return (
@@ -92,11 +52,11 @@ const TeamLogo = memo(({ teamName }: { teamName: TeamCode }) => {
   );
 });
 
-function TeamSlot({ team }: { team: TeamCode }) {
+function TeamSlot({ team, assets }: { team: TeamCode; assets: QuinielaAssetBundle }) {
   return (
     <div className="bg-white box-border content-stretch flex gap-[10px] items-center justify-center px-0 py-[2px] relative shrink-0 size-[71px]">
       <div className="h-[67px] relative shrink-0 w-[58px]">
-        <TeamLogo teamName={team} />
+        <TeamLogo teamName={team} assets={assets} />
       </div>
     </div>
   );
@@ -107,13 +67,16 @@ function Puntaje({
   onSelect,
   readOnly,
   showValidation,
+  variant,
 }: {
   selected: Selection | null;
   onSelect: (value: Selection) => void;
   readOnly: boolean;
   showValidation: boolean;
+  variant: LayoutVariant;
 }) {
   const isInvalid = showValidation && selected === null;
+  const labelOffsetStyle = variant === 'export' ? { transform: 'translateY(-3px)' } : undefined;
 
   return (
     <div
@@ -137,7 +100,10 @@ function Puntaje({
             data-selected={isSelected ? 'true' : undefined}
             className="puntaje-button"
           >
-            <span className="puntaje-button__label font-['Antonio:Regular',_sans-serif] font-normal text-[29px] tracking-[-0.56px] uppercase">
+            <span
+              className="puntaje-button__label font-['Antonio:Regular',_sans-serif] font-normal text-[29px] tracking-[-0.56px] uppercase"
+              style={labelOffsetStyle}
+            >
               {label}
             </span>
             {isSelected ? (
@@ -152,26 +118,27 @@ function Puntaje({
   );
 }
 
-function MatchTime({ day, dateLabel, time }: Pick<MatchInfo, 'day' | 'dateLabel' | 'time'>) {
+function MatchTime({ day, dateLabel, time, variant }: Pick<MatchInfo, 'day' | 'dateLabel' | 'time'> & { variant: LayoutVariant }) {
+  const textOffsetStyle = variant === 'export' ? { transform: 'translateY(-4px)' } : undefined;
   return (
     <div className="bg-[#f766a1] box-border flex gap-[10px] items-center overflow-clip p-[12px] relative rounded-[8px] shrink-0 w-[345px]">
       <div className="content-stretch flex gap-[8px] items-center relative shrink-0">
         <div className="content-stretch flex flex-col gap-[10px] items-start relative shrink-0 w-[108px]">
           <div className="content-stretch flex gap-[10px] items-center justify-center relative shrink-0">
             <div className="flex flex-col font-['Antonio:Regular',_sans-serif] font-normal justify-center leading-[0] text-[#222222] text-[29px] tracking-[-1.015px] uppercase w-[67px]">
-              <p className="leading-[normal]">{day}</p>
+              <p className="leading-[normal]" style={textOffsetStyle}>{day}</p>
             </div>
           </div>
         </div>
         <div className="flex flex-col font-['Antonio:Regular',_sans-serif] font-normal justify-center leading-[0] text-[29px] text-black tracking-[-1.015px] uppercase w-[75px]">
-          <p className="leading-[normal]">{dateLabel}</p>
+          <p className="leading-[normal]" style={textOffsetStyle}>{dateLabel}</p>
         </div>
         <div className="flex flex-col font-['Antonio:Regular',_sans-serif] font-normal justify-center leading-[0] text-[29px] text-black tracking-[-1.015px] uppercase w-[10px]">
-          <p className="leading-[normal]">-</p>
+          <p className="leading-[normal]" style={textOffsetStyle}>-</p>
         </div>
         <div className="content-stretch flex gap-[10px] items-center relative shrink-0 w-[94px]">
           <div className="flex flex-col font-['Antonio:Regular',_sans-serif] font-normal justify-center leading-[0] text-[29px] text-black tracking-[-1.015px] uppercase w-[98px]">
-            <p className="leading-[normal]">{time}</p>
+            <p className="leading-[normal]" style={textOffsetStyle}>{time}</p>
           </div>
         </div>
       </div>
@@ -179,23 +146,29 @@ function MatchTime({ day, dateLabel, time }: Pick<MatchInfo, 'day' | 'dateLabel'
   );
 }
 
-function MatchMeta({ stadium, broadcast }: Pick<MatchInfo, 'stadium' | 'broadcast'>) {
+function MatchMeta({
+  stadium,
+  broadcast,
+  assets,
+  variant,
+}: Pick<MatchInfo, 'stadium' | 'broadcast'> & { assets: QuinielaAssetBundle; variant: LayoutVariant }) {
+  const textOffsetStyle = variant === 'export' ? { transform: 'translateY(-3px)' } : undefined;
   return (
     <div className="absolute flex flex-col gap-[4px] items-start right-[24px] top-1/2 -translate-y-1/2 w-[223px]">
       <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
         <div className="relative shrink-0 size-[32px]">
-          <IconoEstadio />
+          <IconoEstadio assets={assets} />
         </div>
         <div className="flex flex-col font-['Antonio:Regular',_sans-serif] font-normal justify-center leading-[0] text-[21px] text-black tracking-[-0.735px] uppercase">
-          <p className="leading-[normal]">{stadium}</p>
+          <p className="leading-[normal]" style={textOffsetStyle}>{stadium}</p>
         </div>
       </div>
       <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
         <div className="relative shrink-0 size-[32px]">
-          <IconoTVImg />
+          <IconoTVImg assets={assets} />
         </div>
         <div className="flex flex-col font-['Antonio:Regular',_sans-serif] font-normal justify-center leading-[0] text-[21px] text-black tracking-[-0.735px] uppercase">
-          <p className="leading-[normal]">{broadcast}</p>
+          <p className="leading-[normal]" style={textOffsetStyle}>{broadcast}</p>
         </div>
       </div>
     </div>
@@ -208,24 +181,28 @@ function MatchRow({
   onSelect,
   readOnly,
   showValidation,
+  assets,
+  variant,
 }: {
   match: MatchInfo;
   selected: Selection | null;
   onSelect: (value: Selection) => void;
   readOnly: boolean;
   showValidation: boolean;
+  assets: QuinielaAssetBundle;
+  variant: LayoutVariant;
 }) {
   return (
     <div className="bg-white relative rounded-[8px] shrink-0 w-full h-[79px]">
       <div className="flex flex-row items-center size-full">
         <div className="box-border content-stretch flex gap-[25px] items-center pl-0 pr-[8px] py-[4px] relative w-full">
-          <MatchTime day={match.day} dateLabel={match.dateLabel} time={match.time} />
-          <TeamSlot team={match.home} />
-          <Puntaje selected={selected} onSelect={onSelect} readOnly={readOnly} showValidation={showValidation} />
-          <TeamSlot team={match.away} />
+          <MatchTime day={match.day} dateLabel={match.dateLabel} time={match.time} variant={variant} />
+          <TeamSlot team={match.home} assets={assets} />
+          <Puntaje selected={selected} onSelect={onSelect} readOnly={readOnly} showValidation={showValidation} variant={variant} />
+          <TeamSlot team={match.away} assets={assets} />
           <div className="flex-1 min-w-0" />
           <div className="flex-1 min-w-0">
-            <MatchMeta stadium={match.stadium} broadcast={match.broadcast} />
+            <MatchMeta stadium={match.stadium} broadcast={match.broadcast} assets={assets} variant={variant} />
           </div>
         </div>
       </div>
@@ -233,11 +210,11 @@ function MatchRow({
   );
 }
 
-function Frame33() {
+function Frame33({ assets }: { assets: QuinielaAssetBundle }) {
   return (
     <div className="content-stretch flex items-center justify-start relative shrink-0 w-[280px] h-full">
       <div className="h-[113px] relative shrink-0 w-[280px] flex items-center justify-center" data-name="liga bbva mx femenil">
-        <LogoLigaBBVA />
+        <LogoLigaBBVA assets={assets} />
       </div>
     </div>
   );
@@ -254,12 +231,12 @@ function JornadaCenter() {
   );
 }
 
-function Frame34() {
+function Frame34({ assets }: { assets: QuinielaAssetBundle }) {
   return (
     <div className="content-stretch flex h-[130px] items-end relative shrink-0 w-full" data-name="Header">
       <div className="flex flex-row items-center size-full">
         <div className="box-border content-stretch flex items-center pb-[15px] pl-[32px] pr-0 pt-0 relative shrink-0 w-[280px]">
-          <Frame33 />
+          <Frame33 assets={assets} />
         </div>
         <div
           className="flex-1 flex items-center justify-center pb-[15px]"
@@ -269,7 +246,7 @@ function Frame34() {
         </div>
         <div className="box-border content-stretch flex items-center justify-end pb-[15px] pl-0 pr-[32px] pt-0 relative shrink-0 w-[280px]">
           <div className="h-[88px] relative shrink-0 w-[132px] flex items-center justify-center" data-name="somos locales logo">
-            <LogoSomosLocales />
+            <LogoSomosLocales assets={assets} />
           </div>
         </div>
       </div>
@@ -282,11 +259,15 @@ function Frame26({
   onSelect,
   readOnly,
   showValidation,
+  assets,
+  variant,
 }: {
   selections: QuinielaSelections;
   onSelect: (matchId: string, value: Selection) => void;
   readOnly: boolean;
   showValidation: boolean;
+  assets: QuinielaAssetBundle;
+  variant: LayoutVariant;
 }) {
   return (
     <div className="relative shrink-0 w-full">
@@ -300,6 +281,8 @@ function Frame26({
               onSelect={(value) => onSelect(match.id, value)}
               readOnly={readOnly}
               showValidation={showValidation}
+              assets={assets}
+              variant={variant}
             />
           ))}
         </div>
@@ -361,17 +344,26 @@ function Frame35({
   readOnly,
   showValidation,
   participantName,
+  assets,
+  contentOffsetY = 0,
+  variant,
 }: {
   selections: QuinielaSelections;
   onSelect: (matchId: string, value: Selection) => void;
   readOnly: boolean;
   showValidation: boolean;
   participantName?: string | null;
+  assets: QuinielaAssetBundle;
+  contentOffsetY?: number;
+  variant: LayoutVariant;
 }) {
   return (
-    <div className="absolute box-border content-stretch flex flex-col gap-[16px] items-start left-0 px-0 py-[32px] size-[1080px] top-0">
-      <Frame34 />
-      <Frame26 selections={selections} onSelect={onSelect} readOnly={readOnly} showValidation={showValidation} />
+    <div
+      className="absolute box-border content-stretch flex flex-col gap-[16px] items-start left-0 px-0 py-[32px] size-[1080px] top-0"
+      style={contentOffsetY !== 0 ? { transform: `translateY(${contentOffsetY}px)` } : undefined}
+    >
+      <Frame34 assets={assets} />
+      <Frame26 selections={selections} onSelect={onSelect} readOnly={readOnly} showValidation={showValidation} assets={assets} variant={variant} />
       <PieDePagina participantName={participantName} />
     </div>
   );
@@ -383,6 +375,9 @@ interface AperturaJornada15Props {
   isReadOnly?: boolean;
   showSelectionErrors?: boolean;
   participantName?: string | null;
+  assets?: QuinielaAssetBundle;
+  contentOffsetY?: number;
+  layoutVariant?: LayoutVariant;
 }
 
 export default function AperturaJornada15({
@@ -391,18 +386,21 @@ export default function AperturaJornada15({
   isReadOnly = false,
   showSelectionErrors = false,
   participantName,
+  assets = DEFAULT_QUINIELA_ASSETS,
+  contentOffsetY = 0,
+  layoutVariant = 'default',
 }: AperturaJornada15Props) {
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
     }
 
-    Object.values(TEAM_LOGOS).forEach((src) => {
+    Object.values(assets.teamLogos).forEach((src) => {
       const preloader = new Image();
       preloader.decoding = 'async';
       preloader.src = src;
     });
-  }, []);
+  }, [assets]);
 
   const handleSelect = useCallback(
     (matchId: string, value: Selection) => {
@@ -420,7 +418,7 @@ export default function AperturaJornada15({
       <img
         alt="Fondo Liga MX Femenil"
         className="absolute inset-0 max-w-none object-cover pointer-events-none size-full"
-        src={backgroundImage}
+        src={assets.backgroundImage}
         loading="eager"
         decoding="async"
       />
@@ -430,6 +428,9 @@ export default function AperturaJornada15({
         readOnly={isReadOnly}
         showValidation={showSelectionErrors}
         participantName={participantName}
+        assets={assets}
+        contentOffsetY={contentOffsetY}
+        variant={layoutVariant}
       />
     </div>
   );

@@ -14,11 +14,10 @@ import {
 } from './quiniela/config';
 import { firebaseAuth } from './firebase';
 import { useDownloadQuiniela } from './hooks/useDownloadQuiniela';
-import { invalidateSnapshot } from './lib/exportSnapshot';
 
 // Definición centralizada de la jornada mostrada
 const CURRENT_JOURNEY = 15;
-const BUILD_VERSION = 'V10';
+const BUILD_VERSION = 'V19';
 const QUICK_ACCESS_STORAGE_KEY = 'quiniela-quick-access-profile';
 
 const createQuickAccessProfile = (): UserProfile => {
@@ -99,15 +98,19 @@ export default function App() {
   const [showSelectionErrors, setShowSelectionErrors] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [manualSaveDataUrl, setManualSaveDataUrl] = useState<string | null>(null);
+  const getExportData = useCallback(() => ({
+    selections: quinielaSelections,
+    participantName: user?.name ?? null,
+  }), [quinielaSelections, user?.name]);
+
   const {
-    nodeRef: quinielaNodeRef,
     isDownloading,
     error: downloadError,
     downloadAsJpg,
     getDataUrl,
     resetError: resetDownloadError,
     resetState: resetDownloadState,
-  } = useDownloadQuiniela({ journey: CURRENT_JOURNEY });
+  } = useDownloadQuiniela({ journey: CURRENT_JOURNEY, getExportData });
   const completedSelections = useMemo(
     () => Object.values(quinielaSelections).filter((value): value is Selection => value !== null).length,
     [quinielaSelections]
@@ -169,21 +172,6 @@ export default function App() {
     showToast(downloadError, 'error');
     resetDownloadError();
   }, [downloadError, resetDownloadError, showToast]);
-
-  useEffect(() => {
-    const shell = quinielaNodeRef.current;
-    if (!shell) {
-      return;
-    }
-
-    const target = shell.matches('.canvas-wrapper')
-      ? shell
-      : shell.querySelector<HTMLElement>('.canvas-wrapper');
-
-    if (target) {
-      invalidateSnapshot(target);
-    }
-  }, [quinielaSelections, user?.name]);
 
   const hideSubmitTooltip = useCallback(() => {}, []);
   const handleQuickAccess = useCallback(() => {
@@ -528,7 +516,6 @@ export default function App() {
 
         <div
           className="canvas-shell"
-          ref={quinielaNodeRef}
         >
           <div
             className="canvas-wrapper"

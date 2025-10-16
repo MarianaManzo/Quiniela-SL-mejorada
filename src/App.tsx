@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Download, Loader2, Share2, X } from 'lucide-react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { Dashboard } from './components/Dashboard';
 import { LoginScreen, type UserProfile } from './components/LoginScreen';
@@ -13,9 +13,12 @@ import {
   type Selection,
 } from './quiniela/config';
 import { firebaseAuth } from './firebase';
+import { useDownloadQuiniela } from './hooks/useDownloadQuiniela';
+import { invalidateSnapshot } from './lib/exportSnapshot';
 
 // Definición centralizada de la jornada mostrada
 const CURRENT_JOURNEY = 15;
+const BUILD_VERSION = 'V10';
 const QUICK_ACCESS_STORAGE_KEY = 'quiniela-quick-access-profile';
 
 const createQuickAccessProfile = (): UserProfile => {
@@ -94,6 +97,17 @@ export default function App() {
   const toastTimeoutRef = useRef<number | null>(null);
   const [isReadOnlyView, setIsReadOnlyView] = useState(false);
   const [showSelectionErrors, setShowSelectionErrors] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [manualSaveDataUrl, setManualSaveDataUrl] = useState<string | null>(null);
+  const {
+    nodeRef: quinielaNodeRef,
+    isDownloading,
+    error: downloadError,
+    downloadAsJpg,
+    getDataUrl,
+    resetError: resetDownloadError,
+    resetState: resetDownloadState,
+  } = useDownloadQuiniela({ journey: CURRENT_JOURNEY });
   const completedSelections = useMemo(
     () => Object.values(quinielaSelections).filter((value): value is Selection => value !== null).length,
     [quinielaSelections]
@@ -147,6 +161,30 @@ export default function App() {
     return unsubscribe;
   }, []);
 
+  useEffect(() => {
+    if (!downloadError) {
+      return;
+    }
+
+    showToast(downloadError, 'error');
+    resetDownloadError();
+  }, [downloadError, resetDownloadError, showToast]);
+
+  useEffect(() => {
+    const shell = quinielaNodeRef.current;
+    if (!shell) {
+      return;
+    }
+
+    const target = shell.matches('.canvas-wrapper')
+      ? shell
+      : shell.querySelector<HTMLElement>('.canvas-wrapper');
+
+    if (target) {
+      invalidateSnapshot(target);
+    }
+  }, [quinielaSelections, user?.name]);
+
   const hideSubmitTooltip = useCallback(() => {}, []);
   const handleQuickAccess = useCallback(() => {
     let profile: UserProfile | null = null;
@@ -185,8 +223,11 @@ export default function App() {
     setIsReadOnlyView(false);
     setShowSelectionErrors(false);
     hideSubmitTooltip();
+    resetDownloadState();
+    setIsShareOpen(false);
+    setManualSaveDataUrl(null);
     showToast('Acceso rápido activado. ¡Disfruta la quiniela!', 'success');
-  }, [hideSubmitTooltip, showToast]);
+  }, [hideSubmitTooltip, resetDownloadState, showToast]);
 
   useEffect(() => {
     if (!user) {
@@ -196,6 +237,9 @@ export default function App() {
       setIsReadOnlyView(false);
       setShowSelectionErrors(false);
       hideSubmitTooltip();
+      resetDownloadState();
+      setIsShareOpen(false);
+      setManualSaveDataUrl(null);
       return;
     }
 
@@ -205,10 +249,11 @@ export default function App() {
     setIsReadOnlyView(false);
     setShowSelectionErrors(false);
     hideSubmitTooltip();
-  }, [user, createEmptySelections, hideSubmitTooltip]);
+  }, [user, createEmptySelections, hideSubmitTooltip, resetDownloadState]);
 
   const handleSignOut = useCallback(async () => {
-    setIsDownloading(false);
+    resetDownloadState();
+    setManualSaveDataUrl(null);
     setQuinielaSelections(createEmptySelections());
     setLastSubmittedAt(null);
     setIsSaving(false);
@@ -224,30 +269,38 @@ export default function App() {
       console.error('No se pudo cerrar sesión en Firebase', error);
       showToast('No pudimos cerrar sesión. Intenta de nuevo.', 'error');
     }
-  }, [createEmptySelections, hideSubmitTooltip, showToast]);
+  }, [createEmptySelections, hideSubmitTooltip, resetDownloadState, showToast]);
 
   const handleBackToDashboard = useCallback(() => {
-    setIsDownloading(false);
+    resetDownloadState();
+    setManualSaveDataUrl(null);
+    setIsShareOpen(false);
     setView('dashboard');
     setIsReadOnlyView(false);
     setShowSelectionErrors(false);
     hideSubmitTooltip();
-  }, [hideSubmitTooltip]);
+  }, [hideSubmitTooltip, resetDownloadState]);
 
   const handleEnterQuiniela = useCallback(() => {
     setQuinielaSelections(createEmptySelections());
+    resetDownloadState();
+    setManualSaveDataUrl(null);
+    setIsShareOpen(false);
     setIsReadOnlyView(false);
     setShowSelectionErrors(false);
     hideSubmitTooltip();
     setView('quiniela');
-  }, [createEmptySelections, hideSubmitTooltip]);
+  }, [createEmptySelections, hideSubmitTooltip, resetDownloadState]);
 
   const handleEnterPodium = useCallback(() => {
+    resetDownloadState();
+    setManualSaveDataUrl(null);
+    setIsShareOpen(false);
     setIsReadOnlyView(false);
     setShowSelectionErrors(false);
     hideSubmitTooltip();
     setView('podium');
-  }, [hideSubmitTooltip]);
+  }, [hideSubmitTooltip, resetDownloadState]);
 
   const handleSelectionChange = useCallback(
     (matchId: string, value: Selection) => {
@@ -337,6 +390,45 @@ export default function App() {
     [user, showToast, hideSubmitTooltip]
   );
 
+  const handleDownloadJpg = useCallback(async () => {
+    setIsShareOpen(false);
+    setManualSaveDataUrl(null);
+    try {
+      const outcome = await downloadAsJpg();
+      if (outcome.status === 'downloaded') {
+        showToast('Descargamos tu quiniela en formato JPG.', 'success');
+      } else {
+        setManualSaveDataUrl(outcome.dataUrl);
+        setIsShareOpen(true);
+        showToast('Mantén presionada la imagen para guardarla manualmente.', 'success');
+      }
+    } catch {
+      try {
+        const dataUrl = await getDataUrl();
+        setManualSaveDataUrl(dataUrl);
+        setIsShareOpen(true);
+      } catch {
+        // El hook se encarga de notificar el error.
+      }
+    }
+  }, [downloadAsJpg, getDataUrl, showToast]);
+
+  const handleOpenManualSave = useCallback(async () => {
+    try {
+      const dataUrl = await getDataUrl();
+      setManualSaveDataUrl(dataUrl);
+      setIsShareOpen(true);
+      showToast('Mantén presionada la imagen para guardarla manualmente.', 'success');
+    } catch {
+      // El hook se encarga de notificar el error.
+    }
+  }, [getDataUrl, showToast]);
+
+  const handleCloseManualSave = useCallback(() => {
+    setIsShareOpen(false);
+    setManualSaveDataUrl(null);
+  }, []);
+
   if (!authReady) {
     return null;
   }
@@ -363,6 +455,40 @@ export default function App() {
       </div>
     </div>
   ) : null;
+  const manualSaveModal =
+    isShareOpen && manualSaveDataUrl ? (
+      <div className="manual-save-modal" role="dialog" aria-modal="true" onClick={handleCloseManualSave}>
+        <div className="manual-save-modal__backdrop" />
+        <div
+          className="manual-save-modal__content"
+          role="document"
+          onClick={(event) => {
+            event.stopPropagation();
+          }}
+        >
+          <div className="manual-save-modal__header">
+            <h2 className="manual-save-modal__title">Guarda tu quiniela</h2>
+            <button
+              type="button"
+              className="manual-save-modal__dismiss"
+              onClick={handleCloseManualSave}
+              aria-label="Cerrar modal de guardado manual"
+            >
+              <X size={18} aria-hidden="true" />
+            </button>
+          </div>
+          <p className="manual-save-modal__hint">Mantén presionada la imagen y elige “Guardar en Fotos”.</p>
+          <div className="manual-save-modal__preview">
+            <img src={manualSaveDataUrl} alt="Vista previa de la quiniela generada" />
+          </div>
+          <div className="manual-save-modal__actions">
+            <button type="button" className="btn btn-secondary manual-save-modal__close" onClick={handleCloseManualSave}>
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    ) : null;
   const quinielaView = (
     <div className="quiniela-surface">
       <div className="canvas-frame">
@@ -376,10 +502,34 @@ export default function App() {
             >
               <ArrowLeft size={20} aria-hidden="true" />
             </button>
+            <button
+              type="button"
+              onClick={handleOpenManualSave}
+              className="icon-button share-icon"
+              aria-label="Compartir o guardar manualmente"
+              title="Compartir o guardar manualmente"
+              disabled={isDownloading}
+            >
+              <Share2 size={18} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadJpg}
+              className="icon-button download-icon"
+              aria-label="Descargar quiniela en JPG"
+              title="Descargar quiniela en JPG"
+              disabled={isDownloading}
+              aria-busy={isDownloading}
+            >
+              {isDownloading ? <Loader2 size={18} aria-hidden="true" className="icon-spinner" /> : <Download size={18} aria-hidden="true" />}
+            </button>
           </div>
         </div>
 
-        <div className="canvas-shell">
+        <div
+          className="canvas-shell"
+          ref={quinielaNodeRef}
+        >
           <div
             className="canvas-wrapper"
           >
@@ -415,6 +565,10 @@ export default function App() {
   return (
     <>
       {toastBanner}
+      {manualSaveModal}
+      <div className="build-badge" aria-hidden="true">
+        Versión {BUILD_VERSION}
+      </div>
       {view === 'dashboard' ? (
         <div className="dashboard-shell">
           <Navbar

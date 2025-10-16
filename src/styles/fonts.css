@@ -1,0 +1,87 @@
+@font-face {
+  font-family: 'Albert Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/AlbertSans-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Albert Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/AlbertSans-Bold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Albert_Sans:Bold';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/AlbertSans-Bold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Antonio';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/Antonio-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Antonio';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/Antonio-Bold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Antonio:Regular';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/Antonio-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/BarlowCondensed-Bold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Barlow_Condensed:Bold';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/BarlowCondensed-Bold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Kanit';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/Kanit-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Kanit';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/Kanit-SemiBold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Adirek_Sans:SemiBold';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/Kanit-SemiBold.ttf') format('truetype');
+}

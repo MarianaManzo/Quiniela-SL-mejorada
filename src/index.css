@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;700&family=Antonio:wght@400;700&family=Barlow+Condensed:wght@700&family=Kanit:wght@400;600&display=swap");
+@import url("./styles/fonts.css");
 
 /*! tailwindcss v4.1.3 | MIT License | https://tailwindcss.com */
 @layer properties {
@@ -1277,6 +1277,23 @@
 
 .canvas-shell[data-exporting='true'] {
   --canvas-scale: 1;
+  background: #fafaf9;
+  overflow: visible;
+}
+
+.canvas-shell[data-exporting='true'] .canvas-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: none;
+  width: 1080px;
+  height: 1080px;
+  box-shadow: none;
+}
+
+.canvas-shell[data-exporting='true'] .canvas-stage {
+  width: 1080px;
+  height: 1080px;
 }
 
 .canvas-stage {

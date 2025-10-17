@@ -1349,7 +1349,23 @@
 }
 
 [data-layout-variant='export'] [data-icon-type='broadcast'] img {
-  transform: translate(5px, 6px);
+  transform: translateY(6px);
+}
+
+[data-debug-grid='true'] {
+  position: relative;
+}
+
+[data-debug-grid='true']::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(0, 153, 255, 0.25) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 153, 255, 0.25) 1px, transparent 1px);
+  background-size: 100px 100px;
+  z-index: 50;
 }
 
 :root {

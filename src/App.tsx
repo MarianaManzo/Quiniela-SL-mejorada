@@ -17,8 +17,16 @@ import { useDownloadQuiniela } from './hooks/useDownloadQuiniela';
 
 // Definición centralizada de la jornada mostrada
 const CURRENT_JOURNEY = 15;
-const BUILD_VERSION = 'V30';
+const BUILD_VERSION = 'V33';
 const QUICK_ACCESS_STORAGE_KEY = 'quiniela-quick-access-profile';
+
+const shouldShowDebugGrid = (): boolean => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  const params = new URLSearchParams(window.location.search);
+  return params.get('grid') === '1';
+};
 
 const createQuickAccessProfile = (): UserProfile => {
   const uniqueSegment = Math.random().toString(36).slice(2, 8);
@@ -98,6 +106,7 @@ export default function App() {
   const [showSelectionErrors, setShowSelectionErrors] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [manualSaveDataUrl, setManualSaveDataUrl] = useState<string | null>(null);
+  const showDebugGrid = useMemo(() => shouldShowDebugGrid(), []);
   const getExportData = useCallback(() => ({
     selections: quinielaSelections,
     participantName: user?.name ?? null,
@@ -527,6 +536,7 @@ export default function App() {
               isReadOnly={isReadOnlyView}
               showSelectionErrors={showSelectionErrors}
               participantName={user?.name}
+              showGrid={showDebugGrid}
             />
         </Suspense>
           </div>

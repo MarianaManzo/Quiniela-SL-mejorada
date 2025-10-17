@@ -335,6 +335,7 @@ function Frame35({
   assets,
   contentOffsetY = 0,
   variant,
+  showGrid = false,
 }: {
   selections: QuinielaSelections;
   onSelect: (matchId: string, value: Selection) => void;
@@ -344,12 +345,14 @@ function Frame35({
   assets: QuinielaAssetBundle;
   contentOffsetY?: number;
   variant: LayoutVariant;
+  showGrid?: boolean;
 }) {
   return (
     <div
       className="absolute box-border content-stretch flex flex-col gap-[16px] items-start left-0 px-0 py-[32px] size-[1080px] top-0"
       style={contentOffsetY !== 0 ? { transform: `translateY(${contentOffsetY}px)` } : undefined}
       data-layout-variant={variant}
+      data-debug-grid={showGrid ? 'true' : undefined}
     >
       <Frame34 assets={assets} />
       <Frame26 selections={selections} onSelect={onSelect} readOnly={readOnly} showValidation={showValidation} assets={assets} />
@@ -367,6 +370,7 @@ interface AperturaJornada15Props {
   assets?: QuinielaAssetBundle;
   contentOffsetY?: number;
   layoutVariant?: LayoutVariant;
+  showGrid?: boolean;
 }
 
 export default function AperturaJornada15({
@@ -378,6 +382,7 @@ export default function AperturaJornada15({
   assets = DEFAULT_QUINIELA_ASSETS,
   contentOffsetY = 0,
   layoutVariant = 'default',
+  showGrid = false,
 }: AperturaJornada15Props) {
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -420,6 +425,7 @@ export default function AperturaJornada15({
         assets={assets}
         contentOffsetY={contentOffsetY}
         variant={layoutVariant}
+        showGrid={showGrid}
       />
     </div>
   );

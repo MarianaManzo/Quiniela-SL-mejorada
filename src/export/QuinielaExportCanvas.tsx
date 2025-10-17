@@ -10,6 +10,14 @@ type QuinielaExportCanvasProps = {
 
 const noop = () => {};
 
+const shouldShowDebugGrid = (): boolean => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  const params = new URLSearchParams(window.location.search);
+  return params.get('grid') === '1';
+};
+
 export const QuinielaExportCanvas = memo(function QuinielaExportCanvas({
   selections,
   participantName,
@@ -39,6 +47,7 @@ export const QuinielaExportCanvas = memo(function QuinielaExportCanvas({
         assets={INLINE_QUINIELA_ASSETS}
         contentOffsetY={-8}
         layoutVariant="export"
+        showGrid={shouldShowDebugGrid()}
       />
     </div>
   );

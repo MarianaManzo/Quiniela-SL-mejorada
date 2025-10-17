@@ -149,7 +149,7 @@ function MatchMeta({
   return (
     <div className="match-meta absolute flex flex-col gap-[4px] items-start right-[24px] top-1/2 -translate-y-1/2 w-[223px]">
       <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
-        <div className="relative shrink-0 size-[32px]">
+        <div className="relative shrink-0 size-[32px]" data-icon-type="stadium">
           <IconoEstadio assets={assets} />
         </div>
         <div className="flex flex-col font-['Antonio:Regular',_sans-serif] font-normal justify-center leading-[0] text-[21px] text-black tracking-[-0.735px] uppercase">
@@ -157,7 +157,7 @@ function MatchMeta({
         </div>
       </div>
       <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
-        <div className="relative shrink-0 size-[32px]">
+        <div className="relative shrink-0 size-[32px]" data-icon-type="broadcast">
           <IconoTVImg assets={assets} />
         </div>
         <div className="flex flex-col font-['Antonio:Regular',_sans-serif] font-normal justify-center leading-[0] text-[21px] text-black tracking-[-0.735px] uppercase">

@@ -1344,8 +1344,12 @@
   transform: translateY(-10%);
 }
 
-[data-layout-variant='export'] .match-meta img {
+[data-layout-variant='export'] [data-icon-type='stadium'] img {
   transform: translateY(6px);
+}
+
+[data-layout-variant='export'] [data-icon-type='broadcast'] img {
+  transform: translate(5px, 6px);
 }
 
 :root {

@@ -1344,6 +1344,10 @@
   transform: translateY(-15%);
 }
 
+[data-layout-variant='export'] .match-meta img {
+  transform: translateY(6px);
+}
+
 :root {
   --font-size: 16px;
   --background: #fafaf9;

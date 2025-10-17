@@ -67,16 +67,13 @@ function Puntaje({
   onSelect,
   readOnly,
   showValidation,
-  variant,
 }: {
   selected: Selection | null;
   onSelect: (value: Selection) => void;
   readOnly: boolean;
   showValidation: boolean;
-  variant: LayoutVariant;
 }) {
   const isInvalid = showValidation && selected === null;
-  const labelOffsetStyle = variant === 'export' ? { transform: 'translateY(-3px)' } : undefined;
 
   return (
     <div
@@ -102,7 +99,6 @@ function Puntaje({
           >
             <span
               className="puntaje-button__label font-['Antonio:Regular',_sans-serif] font-normal text-[29px] tracking-[-0.56px] uppercase"
-              style={labelOffsetStyle}
             >
               {label}
             </span>
@@ -118,27 +114,26 @@ function Puntaje({
   );
 }
 
-function MatchTime({ day, dateLabel, time, variant }: Pick<MatchInfo, 'day' | 'dateLabel' | 'time'> & { variant: LayoutVariant }) {
-  const textOffsetStyle = variant === 'export' ? { transform: 'translateY(-4px)' } : undefined;
+function MatchTime({ day, dateLabel, time }: Pick<MatchInfo, 'day' | 'dateLabel' | 'time'>) {
   return (
-    <div className="bg-[#f766a1] box-border flex gap-[10px] items-center overflow-clip p-[12px] relative rounded-[8px] shrink-0 w-[345px]">
+    <div className="match-time bg-[#f766a1] box-border flex gap-[10px] items-center overflow-clip p-[12px] relative rounded-[8px] shrink-0 w-[345px]">
       <div className="content-stretch flex gap-[8px] items-center relative shrink-0">
         <div className="content-stretch flex flex-col gap-[10px] items-start relative shrink-0 w-[108px]">
           <div className="content-stretch flex gap-[10px] items-center justify-center relative shrink-0">
             <div className="flex flex-col font-['Antonio:Regular',_sans-serif] font-normal justify-center leading-[0] text-[#222222] text-[29px] tracking-[-1.015px] uppercase w-[67px]">
-              <p className="leading-[normal]" style={textOffsetStyle}>{day}</p>
+              <p className="leading-[normal]">{day}</p>
             </div>
           </div>
         </div>
         <div className="flex flex-col font-['Antonio:Regular',_sans-serif] font-normal justify-center leading-[0] text-[29px] text-black tracking-[-1.015px] uppercase w-[75px]">
-          <p className="leading-[normal]" style={textOffsetStyle}>{dateLabel}</p>
+          <p className="leading-[normal]">{dateLabel}</p>
         </div>
         <div className="flex flex-col font-['Antonio:Regular',_sans-serif] font-normal justify-center leading-[0] text-[29px] text-black tracking-[-1.015px] uppercase w-[10px]">
-          <p className="leading-[normal]" style={textOffsetStyle}>-</p>
+          <p className="leading-[normal]">-</p>
         </div>
         <div className="content-stretch flex gap-[10px] items-center relative shrink-0 w-[94px]">
           <div className="flex flex-col font-['Antonio:Regular',_sans-serif] font-normal justify-center leading-[0] text-[29px] text-black tracking-[-1.015px] uppercase w-[98px]">
-            <p className="leading-[normal]" style={textOffsetStyle}>{time}</p>
+            <p className="leading-[normal]">{time}</p>
           </div>
         </div>
       </div>
@@ -150,17 +145,15 @@ function MatchMeta({
   stadium,
   broadcast,
   assets,
-  variant,
-}: Pick<MatchInfo, 'stadium' | 'broadcast'> & { assets: QuinielaAssetBundle; variant: LayoutVariant }) {
-  const textOffsetStyle = variant === 'export' ? { transform: 'translateY(-3px)' } : undefined;
+}: Pick<MatchInfo, 'stadium' | 'broadcast'> & { assets: QuinielaAssetBundle }) {
   return (
-    <div className="absolute flex flex-col gap-[4px] items-start right-[24px] top-1/2 -translate-y-1/2 w-[223px]">
+    <div className="match-meta absolute flex flex-col gap-[4px] items-start right-[24px] top-1/2 -translate-y-1/2 w-[223px]">
       <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
         <div className="relative shrink-0 size-[32px]">
           <IconoEstadio assets={assets} />
         </div>
         <div className="flex flex-col font-['Antonio:Regular',_sans-serif] font-normal justify-center leading-[0] text-[21px] text-black tracking-[-0.735px] uppercase">
-          <p className="leading-[normal]" style={textOffsetStyle}>{stadium}</p>
+          <p className="leading-[normal]">{stadium}</p>
         </div>
       </div>
       <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
@@ -168,7 +161,7 @@ function MatchMeta({
           <IconoTVImg assets={assets} />
         </div>
         <div className="flex flex-col font-['Antonio:Regular',_sans-serif] font-normal justify-center leading-[0] text-[21px] text-black tracking-[-0.735px] uppercase">
-          <p className="leading-[normal]" style={textOffsetStyle}>{broadcast}</p>
+          <p className="leading-[normal]">{broadcast}</p>
         </div>
       </div>
     </div>
@@ -182,7 +175,6 @@ function MatchRow({
   readOnly,
   showValidation,
   assets,
-  variant,
 }: {
   match: MatchInfo;
   selected: Selection | null;
@@ -190,19 +182,18 @@ function MatchRow({
   readOnly: boolean;
   showValidation: boolean;
   assets: QuinielaAssetBundle;
-  variant: LayoutVariant;
 }) {
   return (
-    <div className="bg-white relative rounded-[8px] shrink-0 w-full h-[79px]">
+    <div className="match-row bg-white relative rounded-[8px] shrink-0 w-full h-[79px]">
       <div className="flex flex-row items-center size-full">
         <div className="box-border content-stretch flex gap-[25px] items-center pl-0 pr-[8px] py-[4px] relative w-full">
-          <MatchTime day={match.day} dateLabel={match.dateLabel} time={match.time} variant={variant} />
+          <MatchTime day={match.day} dateLabel={match.dateLabel} time={match.time} />
           <TeamSlot team={match.home} assets={assets} />
-          <Puntaje selected={selected} onSelect={onSelect} readOnly={readOnly} showValidation={showValidation} variant={variant} />
+          <Puntaje selected={selected} onSelect={onSelect} readOnly={readOnly} showValidation={showValidation} />
           <TeamSlot team={match.away} assets={assets} />
           <div className="flex-1 min-w-0" />
           <div className="flex-1 min-w-0">
-            <MatchMeta stadium={match.stadium} broadcast={match.broadcast} assets={assets} variant={variant} />
+            <MatchMeta stadium={match.stadium} broadcast={match.broadcast} assets={assets} />
           </div>
         </div>
       </div>
@@ -260,14 +251,12 @@ function Frame26({
   readOnly,
   showValidation,
   assets,
-  variant,
 }: {
   selections: QuinielaSelections;
   onSelect: (matchId: string, value: Selection) => void;
   readOnly: boolean;
   showValidation: boolean;
   assets: QuinielaAssetBundle;
-  variant: LayoutVariant;
 }) {
   return (
     <div className="relative shrink-0 w-full">
@@ -282,7 +271,6 @@ function Frame26({
               readOnly={readOnly}
               showValidation={showValidation}
               assets={assets}
-              variant={variant}
             />
           ))}
         </div>
@@ -361,9 +349,10 @@ function Frame35({
     <div
       className="absolute box-border content-stretch flex flex-col gap-[16px] items-start left-0 px-0 py-[32px] size-[1080px] top-0"
       style={contentOffsetY !== 0 ? { transform: `translateY(${contentOffsetY}px)` } : undefined}
+      data-layout-variant={variant}
     >
       <Frame34 assets={assets} />
-      <Frame26 selections={selections} onSelect={onSelect} readOnly={readOnly} showValidation={showValidation} assets={assets} variant={variant} />
+      <Frame26 selections={selections} onSelect={onSelect} readOnly={readOnly} showValidation={showValidation} assets={assets} />
       <PieDePagina participantName={participantName} />
     </div>
   );

@@ -1341,7 +1341,7 @@
 }
 
 [data-layout-variant='export'] .match-meta {
-  transform: translateY(-15%);
+  transform: translateY(-10%);
 }
 
 [data-layout-variant='export'] .match-meta img {

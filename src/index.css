@@ -1367,9 +1367,14 @@
   display: inline-block;
 }
 
+
+[data-export-platform='default'] .participant-name-text {
+  top: calc(var(--participant-name-offset, -15px) + 5px);
+}
+
 [data-export-platform='default'] .match-time p,
 [data-export-platform='default'] .puntaje-button__label {
-  transform: translateY(-10px);
+  transform: translateY(10px);
 }
 
 [data-export-platform='default'] .puntaje-button__label {
@@ -1377,7 +1382,7 @@
 }
 
 [data-export-platform='default'] .puntaje-badge-inner {
-  transform: translateY(-10px);
+  transform: translateY(5px);
 }
 
 [data-export-platform='default'] .match-meta p {

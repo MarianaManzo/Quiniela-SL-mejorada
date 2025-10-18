@@ -1356,6 +1356,11 @@
   max-height: 55px;
 }
 
+.team-slot-logo {
+  position: relative;
+  top: 5px;
+}
+
 [data-debug-grid='true'] {
   position: relative;
 }

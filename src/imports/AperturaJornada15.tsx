@@ -55,7 +55,7 @@ const TeamLogo = memo(({ teamName, assets }: { teamName: TeamCode; assets: Quini
 function TeamSlot({ team, assets }: { team: TeamCode; assets: QuinielaAssetBundle }) {
   return (
     <div className="bg-white box-border content-stretch flex gap-[10px] items-center justify-center px-0 py-[2px] relative shrink-0 size-[71px]">
-      <div className="h-[67px] relative shrink-0 w-[58px]">
+      <div className="team-slot-logo h-[67px] relative shrink-0 w-[58px]">
         <TeamLogo teamName={team} assets={assets} />
       </div>
     </div>

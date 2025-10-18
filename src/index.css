@@ -1363,8 +1363,29 @@
 
 [data-layout-variant='export'] .participant-name-text {
   position: relative;
-  top: -10px;
+  top: var(--participant-name-offset, -15px);
   display: inline-block;
+}
+
+[data-export-platform='android'] .participant-name-text {
+  top: calc(var(--participant-name-offset, -15px) + 5px);
+}
+
+[data-export-platform='android'] .match-time p,
+[data-export-platform='android'] .puntaje-button__label {
+  transform: translateY(8px);
+}
+
+[data-export-platform='android'] .match-meta p {
+  transform: translateY(15px);
+}
+
+[data-export-platform='android'] .puntaje-button__label {
+  display: inline-block;
+}
+
+[data-export-platform='android'] .puntaje-badge-inner {
+  transform: translateY(-2px);
 }
 
 .team-logo-image {

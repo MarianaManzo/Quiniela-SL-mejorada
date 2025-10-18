@@ -1348,8 +1348,8 @@
   transform: translateY(6px);
 }
 
-[data-layout-variant='export'] [data-icon-type='broadcast'] img {
-  transform: translate(8px, 9px);
+ [data-layout-variant='export'] [data-icon-type='broadcast'] img {
+  transform: translate(3px, 9px);
 }
 
 [data-debug-grid='true'] {

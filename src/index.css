@@ -1349,7 +1349,7 @@
 }
 
 [data-layout-variant='export'] [data-icon-type='broadcast'] img {
-  transform: translateY(6px);
+  transform: translate(8px, 9px);
 }
 
 [data-debug-grid='true'] {
@@ -1364,7 +1364,7 @@
   background-image:
     linear-gradient(to right, rgba(0, 153, 255, 0.25) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(0, 153, 255, 0.25) 1px, transparent 1px);
-  background-size: 100px 100px;
+  background-size: 10px 10px;
   z-index: 50;
 }
 

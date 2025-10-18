@@ -223,8 +223,7 @@ export default function App() {
     resetDownloadState();
     setIsShareOpen(false);
     setManualSaveDataUrl(null);
-    showToast('Acceso rápido activado. ¡Disfruta la quiniela!', 'success');
-  }, [hideSubmitTooltip, resetDownloadState, showToast]);
+  }, [hideSubmitTooltip, resetDownloadState]);
 
   useEffect(() => {
     if (!user) {

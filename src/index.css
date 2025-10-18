@@ -1327,11 +1327,11 @@
 [data-layout-variant='export'] .puntaje-button__label {
   display: inline-block;
   position: relative;
-  top: -4px;
+  top: -9px;
 }
 
 [data-layout-variant='export'] .puntaje-button__badge {
-  transform: translateY(-4px);
+  transform: translateY(-9px);
 }
 
 [data-layout-variant='export'] .match-time {

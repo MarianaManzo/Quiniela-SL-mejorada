@@ -17,7 +17,7 @@ import { useDownloadQuiniela } from './hooks/useDownloadQuiniela';
 
 // Definición centralizada de la jornada mostrada
 const CURRENT_JOURNEY = 15;
-const BUILD_VERSION = 'V35';
+const BUILD_VERSION = 'V36';
 const QUICK_ACCESS_STORAGE_KEY = 'quiniela-quick-access-profile';
 
 const shouldShowDebugGrid = (): boolean => {

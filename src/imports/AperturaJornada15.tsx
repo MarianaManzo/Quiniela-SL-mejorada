@@ -37,7 +37,7 @@ const TeamLogo = memo(({ teamName, assets }: { teamName: TeamCode; assets: Quini
     return (
       <img
         alt={`Logo ${teamName}`}
-        className="w-full h-full object-contain"
+        className="team-logo-image w-full h-full object-contain"
         src={logoSrc}
         loading="eager"
         decoding="async"

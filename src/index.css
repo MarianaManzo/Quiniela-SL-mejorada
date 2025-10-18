@@ -1348,8 +1348,12 @@
   transform: translateY(6px);
 }
 
- [data-layout-variant='export'] [data-icon-type='broadcast'] img {
+[data-layout-variant='export'] [data-icon-type='broadcast'] img {
   transform: translate(3px, 9px);
+}
+
+.team-logo-image {
+  max-height: 55px;
 }
 
 [data-debug-grid='true'] {

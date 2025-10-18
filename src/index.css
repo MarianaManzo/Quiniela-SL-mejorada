@@ -1320,7 +1320,7 @@
 [data-layout-variant='export'] .match-time p,
 [data-layout-variant='export'] .match-meta p {
   display: inline-block;
-  margin-top: -9px;
+  margin-top: -14px;
   line-height: 1.08;
 }
 

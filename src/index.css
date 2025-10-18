@@ -737,7 +737,11 @@
 }
 
 .puntaje-badge-inner {
-  display: inline-block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
 }
 
 .puntaje-group[data-invalid="true"] .puntaje-button {

@@ -287,7 +287,7 @@ function PieDePagina({ participantName }: { participantName?: string | null }) {
           <div className="flex flex-col justify-center lowercase relative shrink-0">
             <p className="leading-[normal] text-nowrap whitespace-pre">@somoslocalesfemx</p>
           </div>
-          <div className="flex flex-col justify-center items-center flex-1">
+          <div className="flex flex-col justify-center items-center flex-1" data-identifier="participant-name">
             <div
               style={{
                 display: 'inline-flex',

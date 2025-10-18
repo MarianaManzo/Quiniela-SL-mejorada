@@ -1604,3 +1604,7 @@ html {
     transform: rotate(360deg);
   }
 }
+[data-layout-variant='export'] [data-identifier='participant-name'] {
+  position: relative;
+  top: -15px;
+}

@@ -1369,7 +1369,7 @@
 
 
 [data-export-platform='default'] .participant-name-text {
-  top: calc(var(--participant-name-offset, -15px) + 10px);
+  top: calc(var(--participant-name-offset, -15px) + 12px);
 }
 
 [data-export-platform='default'] .match-time p,

@@ -113,7 +113,8 @@ export default function App() {
   }), [quinielaSelections, user?.name]);
 
   const {
-    isDownloading,
+    isPreparingDownload,
+    isPreparingShare,
     error: downloadError,
     downloadAsJpg,
     getDataUrl,
@@ -504,10 +505,14 @@ export default function App() {
               className="icon-button share-icon"
               aria-label="Compartir o guardar manualmente"
               title="Compartir o guardar manualmente"
-              disabled={isDownloading}
-              aria-busy={isDownloading}
+              disabled={isPreparingShare}
+              aria-busy={isPreparingShare}
             >
-              {isDownloading ? <Loader2 size={18} aria-hidden="true" className="icon-spinner" /> : <Share2 size={18} aria-hidden="true" />}
+              {isPreparingShare ? (
+                <Loader2 size={18} aria-hidden="true" className="icon-spinner icon-spinner--accent" />
+              ) : (
+                <Share2 size={18} aria-hidden="true" />
+              )}
             </button>
             <button
               type="button"
@@ -515,10 +520,10 @@ export default function App() {
               className="icon-button download-icon"
               aria-label="Descargar quiniela en JPG"
               title="Descargar quiniela en JPG"
-              disabled={isDownloading}
-              aria-busy={isDownloading}
+              disabled={isPreparingDownload}
+              aria-busy={isPreparingDownload}
             >
-              {isDownloading ? <Loader2 size={18} aria-hidden="true" className="icon-spinner" /> : <Download size={18} aria-hidden="true" />}
+              {isPreparingDownload ? <Loader2 size={18} aria-hidden="true" className="icon-spinner" /> : <Download size={18} aria-hidden="true" />}
             </button>
           </div>
         </div>

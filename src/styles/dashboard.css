@@ -152,6 +152,10 @@
   animation: quiniela-spinner 0.9s linear infinite;
 }
 
+.quiniela-surface .icon-spinner--accent {
+  color: #f6d433;
+}
+
 @keyframes quiniela-spinner {
   to {
     transform: rotate(360deg);

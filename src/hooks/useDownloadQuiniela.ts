@@ -16,6 +16,8 @@ type UseDownloadQuinielaOptions = {
 
 type UseDownloadQuinielaResult = {
   isDownloading: boolean;
+  isPreparingDownload: boolean;
+  isPreparingShare: boolean;
   error: string | null;
   downloadAsJpg: () => Promise<DownloadResult>;
   getDataUrl: () => Promise<string>;
@@ -217,7 +219,8 @@ const captureDedicatedSnapshot = async (payload: ExportPayload, mimeType: string
 
 export const useDownloadQuiniela = ({ journey, getExportData }: UseDownloadQuinielaOptions): UseDownloadQuinielaResult => {
   const dataUrlRef = useRef<string | null>(null);
-  const [isDownloading, setIsDownloading] = useState(false);
+  const [isPreparingDownload, setIsPreparingDownload] = useState(false);
+  const [isPreparingShare, setIsPreparingShare] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const filename = `quiniela-${journey}.jpg`;
 
@@ -226,7 +229,8 @@ export const useDownloadQuiniela = ({ journey, getExportData }: UseDownloadQuini
   }, []);
 
   const resetState = useCallback(() => {
-    setIsDownloading(false);
+    setIsPreparingDownload(false);
+    setIsPreparingShare(false);
     setError(null);
     dataUrlRef.current = null;
   }, []);
@@ -245,7 +249,7 @@ export const useDownloadQuiniela = ({ journey, getExportData }: UseDownloadQuini
   const downloadAsJpg = useCallback(async () => {
     try {
       resetError();
-      setIsDownloading(true);
+      setIsPreparingDownload(true);
       const payload = preparePayload();
       const { blob } = await captureDedicatedSnapshot(payload, JPEG_MIME_TYPE);
 
@@ -287,7 +291,7 @@ export const useDownloadQuiniela = ({ journey, getExportData }: UseDownloadQuini
       setError(message);
       throw new Error(message);
     } finally {
-      setIsDownloading(false);
+      setIsPreparingDownload(false);
     }
   }, [filename, preparePayload, resetError]);
 
@@ -299,7 +303,7 @@ export const useDownloadQuiniela = ({ journey, getExportData }: UseDownloadQuini
       }
 
       resetError();
-      setIsDownloading(true);
+      setIsPreparingShare(true);
 
       const payload = preparePayload();
       const { blob } = await captureDedicatedSnapshot(payload, JPEG_MIME_TYPE);
@@ -315,12 +319,14 @@ export const useDownloadQuiniela = ({ journey, getExportData }: UseDownloadQuini
       setError(message);
       throw new Error(message);
     } finally {
-      setIsDownloading(false);
+      setIsPreparingShare(false);
     }
   }, [preparePayload, resetError]);
 
   return {
-    isDownloading,
+    isDownloading: isPreparingDownload || isPreparingShare,
+    isPreparingDownload,
+    isPreparingShare,
     error,
     downloadAsJpg,
     getDataUrl,

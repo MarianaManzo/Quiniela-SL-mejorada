@@ -2,6 +2,7 @@ import { createElement, useCallback, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { exportSnapshot, type SnapshotResult } from '../lib/exportSnapshot';
 import type { QuinielaSelections } from '../quiniela/config';
+import { isAndroidDevice, isIOSDevice } from '../utils/platform';
 
 type ExportPayload = {
   selections: QuinielaSelections;
@@ -32,20 +33,6 @@ type DownloadResult =
       status: 'manual';
       dataUrl: string;
     };
-
-const isIOSDevice = (): boolean => {
-  if (typeof navigator === 'undefined') {
-    return false;
-  }
-
-  const ua = navigator.userAgent || '';
-  const platform = navigator.platform || '';
-
-  const iOSMatch = /iPad|iPhone|iPod/i.test(ua);
-  const iPadOS13Up = platform === 'MacIntel' && typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 1;
-
-  return iOSMatch || iPadOS13Up;
-};
 
 const waitForFonts = async () => {
   if (typeof document === 'undefined') {
@@ -186,11 +173,13 @@ const mountExportLayout = async (payload: ExportPayload): Promise<{ node: HTMLEl
 
   try {
     const { QuinielaExportCanvas } = await import('../export/QuinielaExportCanvas');
+    const platform = isIOSDevice() ? 'ios' : isAndroidDevice() ? 'android' : 'default';
 
     root.render(
       createElement(QuinielaExportCanvas, {
         selections: payload.selections,
         participantName: payload.participantName,
+        platform,
       })
     );
 

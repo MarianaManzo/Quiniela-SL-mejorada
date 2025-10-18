@@ -13,8 +13,8 @@ const injectPwaInstallerStyles = () => {
       bottom: 32px;
       right: 32px;
       z-index: 9999;
-      background: linear-gradient(135deg, #4f46e5, #6d28d9);
-      color: #f8fafc;
+      background: linear-gradient(135deg, #ff6fa9, #f472b6);
+      color: #1b1b1f;
       border: none;
       border-radius: 8px;
       padding: 14px 24px;
@@ -22,7 +22,7 @@ const injectPwaInstallerStyles = () => {
       font-weight: 500;
       letter-spacing: 0.02em;
       cursor: pointer;
-      box-shadow: 0 18px 40px -18px rgba(79, 70, 229, 0.55);
+      box-shadow: 0 18px 40px -18px rgba(255, 111, 169, 0.52);
       transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
       font-family: 'Albert Sans', 'system-ui', sans-serif;
       align-items: center;
@@ -31,8 +31,8 @@ const injectPwaInstallerStyles = () => {
 
     .pwa-install-button:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 22px 46px -18px rgba(109, 40, 217, 0.55);
-      background: linear-gradient(135deg, #4338ca, #5b21b6);
+      box-shadow: 0 22px 46px -18px rgba(255, 96, 161, 0.6);
+      background: linear-gradient(135deg, #ff5c9c, #ec4899);
     }
 
     .pwa-install-button:disabled {
@@ -59,7 +59,7 @@ const injectPwaInstallerStyles = () => {
       border-radius: 16px;
       padding: 24px;
       max-width: min(340px, calc(100% - 48px));
-      color: #f1f5f9;
+      color: #f8fafc;
       font-size: 15px;
       line-height: 1.45;
       box-shadow: 0 24px 60px -20px rgba(8, 9, 12, 0.65);
@@ -79,9 +79,9 @@ const injectPwaInstallerStyles = () => {
       width: 100%;
       padding: 12px;
       border-radius: 10px;
-      background: linear-gradient(135deg, #22d3ee, #2563eb);
+      background: linear-gradient(135deg, #ff6fa9, #f472b6);
       border: none;
-      color: #0f172a;
+      color: #1b1b1f;
       font-weight: 600;
       cursor: pointer;
       transition: transform 140ms ease;
@@ -101,14 +101,14 @@ const setupPwaInstallButton = () => {
   const button = document.createElement('button');
   button.className = 'pwa-install-button';
   button.type = 'button';
-  button.textContent = '📲 Instalar app';
+  button.textContent = 'Instalar app';
 
   const iosOverlay = document.createElement('div');
   iosOverlay.className = 'pwa-install-ios-tip';
   iosOverlay.innerHTML = `
     <div class="pwa-install-ios-card" role="dialog" aria-modal="true">
       <strong>Instala esta app</strong>
-      Para agregarla a tu pantalla de inicio, toca el icono de compartir y elige “Agregar a pantalla de inicio” 📱
+      Para agregarla a tu pantalla de inicio, toca el icono de compartir y elige “Agregar a pantalla de inicio”.
       <button type="button" aria-label="Cerrar guía de instalación">Entendido</button>
     </div>
   `;

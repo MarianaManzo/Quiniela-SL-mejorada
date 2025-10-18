@@ -416,9 +416,9 @@ export default function App() {
       setIsShareOpen(true);
       showToast('Mantén presionada la imagen para guardarla manualmente.', 'success');
     } catch {
-      // El hook se encarga de notificar el error.
+      resetDownloadError();
     }
-  }, [getDataUrl, showToast]);
+  }, [getDataUrl, resetDownloadError, showToast]);
 
   const handleCloseManualSave = useCallback(() => {
     setIsShareOpen(false);
@@ -505,8 +505,9 @@ export default function App() {
               aria-label="Compartir o guardar manualmente"
               title="Compartir o guardar manualmente"
               disabled={isDownloading}
+              aria-busy={isDownloading}
             >
-              <Share2 size={18} aria-hidden="true" />
+              {isDownloading ? <Loader2 size={18} aria-hidden="true" className="icon-spinner" /> : <Share2 size={18} aria-hidden="true" />}
             </button>
             <button
               type="button"

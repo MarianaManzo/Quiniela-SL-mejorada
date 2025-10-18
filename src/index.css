@@ -1361,6 +1361,12 @@
   transform: translate(3px, 9px);
 }
 
+[data-layout-variant='export'] .participant-name-text {
+  position: relative;
+  top: -15px;
+  display: inline-block;
+}
+
 .team-logo-image {
   max-height: 55px;
 }

@@ -303,6 +303,7 @@ function PieDePagina({ participantName }: { participantName?: string | null }) {
               }}
             >
               <span
+                className="participant-name-text"
                 style={{
                   fontFamily: 'Antonio, sans-serif',
                   letterSpacing: '0.3em',

@@ -1369,12 +1369,12 @@
 
 
 [data-export-platform='default'] .participant-name-text {
-  top: calc(var(--participant-name-offset, -15px) + 5px);
+  top: calc(var(--participant-name-offset, -15px) + 10px);
 }
 
 [data-export-platform='default'] .match-time p,
 [data-export-platform='default'] .puntaje-button__label {
-  transform: translateY(10px);
+  transform: translateY(5px);
 }
 
 [data-export-platform='default'] .puntaje-button__label {
@@ -1382,7 +1382,7 @@
 }
 
 [data-export-platform='default'] .puntaje-badge-inner {
-  transform: translateY(5px);
+  transform: translateY(2px);
 }
 
 [data-export-platform='default'] .match-meta p {

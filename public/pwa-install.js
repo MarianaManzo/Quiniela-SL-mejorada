@@ -14,7 +14,7 @@ const injectPwaInstallerStyles = () => {
       right: 32px;
       z-index: 9999;
       background: linear-gradient(135deg, #ff6fa9, #f472b6);
-      color: #1b1b1f;
+      color: #fdf2f8;
       border: none;
       border-radius: 8px;
       padding: 14px 24px;
@@ -81,7 +81,7 @@ const injectPwaInstallerStyles = () => {
       border-radius: 10px;
       background: linear-gradient(135deg, #ff6fa9, #f472b6);
       border: none;
-      color: #1b1b1f;
+      color: #fdf2f8;
       font-weight: 600;
       cursor: pointer;
       transition: transform 140ms ease;

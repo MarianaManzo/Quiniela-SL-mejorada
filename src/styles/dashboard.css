@@ -75,7 +75,7 @@
 .quiniela-surface .canvas-frame__toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 16px;
   padding: 0;
 }
@@ -84,6 +84,11 @@
   display: flex;
   align-items: center;
   gap: 14px;
+  width: 100%;
+}
+
+.quiniela-surface .canvas-frame__group .back-button {
+  margin-right: auto;
 }
 
 .quiniela-surface .canvas-frame__alert {

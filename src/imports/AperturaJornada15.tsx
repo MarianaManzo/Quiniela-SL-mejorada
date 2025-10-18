@@ -81,11 +81,11 @@ function Puntaje({
       data-invalid={isInvalid ? 'true' : undefined}
       aria-invalid={isInvalid}
     >
-      {(['L', 'E', 'V'] as Selection[]).map((label) => {
-        const isSelected = selected === label;
-        return (
-          <button
-            key={label}
+            {(['L', 'E', 'V'] as Selection[]).map((label) => {
+              const isSelected = selected === label;
+              return (
+                <button
+                  key={label}
             type="button"
             onClick={() => {
               if (!readOnly) {
@@ -104,7 +104,7 @@ function Puntaje({
             </span>
             {isSelected ? (
               <span className="puntaje-button__badge">
-                ✓
+                <span className="puntaje-badge-inner">✓</span>
               </span>
             ) : null}
           </button>

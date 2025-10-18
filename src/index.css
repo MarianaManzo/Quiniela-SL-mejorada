@@ -736,6 +736,10 @@
   border: 1px solid #f8d95b;
 }
 
+.puntaje-badge-inner {
+  display: inline-block;
+}
+
 .puntaje-group[data-invalid="true"] .puntaje-button {
   border-color: rgba(239, 68, 68, 0.65);
   box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
@@ -1335,9 +1339,12 @@
 }
 
 [data-layout-variant='export'] .puntaje-button__badge {
-  transform: translateY(-9px);
+  top: -4px;
 }
 
+[data-layout-variant='export'] .puntaje-badge-inner {
+  transform: translateY(-5px);
+}
 [data-layout-variant='export'] .match-meta {
   transform: translateY(-10%);
 }

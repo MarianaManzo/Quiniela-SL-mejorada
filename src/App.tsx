@@ -1,11 +1,12 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Download, Loader2, Share2, X } from 'lucide-react';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 import { Dashboard } from './components/Dashboard';
 import { LoginScreen, type UserProfile } from './components/LoginScreen';
 import { Navbar } from './components/Navbar';
 import { PodiumPage } from './components/PodiumPage';
 import {
+  MATCHES,
   QUINIELA_STORAGE_KEY,
   createEmptySelections,
   type QuinielaSelections,
@@ -14,6 +15,7 @@ import {
 } from './quiniela/config';
 import { firebaseAuth } from './firebase';
 import { useDownloadQuiniela } from './hooks/useDownloadQuiniela';
+import { crearOActualizarUsuario, guardarQuiniela } from './services/firestoreService';
 
 // Definición centralizada de la jornada mostrada
 const CURRENT_JOURNEY = 15;
@@ -96,6 +98,7 @@ function LoadingSpinner() {
 export default function App() {
   const [view, setView] = useState<'dashboard' | 'quiniela' | 'podium'>('dashboard');
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [quinielaSelections, setQuinielaSelections] = useState<QuinielaSelections>(() => createEmptySelections());
   const [isSaving, setIsSaving] = useState(false);
@@ -154,11 +157,17 @@ export default function App() {
     };
   }, []);
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(firebaseAuth, (firebaseUser) => {
-      if (firebaseUser) {
-        const displayName = firebaseUser.displayName?.trim();
-        const email = firebaseUser.email ?? '';
+    const unsubscribe = onAuthStateChanged(firebaseAuth, (authUser) => {
+      if (authUser) {
+        const displayName = authUser.displayName?.trim();
+        const email = authUser.email ?? '';
         const fallbackName = email ? email.split('@')[0] : 'Participante';
+
+        setFirebaseUser(authUser);
+        void crearOActualizarUsuario(authUser).catch((error) => {
+          console.error('No se pudo sincronizar el usuario en Firestore', error);
+        });
+
         setUser({
           name: displayName && displayName.length > 0 ? displayName : fallbackName,
           email,
@@ -166,6 +175,7 @@ export default function App() {
         });
         setView((current) => (current === 'quiniela' || current === 'podium' ? current : 'dashboard'));
       } else {
+        setFirebaseUser(null);
         setUser(null);
       }
       setAuthReady(true);
@@ -320,7 +330,7 @@ export default function App() {
     [isReadOnlyView, showSelectionErrors, hideSubmitTooltip]
   );
 
-  const handleSubmitQuiniela = useCallback(() => {
+  const handleSubmitQuiniela = useCallback(async () => {
     if (isReadOnlyView) {
       showToast('Esta quiniela es de solo lectura.', 'error');
       return;
@@ -348,6 +358,15 @@ export default function App() {
     };
 
     try {
+      if (firebaseUser) {
+        const pronosticos = MATCHES.map((match) => submission.selections[match.id]) as Selection[];
+        await guardarQuiniela({
+          uid: firebaseUser.uid,
+          jornada: CURRENT_JOURNEY,
+          pronosticos,
+        });
+      }
+
       persistSubmissionForUser(user.email, submission);
       setLastSubmittedAt(submission.submittedAt);
       setShowSelectionErrors(false);
@@ -360,7 +379,7 @@ export default function App() {
     } finally {
       setIsSaving(false);
     }
-  }, [user, needsMoreSelections, quinielaSelections, showToast, isReadOnlyView, hideSubmitTooltip]);
+  }, [firebaseUser, user, needsMoreSelections, quinielaSelections, showToast, isReadOnlyView, hideSubmitTooltip]);
 
   const handleViewSubmission = useCallback(
     (journeyCode: string) => {

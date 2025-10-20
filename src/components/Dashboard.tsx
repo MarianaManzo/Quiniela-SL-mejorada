@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { ROLE_LABELS, type UserProfile } from "./LoginScreen";
 import { TOP_RANKING } from "../data/podium";
+import { obtenerUsuariosParaPodio } from "../services/firestoreService";
 import logoSomosLocales from "figma:asset/logo-somos-locales.png";
 import "../styles/dashboard.css";
 
@@ -33,13 +34,6 @@ const tips = [
   "Activa recordatorios 30 minutos antes de que cierre la quiniela.",
   "Comparte tus picks en el grupo de la comunidad Somos Locales.",
 ];
-
-const ranking = TOP_RANKING.slice(0, 4).map((entry, index) => ({
-  id: entry.id,
-  name: entry.name,
-  score: `${entry.points} pts`,
-  position: index + 1,
-}));
 
 interface TournamentSectionState {
   id: string;
@@ -244,6 +238,44 @@ export function Dashboard({ user, onEnterQuiniela, onViewQuiniela, onViewPodium 
       collapsed: COLLAPSED_SECTIONS.has(section.id),
     }))
   );
+  const [topRanking, setTopRanking] = useState(
+    TOP_RANKING.slice(0, 4).map((entry, index) => ({
+      id: String(entry.id),
+      name: entry.name,
+      score: `${entry.points} pts`,
+      position: index + 1,
+    }))
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadRanking = async () => {
+      try {
+        const podium = await obtenerUsuariosParaPodio(4);
+        if (cancelled || podium.length === 0) {
+          return;
+        }
+
+        setTopRanking(
+          podium.map((entry, index) => ({
+            id: entry.id,
+            name: entry.nombre,
+            score: `${entry.puntosTotales} pts`,
+            position: index + 1,
+          }))
+        );
+      } catch (error) {
+        console.error("No se pudo cargar el ranking destacado", error);
+      }
+    };
+
+    void loadRanking();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const isSectionCollapsed = (sectionId: string) => sectionState.find((state) => state.id === sectionId)?.collapsed;
 
@@ -293,7 +325,7 @@ export function Dashboard({ user, onEnterQuiniela, onViewQuiniela, onViewPodium 
             Pódium
           </span>
           <ul className="ranking-list ranking-list--featured">
-            {ranking.map((entry) => (
+            {topRanking.map((entry) => (
               <li key={entry.id} className="ranking-item">
                 <span className="ranking-position">{entry.position}</span>
                 <span className="ranking-name">{entry.name}</span>

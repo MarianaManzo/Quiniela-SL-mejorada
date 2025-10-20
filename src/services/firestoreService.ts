@@ -82,7 +82,7 @@ export const guardarQuiniela = async ({
   await updateDoc(userRef, { ultimaJornada: jornada });
 };
 
-export const obtenerUsuariosParaPodio = async (): Promise<PodiumUser[]> => {
+export const obtenerUsuariosParaPodio = async (limitResult = 0): Promise<PodiumUser[]> => {
   const usuariosSnapshot = await getDocs(collection(firebaseFirestore, "Usuarios"));
 
   const usuarios = await Promise.all(
@@ -116,7 +116,7 @@ export const obtenerUsuariosParaPodio = async (): Promise<PodiumUser[]> => {
     })
   );
 
-  return usuarios.sort((a, b) => {
+  const ordered = usuarios.sort((a, b) => {
     if (b.puntosTotales !== a.puntosTotales) {
       return b.puntosTotales - a.puntosTotales;
     }
@@ -125,4 +125,10 @@ export const obtenerUsuariosParaPodio = async (): Promise<PodiumUser[]> => {
     }
     return a.nombre.localeCompare(b.nombre);
   });
+
+  if (limitResult > 0) {
+    return ordered.slice(0, limitResult);
+  }
+
+  return ordered;
 };

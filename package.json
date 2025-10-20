@@ -59,6 +59,6 @@
       "scripts": {
             "dev": "vite",
             "build": "vite build",
-            "guardar:resultados": "ts-node scripts/guardarResultados.ts"
+            "guardar:resultados": "tsx scripts/guardarResultados.ts"
       }
 }

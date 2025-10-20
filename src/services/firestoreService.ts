@@ -132,3 +132,16 @@ export const obtenerUsuariosParaPodio = async (limitResult = 0): Promise<PodiumU
 
   return ordered;
 };
+
+export const guardarResultadosOficiales = async (jornada: number, resultados: Selection[]): Promise<void> => {
+  if (resultados.length !== 9) {
+    throw new Error("Los resultados oficiales deben incluir 9 marcadores.");
+  }
+
+  const resultadosRef = doc(firebaseFirestore, "jornadas", jornada.toString());
+
+  await setDoc(resultadosRef, {
+    resultadosOficiales: resultados,
+    fechaCierre: serverTimestamp(),
+  });
+};

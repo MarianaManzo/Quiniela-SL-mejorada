@@ -1,7 +1,15 @@
-import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import type { User } from "firebase/auth";
 import { firebaseFirestore } from "../firebase";
 import type { Selection } from "../quiniela/config";
+
+export type PodiumUser = {
+  id: string;
+  nombre: string;
+  email: string;
+  puntosTotales: number;
+  ultimaJornada: number;
+};
 
 type GuardarQuinielaPayload = {
   uid: string;
@@ -72,4 +80,49 @@ export const guardarQuiniela = async ({
 
   const userRef = doc(firebaseFirestore, "Usuarios", uid);
   await updateDoc(userRef, { ultimaJornada: jornada });
+};
+
+export const obtenerUsuariosParaPodio = async (): Promise<PodiumUser[]> => {
+  const usuariosSnapshot = await getDocs(collection(firebaseFirestore, "Usuarios"));
+
+  const usuarios = await Promise.all(
+    usuariosSnapshot.docs.map(async (docSnap) => {
+      const data = docSnap.data();
+      const nombre = typeof data.nombreApellido === "string" && data.nombreApellido.trim().length > 0
+        ? data.nombreApellido.trim()
+        : typeof data.email === "string"
+          ? data.email
+          : "Participante";
+      const email = typeof data.email === "string" ? data.email : "";
+      const ultimaJornada = typeof data.ultimaJornada === "number" ? data.ultimaJornada : 0;
+
+      let puntosTotales = typeof data.puntos === "number" ? data.puntos : 0;
+      if (!puntosTotales) {
+        const quinielasSnapshot = await getDocs(collection(firebaseFirestore, "Usuarios", docSnap.id, "quinielas"));
+        puntosTotales = quinielasSnapshot.docs.reduce((acc, quinielaDoc) => {
+          const quinielaData = quinielaDoc.data();
+          const puntos = typeof quinielaData.puntosObtenidos === "number" ? quinielaData.puntosObtenidos : 0;
+          return acc + puntos;
+        }, 0);
+      }
+
+      return {
+        id: docSnap.id,
+        nombre,
+        email,
+        puntosTotales,
+        ultimaJornada,
+      } satisfies PodiumUser;
+    })
+  );
+
+  return usuarios.sort((a, b) => {
+    if (b.puntosTotales !== a.puntosTotales) {
+      return b.puntosTotales - a.puntosTotales;
+    }
+    if (b.ultimaJornada !== a.ultimaJornada) {
+      return b.ultimaJornada - a.ultimaJornada;
+    }
+    return a.nombre.localeCompare(b.nombre);
+  });
 };

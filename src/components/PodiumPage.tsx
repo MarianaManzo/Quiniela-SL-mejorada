@@ -1,27 +1,72 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 
-import { PODIUM_ENTRIES, type PodiumEntry } from "../data/podium";
+import { PODIUM_ENTRIES } from "../data/podium";
 import "../styles/podium.css";
+import { obtenerUsuariosParaPodio, type PodiumUser } from "../services/firestoreService";
 
 const PAGE_SIZE = 30;
 
+type PodiumRow = {
+  id: string;
+  name: string;
+  points: number;
+  ultimaJornada?: number;
+  email?: string;
+};
+
+const FALLBACK_ROWS: PodiumRow[] = PODIUM_ENTRIES.map((entry) => ({
+  id: `fallback-${entry.id}`,
+  name: entry.name,
+  points: entry.points,
+}));
+
 export function PodiumPage() {
   const [query, setQuery] = useState("");
+  const [entries, setEntries] = useState<PodiumRow[]>(FALLBACK_ROWS);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [isMobileSearchOpen, setMobileSearchOpen] = useState(false);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchPodium = async () => {
+      try {
+        const snapshot = await obtenerUsuariosParaPodio();
+        if (cancelled || snapshot.length === 0) {
+          return;
+        }
+
+        setEntries(
+          snapshot.map((row) => ({
+            id: row.id,
+            name: row.nombre,
+            points: row.puntosTotales,
+            ultimaJornada: row.ultimaJornada,
+            email: row.email,
+          }))
+        );
+      } catch (error) {
+        console.error("No se pudo cargar el pódium desde Firestore", error);
+      }
+    };
+
+    void fetchPodium();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const filteredEntries = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) {
-      return PODIUM_ENTRIES;
+      return entries;
     }
-    return PODIUM_ENTRIES.filter((entry) =>
-      `${entry.name} ${entry.team} ${entry.city}`.toLowerCase().includes(normalized)
-    );
-  }, [query]);
+    return entries.filter((entry) => entry.name.toLowerCase().includes(normalized));
+  }, [entries, query]);
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
@@ -164,7 +209,7 @@ export function PodiumPage() {
   );
 }
 
-function renderRow(entry: PodiumEntry, index: number) {
+function renderRow(entry: PodiumRow, index: number) {
   const rank = index + 1;
   const highlightRank = rank <= 3 ? rank : undefined;
 
@@ -180,6 +225,9 @@ function renderRow(entry: PodiumEntry, index: number) {
       </span>
       <span className="podium-table__cell podium-table__cell--name" role="cell">
         <span className="podium-participant__name">{entry.name}</span>
+        {entry.ultimaJornada ? (
+          <span className="podium-participant__meta">Jornada {entry.ultimaJornada}</span>
+        ) : null}
       </span>
       <span className="podium-table__cell podium-table__cell--points" role="cell">
         {entry.points} pts

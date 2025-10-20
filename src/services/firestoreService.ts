@@ -34,7 +34,15 @@ export const crearOActualizarUsuario = async (user: User): Promise<void> => {
     ultimaJornada: typeof existingData?.ultimaJornada === "number" ? existingData.ultimaJornada : 0,
   };
 
-  await setDoc(userRef, basePayload, { merge: true });
+  await setDoc(
+    userRef,
+    {
+      ...basePayload,
+      fechaCreacion: existingData?.fechaCreacion ?? serverTimestamp(),
+      fechaActualizacion: serverTimestamp(),
+    },
+    { merge: true },
+  );
 };
 
 /**

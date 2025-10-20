@@ -56,19 +56,27 @@ export const calcularPuntos = functions.firestore
 
       const delta = puntos - anterior;
 
-      batch.update(docSnap.ref, {
-        puntosObtenidos: puntos,
-        estadoQuiniela: "cerrada",
-        fechaActualizacion: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      batch.set(
+        docSnap.ref,
+        {
+          puntosObtenidos: puntos,
+          estadoQuiniela: "cerrada",
+          fechaActualizacion: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
 
       const userRef = docSnap.ref.parent?.parent;
       if (userRef && delta !== 0) {
-        batch.update(userRef, {
-          puntos: admin.firestore.FieldValue.increment(delta),
-          fechaActualizacion: admin.firestore.FieldValue.serverTimestamp(),
-          ultimaJornada: jornadaNumero,
-        });
+        batch.set(
+          userRef,
+          {
+            puntos: admin.firestore.FieldValue.increment(delta),
+            fechaActualizacion: admin.firestore.FieldValue.serverTimestamp(),
+            ultimaJornada: jornadaNumero,
+          },
+          { merge: true },
+        );
       }
     });
 

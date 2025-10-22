@@ -61,7 +61,8 @@
             "dev": "vite",
             "build": "vite build",
             "guardar:resultados": "tsx scripts/guardarResultados.ts",
-            "seed:firestore": "tsx scripts/seedDatabase.ts",
-            "migrate:quinielas": "tsx scripts/migrateQuinielasIds.ts"
-      }
+      "seed:firestore": "tsx scripts/seedDatabase.ts",
+      "migrate:quinielas": "tsx scripts/migrateQuinielasIds.ts",
+      "open:journey": "tsx scripts/openJourney.ts"
+  }
 }

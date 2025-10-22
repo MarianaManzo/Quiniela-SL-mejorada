@@ -518,6 +518,9 @@ export default function App() {
       resetDownloadState();
       setIsShareOpen(false);
       setManualSaveDataUrl(null);
+      setCurrentSubmissionAt(null);
+      setPreviousSubmissionAt(null);
+      setPreviousJourneyCloseDate(null);
       return;
     }
 
@@ -525,9 +528,11 @@ export default function App() {
     setQuinielaSelections(createEmptySelections());
     setLastSubmittedAt(stored?.submittedAt ?? null);
     setIsReadOnlyView(Boolean(stored && stored.journey === CURRENT_JOURNEY));
+    setCurrentSubmissionAt(stored && stored.journey === CURRENT_JOURNEY ? stored.submittedAt : null);
+    setPreviousSubmissionAt(stored && stored.journey === previousJourneyNumber ? stored.submittedAt : null);
     setShowSelectionErrors(false);
     hideSubmitTooltip();
-  }, [user, createEmptySelections, hideSubmitTooltip, resetDownloadState]);
+  }, [user, createEmptySelections, hideSubmitTooltip, resetDownloadState, previousJourneyNumber]);
 
   const handleSignOut = useCallback(async () => {
     resetDownloadState();
@@ -644,6 +649,7 @@ export default function App() {
           uid: firebaseUser.uid,
           jornada: CURRENT_JOURNEY,
           pronosticos,
+          estadoQuiniela: 'cerrada',
         });
       }
 

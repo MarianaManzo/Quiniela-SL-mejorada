@@ -314,15 +314,19 @@ export function Dashboard({
     .find((section) => section.id === "regular")
     ?.cards.find((card) => card.tone === "current");
   const activeJourneyCode = journeyCode ?? activeJourney?.code ?? "";
-  const heroButtonLabel = hasSubmitted
-    ? activeJourneyCode
-      ? `Ver ${activeJourneyCode}`
-      : "Ver"
-    : journeyClosed
+  const heroButtonLabel = (
+    hasSubmitted
       ? activeJourneyCode
-        ? `Expirada ${activeJourneyCode}`
-        : "Expirada"
-      : "Participar";
+        ? `Ver ${activeJourneyCode}`
+        : "Ver"
+      : journeyClosed
+        ? activeJourneyCode
+          ? `Expirada ${activeJourneyCode}`
+          : "Expirada"
+        : activeJourneyCode
+          ? `Participar ${activeJourneyCode}`
+          : "Participar"
+  ).trim();
   const previousSubmitted = Boolean(previousJourneySubmittedAt);
   const heroActionDisabled = journeyClosed && !hasSubmitted;
 
@@ -331,17 +335,16 @@ export function Dashboard({
 
   const formatDisplayDate = (date: Date): string => {
     const dateFormatter = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short" });
-    const raw = dateFormatter.format(date).replace('.', '').trim();
+    const raw = dateFormatter.format(date).replace('.', '').toUpperCase().trim();
     const parts = raw.split(' ').filter(Boolean);
     const dayPart = parts[0] ?? raw;
-    const monthPartRaw = parts[1] ?? '';
-    const monthPart = monthPartRaw ? monthPartRaw.charAt(0).toUpperCase() + monthPartRaw.slice(1) : '';
+    const monthPart = parts[1] ?? '';
     const time = date.toLocaleTimeString("es-MX", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
     });
-    return monthPart ? `${dayPart} ${monthPart} · ${time} hrs` : `${dayPart} · ${time} hrs`;
+    return monthPart ? `${dayPart} ${monthPart} - ${time}` : `${dayPart} - ${time}`;
   };
   const formatSubmissionDate = (iso: string): string => formatDisplayDate(new Date(iso));
 
@@ -454,23 +457,22 @@ export function Dashboard({
             Sumemos voz a la liga femenil con intuición y juego limpio. Completa tu pronóstico, compártelo con tu equipo
             y celebremos cada gol juntas.
           </p>
-          {heroCountdownVisible && journeyCloseLabel ? (
-            <div className="hero-action__label" role="status">
-              <Clock size={18} aria-hidden="true" />
-              <span>{journeyCloseLabel}</span>
-            </div>
-          ) : null}
-          {!heroCountdownVisible && heroClosedMessage ? (
-            <div className="hero-action__label hero-action__label--muted" role="status">
-              <AlertTriangle size={18} aria-hidden="true" />
-              <span>{heroClosedMessage}</span>
-            </div>
-          ) : null}
-
           <div className="hero-actions">
+            {heroCountdownVisible && journeyCloseLabel ? (
+              <div className="hero-action__label" role="status">
+                <Clock size={18} aria-hidden="true" />
+                <span>{journeyCloseLabel}</span>
+              </div>
+            ) : null}
+            {!heroCountdownVisible && heroClosedMessage ? (
+              <div className="hero-action__label hero-action__label--muted" role="status">
+                <AlertTriangle size={18} aria-hidden="true" />
+                <span>{heroClosedMessage}</span>
+              </div>
+            ) : null}
             <button
               type="button"
-              className="btn btn-primary"
+              className="btn btn-primary hero-action__button"
               onClick={handleHeroAction}
               disabled={heroActionDisabled}
               aria-disabled={heroActionDisabled}

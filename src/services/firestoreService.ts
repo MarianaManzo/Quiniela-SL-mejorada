@@ -25,6 +25,7 @@ type GuardarQuinielaPayload = {
   pronosticos: Selection[];
   puntosObtenidos?: number;
   estadoQuiniela?: "abierta" | "cerrada";
+  quinielaEnviada?: boolean;
 };
 
 /**
@@ -72,6 +73,7 @@ export const guardarQuiniela = async ({
   pronosticos,
   puntosObtenidos = 0,
   estadoQuiniela = "abierta",
+  quinielaEnviada,
 }: GuardarQuinielaPayload): Promise<void> => {
   if (pronosticos.length !== 9) {
     throw new Error("La quiniela debe incluir 9 pronósticos.");
@@ -84,7 +86,9 @@ export const guardarQuiniela = async ({
     pronosticos,
     puntosObtenidos,
     estadoQuiniela,
+    quinielaEnviada: typeof quinielaEnviada === "boolean" ? quinielaEnviada : estadoQuiniela !== "abierta",
     fechaCreacion: serverTimestamp(),
+    fechaActualizacion: serverTimestamp(),
   });
 
   const userRef = doc(firebaseFirestore, "Usuarios", uid);

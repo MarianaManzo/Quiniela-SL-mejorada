@@ -47,13 +47,33 @@ const ensureDisplayName = (value: string): string => {
   return cleaned.length > 0 ? cleaned : 'Invitado rápido';
 };
 
+const toDate = (value: unknown): Date | null => {
+  if (value instanceof Timestamp) {
+    return value.toDate();
+  }
+  if (value instanceof Date) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+  return null;
+};
+
+const toIsoString = (value: unknown): string | null => {
+  const date = toDate(value);
+  return date ? date.toISOString() : null;
+};
+
 const formatJourneyDateParts = (date: Date): { dayMonth: string; time: string } => {
   const dateFormatter = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short' });
-  const raw = dateFormatter.format(date).replace('.', '').trim();
+  const raw = dateFormatter.format(date).replace('.', '').toUpperCase().trim();
   const parts = raw.split(' ').filter(Boolean);
   const dayPart = parts[0] ?? raw;
-  const monthPartRaw = parts[1] ?? '';
-  const monthPart = monthPartRaw ? monthPartRaw.charAt(0).toUpperCase() + monthPartRaw.slice(1) : '';
+  const monthPart = parts[1] ?? '';
   const time = date.toLocaleTimeString('es-MX', {
     hour: '2-digit',
     minute: '2-digit',
@@ -65,7 +85,7 @@ const formatJourneyDateParts = (date: Date): { dayMonth: string; time: string } 
 
 const buildCloseLabel = (prefix: 'Cierra' | 'Cerró', date: Date): string => {
   const { dayMonth, time } = formatJourneyDateParts(date);
-  return `${prefix} el ${dayMonth} · ${time} hrs`;
+  return `${prefix} el ${dayMonth} - ${time}`;
 };
 
 type StoredSubmissions = Record<string, QuinielaSubmission | (Omit<QuinielaSubmission, 'journey'> & { journey?: number })>;
@@ -130,6 +150,10 @@ export default function App() {
   const [journeyCloseDate, setJourneyCloseDate] = useState<Date | null>(null);
   const [now, setNow] = useState<Date>(() => new Date());
   const [lastSubmittedAt, setLastSubmittedAt] = useState<string | null>(null);
+  const previousJourneyNumber = CURRENT_JOURNEY - 1;
+  const [previousJourneyCloseDate, setPreviousJourneyCloseDate] = useState<Date | null>(null);
+  const [currentSubmissionAt, setCurrentSubmissionAt] = useState<string | null>(null);
+  const [previousSubmissionAt, setPreviousSubmissionAt] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
   const toastTimeoutRef = useRef<number | null>(null);
   const [isReadOnlyView, setIsReadOnlyView] = useState(false);
@@ -154,15 +178,14 @@ export default function App() {
     }
     return buildCloseLabel('Cerró', journeyCloseDate);
   }, [journeyCloseDate]);
-  const previousJourneyCloseLabel = useMemo(() => {
-    const previous = loadSubmissionForUser(user?.email ?? '');
-    if (!journeyCloseDate) {
+  const previousJourneyClosedLabel = useMemo(() => {
+    if (!previousJourneyCloseDate) {
       return null;
     }
-    const previousDate = new Date(journeyCloseDate.getTime());
-    previousDate.setDate(previousDate.getDate() - 7);
-    return buildCloseLabel('Cerró', previousDate);
-  }, [journeyCloseDate, user?.email]);
+    return buildCloseLabel('Cerró', previousJourneyCloseDate);
+  }, [previousJourneyCloseDate]);
+  const currentJourneySubmittedAt = currentSubmissionAt ?? lastSubmittedAt;
+  const previousJourneySubmittedAt = previousSubmissionAt;
   const showDebugGrid = useMemo(() => shouldShowDebugGrid(), []);
   const participantDisplayName = useMemo(
     () => formatParticipantName(user?.name, user?.email),
@@ -219,44 +242,46 @@ export default function App() {
       return;
     }
 
+    const unsubscribeFns: Array<() => void> = [];
+
     const journeyRef = doc(firebaseFirestore, 'jornadas', CURRENT_JOURNEY.toString());
-    const unsubscribe = onSnapshot(
-      journeyRef,
-      (snapshot) => {
-        if (!snapshot.exists()) {
+    unsubscribeFns.push(
+      onSnapshot(
+        journeyRef,
+        (snapshot) => {
+          const data = snapshot.exists() ? snapshot.data() : undefined;
+          setJourneyCloseDate(toDate((data as { fechaCierre?: unknown } | undefined)?.fechaCierre));
+        },
+        (error) => {
+          console.error('No se pudo obtener la fecha de cierre de la jornada', error);
           setJourneyCloseDate(null);
-          return;
-        }
-
-        const data = snapshot.data() as { fechaCierre?: Timestamp | Date | string } | undefined;
-        const rawClose = data?.fechaCierre;
-
-        if (rawClose instanceof Timestamp) {
-          setJourneyCloseDate(rawClose.toDate());
-          return;
-        }
-
-        if (rawClose instanceof Date) {
-          setJourneyCloseDate(rawClose);
-          return;
-        }
-
-        if (typeof rawClose === 'string') {
-          const parsed = new Date(rawClose);
-          setJourneyCloseDate(Number.isNaN(parsed.getTime()) ? null : parsed);
-          return;
-        }
-
-        setJourneyCloseDate(null);
-      },
-      (error) => {
-        console.error('No se pudo obtener la fecha de cierre de la jornada', error);
-        setJourneyCloseDate(null);
-      },
+        },
+      ),
     );
 
-    return () => unsubscribe();
-  }, []);
+    if (previousJourneyNumber > 0) {
+      const previousRef = doc(firebaseFirestore, 'jornadas', previousJourneyNumber.toString());
+      unsubscribeFns.push(
+        onSnapshot(
+          previousRef,
+          (snapshot) => {
+            const data = snapshot.exists() ? snapshot.data() : undefined;
+            setPreviousJourneyCloseDate(toDate((data as { fechaCierre?: unknown } | undefined)?.fechaCierre));
+          },
+          (error) => {
+            console.error('No se pudo obtener la fecha de cierre de la jornada previa', error);
+            setPreviousJourneyCloseDate(null);
+          },
+        ),
+      );
+    } else {
+      setPreviousJourneyCloseDate(null);
+    }
+
+    return () => {
+      unsubscribeFns.forEach((fn) => fn());
+    };
+  }, [previousJourneyNumber]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -268,6 +293,82 @@ export default function App() {
     const intervalId = window.setInterval(updateNow, 60000);
     return () => window.clearInterval(intervalId);
   }, []);
+  useEffect(() => {
+    if (!firebaseUser) {
+      setCurrentSubmissionAt(null);
+      setPreviousSubmissionAt(null);
+      return undefined;
+    }
+
+    const unsubscribeFns: Array<() => void> = [];
+
+    const currentQuinielaRef = doc(
+      firebaseFirestore,
+      'Usuarios',
+      firebaseUser.uid,
+      'quinielas',
+      CURRENT_JOURNEY.toString(),
+    );
+
+    unsubscribeFns.push(
+      onSnapshot(currentQuinielaRef, (snapshot) => {
+        if (!snapshot.exists()) {
+          setCurrentSubmissionAt(null);
+          setIsReadOnlyView(false);
+          return;
+        }
+
+        const data = snapshot.data() as {
+          estadoQuiniela?: string;
+          quinielaEnviada?: boolean;
+          fechaActualizacion?: unknown;
+          fechaCreacion?: unknown;
+        };
+
+        const submitted = data?.estadoQuiniela !== 'abierta' || Boolean(data?.quinielaEnviada);
+        const submittedAt = submitted ? toIsoString(data?.fechaActualizacion ?? data?.fechaCreacion) : null;
+
+        setIsReadOnlyView(submitted);
+        setCurrentSubmissionAt(submittedAt);
+      });
+    );
+
+    if (previousJourneyNumber > 0) {
+      const previousQuinielaRef = doc(
+        firebaseFirestore,
+        'Usuarios',
+        firebaseUser.uid,
+        'quinielas',
+        previousJourneyNumber.toString(),
+      );
+
+      unsubscribeFns.push(
+        onSnapshot(previousQuinielaRef, (snapshot) => {
+          if (!snapshot.exists()) {
+            setPreviousSubmissionAt(null);
+            return;
+          }
+
+          const data = snapshot.data() as {
+            estadoQuiniela?: string;
+            quinielaEnviada?: boolean;
+            fechaActualizacion?: unknown;
+            fechaCreacion?: unknown;
+          };
+
+          const submitted = data?.estadoQuiniela !== 'abierta' || Boolean(data?.quinielaEnviada);
+          const submittedAt = submitted ? toIsoString(data?.fechaActualizacion ?? data?.fechaCreacion) : null;
+          setPreviousSubmissionAt(submittedAt);
+        }),
+      );
+    } else {
+      setPreviousSubmissionAt(null);
+    }
+
+    return () => {
+      unsubscribeFns.forEach((fn) => fn());
+    };
+  }, [firebaseUser, previousJourneyNumber]);
   useEffect(() => {
     let isMounted = true;
 
@@ -335,6 +436,12 @@ export default function App() {
     showToast(downloadError, 'error');
     resetDownloadError();
   }, [downloadError, resetDownloadError, showToast]);
+
+  useEffect(() => {
+    if (currentSubmissionAt) {
+      setLastSubmittedAt(currentSubmissionAt);
+    }
+  }, [currentSubmissionAt]);
 
   const hideSubmitTooltip = useCallback(() => {}, []);
   const handleQuickAccess = useCallback(() => {
@@ -789,9 +896,9 @@ export default function App() {
             journeyCloseLabel={journeyCloseLabel}
             journeyClosedLabel={journeyClosedLabel}
             journeyClosed={journeyClosed}
-            journeySubmittedAt={lastSubmittedAt}
-            previousJourneyClosedLabel={previousJourneyCloseLabel}
-            previousJourneySubmittedAt={lastSubmittedAt && loadSubmissionForUser(user.email)?.journey === CURRENT_JOURNEY - 1 ? lastSubmittedAt : null}
+            journeySubmittedAt={currentJourneySubmittedAt}
+            previousJourneyClosedLabel={previousJourneyClosedLabel}
+            previousJourneySubmittedAt={previousJourneySubmittedAt}
           />
         </div>
       ) : (

@@ -308,6 +308,8 @@ export function Dashboard({
 
   const firstName = user.name.trim().split(" ")[0] || user.name;
   const hasSubmitted = Boolean(journeySubmittedAt);
+  const journeyNumber = journeyCode ? Number.parseInt(journeyCode.replace(/\D/g, ''), 10) : null;
+  const previousJourneyCode = journeyNumber && journeyNumber > 1 ? `J${String(journeyNumber - 1).padStart(2, '0')}` : null;
   const activeJourney = tournamentSections
     .find((section) => section.id === "regular")
     ?.cards.find((card) => card.tone === "current");
@@ -315,14 +317,13 @@ export function Dashboard({
   const heroButtonLabel = hasSubmitted
     ? activeJourneyCode
       ? `Ver ${activeJourneyCode}`
-      : "Ver jornada"
+      : "Ver"
     : journeyClosed
       ? activeJourneyCode
         ? `Expirada ${activeJourneyCode}`
         : "Expirada"
-      : activeJourneyCode
-        ? `Participar ${activeJourneyCode}`
-        : "Participar";
+      : "Participar";
+  const previousSubmitted = Boolean(previousJourneySubmittedAt);
   const heroActionDisabled = journeyClosed && !hasSubmitted;
 
   const heroCountdownVisible = !journeyClosed && !hasSubmitted && Boolean(journeyCloseLabel);
@@ -385,11 +386,11 @@ export function Dashboard({
         }
 
         if (
-          journeyClosed &&
+          previousJourneyCode &&
           previousJourneyClosedLabel &&
-          card.code === `J${(parseInt(journeyCode.replace(/\D/g, ""), 10) - 1).toString().padStart(2, "0")}`
+          card.code === previousJourneyCode
         ) {
-          if (previousJourneySubmittedAt) {
+          if (previousSubmitted && previousJourneySubmittedAt) {
             return {
               ...card,
               tone: "success" as JourneyTone,
@@ -454,15 +455,15 @@ export function Dashboard({
             y celebremos cada gol juntas.
           </p>
           {heroCountdownVisible && journeyCloseLabel ? (
-            <div className="hero-countdown" role="status">
+            <div className="hero-action__label" role="status">
               <Clock size={18} aria-hidden="true" />
-              <span className="hero-countdown__label">{journeyCloseLabel}</span>
+              <span>{journeyCloseLabel}</span>
             </div>
           ) : null}
           {!heroCountdownVisible && heroClosedMessage ? (
-            <div className="hero-countdown hero-countdown--muted" role="status">
+            <div className="hero-action__label hero-action__label--muted" role="status">
               <AlertTriangle size={18} aria-hidden="true" />
-              <span className="hero-countdown__label">{heroClosedMessage}</span>
+              <span>{heroClosedMessage}</span>
             </div>
           ) : null}
 

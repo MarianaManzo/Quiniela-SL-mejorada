@@ -360,8 +360,8 @@ export function Dashboard({
               tone: "success" as JourneyTone,
               statusLabel: "Enviado",
               meta: `Pronóstico enviado el ${formatSubmissionDate(journeySubmittedAt)}`,
-              ctaLabel: "Ver",
-              ctaMobileLabel: "Ver",
+              ctaLabel: undefined,
+              ctaMobileLabel: undefined,
             };
           }
 
@@ -394,8 +394,8 @@ export function Dashboard({
               tone: "success" as JourneyTone,
               statusLabel: "Enviado",
               meta: `Pronóstico enviado el ${formatSubmissionDate(previousJourneySubmittedAt)}`,
-              ctaLabel: "Ver",
-              ctaMobileLabel: "Ver",
+              ctaLabel: undefined,
+              ctaMobileLabel: undefined,
             };
           }
 

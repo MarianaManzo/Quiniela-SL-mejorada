@@ -47,6 +47,27 @@ const ensureDisplayName = (value: string): string => {
   return cleaned.length > 0 ? cleaned : 'Invitado rápido';
 };
 
+const formatJourneyDateParts = (date: Date): { dayMonth: string; time: string } => {
+  const dateFormatter = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short' });
+  const raw = dateFormatter.format(date).replace('.', '').trim();
+  const parts = raw.split(' ').filter(Boolean);
+  const dayPart = parts[0] ?? raw;
+  const monthPartRaw = parts[1] ?? '';
+  const monthPart = monthPartRaw ? monthPartRaw.charAt(0).toUpperCase() + monthPartRaw.slice(1) : '';
+  const time = date.toLocaleTimeString('es-MX', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const dayMonth = monthPart ? `${dayPart} ${monthPart}` : dayPart;
+  return { dayMonth, time };
+};
+
+const buildCloseLabel = (prefix: 'Cierra' | 'Cerró', date: Date): string => {
+  const { dayMonth, time } = formatJourneyDateParts(date);
+  return `${prefix} el ${dayMonth} · ${time} hrs`;
+};
+
 type StoredSubmissions = Record<string, QuinielaSubmission | (Omit<QuinielaSubmission, 'journey'> & { journey?: number })>;
 
 const readStoredSubmissions = (): StoredSubmissions => {
@@ -125,44 +146,14 @@ export default function App() {
     if (!journeyCloseDate) {
       return null;
     }
-
-    const dateLabel = journeyCloseDate.toLocaleDateString('es-MX', {
-      day: 'numeric',
-      month: 'long',
-    });
-    const timeLabel = journeyCloseDate.toLocaleTimeString('es-MX', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
-    return `Cierra el ${dateLabel} · ${timeLabel} h (CDMX)`;
+    return buildCloseLabel('Cierra', journeyCloseDate);
   }, [journeyCloseDate]);
-  const journeyTimeRemaining = useMemo(() => {
+  const journeyClosedLabel = useMemo(() => {
     if (!journeyCloseDate) {
       return null;
     }
-
-    const diffMs = journeyCloseDate.getTime() - now.getTime();
-    if (diffMs <= 0) {
-      return null;
-    }
-
-    const totalMinutes = Math.floor(diffMs / 60000);
-    const days = Math.floor(totalMinutes / (60 * 24));
-    const hours = Math.floor((totalMinutes - days * 60 * 24) / 60);
-    const minutes = totalMinutes - days * 60 * 24 - hours * 60;
-
-    const segments: string[] = [];
-    if (days > 0) {
-      segments.push(`${days} ${days === 1 ? 'día' : 'días'}`);
-    }
-    if (hours > 0) {
-      segments.push(`${hours} h`);
-    }
-    segments.push(`${minutes} min`);
-
-    return `Faltan ${segments.join(' ')} para cerrar`;
-  }, [journeyCloseDate, now]);
+    return buildCloseLabel('Cerró', journeyCloseDate);
+  }, [journeyCloseDate]);
   const showDebugGrid = useMemo(() => shouldShowDebugGrid(), []);
   const participantDisplayName = useMemo(
     () => formatParticipantName(user?.name, user?.email),
@@ -787,7 +778,7 @@ export default function App() {
             onViewPodium={handleEnterPodium}
             journeyCode={`J${CURRENT_JOURNEY.toString().padStart(2, '0')}`}
             journeyCloseLabel={journeyCloseLabel}
-            journeyTimeRemaining={journeyTimeRemaining}
+            journeyClosedLabel={journeyClosedLabel}
             journeyClosed={journeyClosed}
             journeySubmittedAt={lastSubmittedAt}
           />

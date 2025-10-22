@@ -23,7 +23,7 @@ interface DashboardProps {
   onViewPodium?: () => void;
   journeyCode?: string;
   journeyCloseLabel?: string | null;
-  journeyTimeRemaining?: string | null;
+  journeyClosedLabel?: string | null;
   journeyClosed?: boolean;
   journeySubmittedAt?: string | null;
 }
@@ -243,7 +243,7 @@ export function Dashboard({
   onViewPodium,
   journeyCode,
   journeyCloseLabel,
-  journeyTimeRemaining,
+  journeyClosedLabel,
   journeyClosed = false,
   journeySubmittedAt,
 }: DashboardProps) {
@@ -303,33 +303,42 @@ export function Dashboard({
   };
 
   const firstName = user.name.trim().split(" ")[0] || user.name;
+  const hasSubmitted = Boolean(journeySubmittedAt);
   const activeJourney = tournamentSections
     .find((section) => section.id === "regular")
     ?.cards.find((card) => card.tone === "current");
   const activeJourneyCode = journeyCode ?? activeJourney?.code ?? "";
-  const participateLabel = journeyClosed
+  const heroButtonLabel = hasSubmitted
     ? activeJourneyCode
       ? `Ver ${activeJourneyCode}`
       : "Ver jornada"
-    : activeJourneyCode
-      ? `Participa en ${activeJourneyCode}`
-      : "Participa en jornada";
-  const participateMobileLabel = journeyClosed ? "Ver" : "Participa";
-  const heroActionDisabled = journeyClosed && !onViewQuiniela;
+    : journeyClosed
+      ? activeJourneyCode
+        ? `Expirada ${activeJourneyCode}`
+        : "Expirada"
+      : activeJourneyCode
+        ? `Participar ${activeJourneyCode}`
+        : "Participar";
+  const heroActionDisabled = journeyClosed && !hasSubmitted;
 
-  const formatSubmissionDate = (iso: string): string => {
-    const submitted = new Date(iso);
-    const date = submitted.toLocaleDateString("es-MX", {
-      day: "numeric",
-      month: "long",
-    });
-    const time = submitted.toLocaleTimeString("es-MX", {
+  const heroCountdownVisible = !journeyClosed && !hasSubmitted && Boolean(journeyCloseLabel);
+  const heroClosedMessage = journeyClosed && !hasSubmitted ? journeyClosedLabel ?? "La jornada está cerrada." : null;
+
+  const formatDisplayDate = (date: Date): string => {
+    const dateFormatter = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short" });
+    const raw = dateFormatter.format(date).replace('.', '').trim();
+    const parts = raw.split(' ').filter(Boolean);
+    const dayPart = parts[0] ?? raw;
+    const monthPartRaw = parts[1] ?? '';
+    const monthPart = monthPartRaw ? monthPartRaw.charAt(0).toUpperCase() + monthPartRaw.slice(1) : '';
+    const time = date.toLocaleTimeString("es-MX", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
     });
-    return `${date} · ${time} h`;
+    return monthPart ? `${dayPart} ${monthPart} · ${time} hrs` : `${dayPart} · ${time} hrs`;
   };
+  const formatSubmissionDate = (iso: string): string => formatDisplayDate(new Date(iso));
 
   const computedSections: TournamentSection[] = useMemo(() => {
     return tournamentSections.map((section) => {
@@ -343,7 +352,7 @@ export function Dashboard({
         }
 
         if (journeyClosed) {
-          if (journeySubmittedAt) {
+          if (hasSubmitted && journeySubmittedAt) {
             return {
               ...card,
               tone: "success" as JourneyTone,
@@ -354,7 +363,7 @@ export function Dashboard({
             };
           }
 
-          const closedLabel = journeyCloseLabel ?? "La jornada cerró";
+          const closedLabel = journeyClosedLabel ?? journeyCloseLabel ?? "La jornada cerró";
           return {
             ...card,
             tone: "warning" as JourneyTone,
@@ -365,7 +374,7 @@ export function Dashboard({
           };
         }
 
-        const metaLabel = journeyTimeRemaining ?? journeyCloseLabel ?? card.meta;
+        const metaLabel = journeyCloseLabel ?? card.meta;
         return {
           ...card,
           tone: "current" as JourneyTone,
@@ -381,10 +390,13 @@ export function Dashboard({
         cards,
       };
     });
-  }, [journeyCode, journeyClosed, journeyCloseLabel, journeySubmittedAt, journeyTimeRemaining]);
+  }, [hasSubmitted, journeyClosed, journeyClosedLabel, journeyCloseLabel, journeyCode, journeySubmittedAt]);
 
   const handleHeroAction = () => {
-    if (journeyClosed && journeyCode) {
+    if (heroActionDisabled) {
+      return;
+    }
+    if ((journeyClosed || hasSubmitted) && journeyCode) {
       onViewQuiniela?.(journeyCode);
       return;
     }
@@ -404,19 +416,18 @@ export function Dashboard({
             Sumemos voz a la liga femenil con intuición y juego limpio. Completa tu pronóstico, compártelo con tu equipo
             y celebremos cada gol juntas.
           </p>
-          {journeyCloseLabel && (
+          {heroCountdownVisible && journeyCloseLabel ? (
             <div className="hero-countdown" role="status">
               <Clock size={18} aria-hidden="true" />
-              <div className="hero-countdown__content">
-                <span className="hero-countdown__label">{journeyCloseLabel}</span>
-                <span className="hero-countdown__time">
-                  {journeyClosed
-                    ? "La jornada está cerrada. Revisa tu pronóstico."
-                    : journeyTimeRemaining ?? "Cierre inminente"}
-                </span>
-              </div>
+              <span className="hero-countdown__label">{journeyCloseLabel}</span>
             </div>
-          )}
+          ) : null}
+          {!heroCountdownVisible && heroClosedMessage ? (
+            <div className="hero-countdown hero-countdown--muted" role="status">
+              <AlertTriangle size={18} aria-hidden="true" />
+              <span className="hero-countdown__label">{heroClosedMessage}</span>
+            </div>
+          ) : null}
 
           <div className="hero-actions">
             <button
@@ -426,9 +437,9 @@ export function Dashboard({
               disabled={heroActionDisabled}
               aria-disabled={heroActionDisabled}
             >
-              <span className="btn__label btn__label--desktop">{participateLabel}</span>
-              <span className="btn__label btn__label--mobile">{participateMobileLabel}</span>
-              <ArrowRight size={18} />
+              <span className="btn__label btn__label--desktop">{heroButtonLabel}</span>
+              <span className="btn__label btn__label--mobile">{heroButtonLabel}</span>
+              {!heroActionDisabled ? <ArrowRight size={18} /> : null}
             </button>
           </div>
         </div>

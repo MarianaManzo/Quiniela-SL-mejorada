@@ -344,6 +344,12 @@
   box-shadow: 0 24px 54px -40px rgba(15, 16, 19, 0.8);
 }
 
+.hero-countdown--muted {
+  background: rgba(15, 16, 19, 0.4);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: rgba(248, 250, 252, 0.82);
+}
+
 .hero-countdown svg {
   flex-shrink: 0;
   margin-top: 2px;

@@ -789,6 +789,7 @@ export default function App() {
             journeyCloseLabel={journeyCloseLabel}
             journeyTimeRemaining={journeyTimeRemaining}
             journeyClosed={journeyClosed}
+            journeySubmittedAt={lastSubmittedAt}
           />
         </div>
       ) : (

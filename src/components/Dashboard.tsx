@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -25,6 +25,7 @@ interface DashboardProps {
   journeyCloseLabel?: string | null;
   journeyTimeRemaining?: string | null;
   journeyClosed?: boolean;
+  journeySubmittedAt?: string | null;
 }
 
 const communityNotes = [
@@ -244,6 +245,7 @@ export function Dashboard({
   journeyCloseLabel,
   journeyTimeRemaining,
   journeyClosed = false,
+  journeySubmittedAt,
 }: DashboardProps) {
   const [sectionState, setSectionState] = useState<TournamentSectionState[]>(
     tournamentSections.map((section) => ({
@@ -314,6 +316,72 @@ export function Dashboard({
       : "Participa en jornada";
   const participateMobileLabel = journeyClosed ? "Ver" : "Participa";
   const heroActionDisabled = journeyClosed && !onViewQuiniela;
+
+  const formatSubmissionDate = (iso: string): string => {
+    const submitted = new Date(iso);
+    const date = submitted.toLocaleDateString("es-MX", {
+      day: "numeric",
+      month: "long",
+    });
+    const time = submitted.toLocaleTimeString("es-MX", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    return `${date} · ${time} h`;
+  };
+
+  const computedSections: TournamentSection[] = useMemo(() => {
+    return tournamentSections.map((section) => {
+      if (section.id !== "regular" || !journeyCode) {
+        return section;
+      }
+
+      const cards = section.cards.map((card) => {
+        if (card.code !== journeyCode) {
+          return card;
+        }
+
+        if (journeyClosed) {
+          if (journeySubmittedAt) {
+            return {
+              ...card,
+              tone: "success" as JourneyTone,
+              statusLabel: "Enviado",
+              meta: `Pronóstico enviado el ${formatSubmissionDate(journeySubmittedAt)}`,
+              ctaLabel: "Ver",
+              ctaMobileLabel: "Ver",
+            };
+          }
+
+          const closedLabel = journeyCloseLabel ?? "La jornada cerró";
+          return {
+            ...card,
+            tone: "warning" as JourneyTone,
+            statusLabel: "Expirado",
+            meta: closedLabel,
+            ctaLabel: undefined,
+            ctaMobileLabel: undefined,
+          };
+        }
+
+        const metaLabel = journeyTimeRemaining ?? journeyCloseLabel ?? card.meta;
+        return {
+          ...card,
+          tone: "current" as JourneyTone,
+          statusLabel: "En curso",
+          meta: metaLabel,
+          ctaLabel: "Participar",
+          ctaMobileLabel: "Participa",
+        };
+      });
+
+      return {
+        ...section,
+        cards,
+      };
+    });
+  }, [journeyCode, journeyClosed, journeyCloseLabel, journeySubmittedAt, journeyTimeRemaining]);
 
   const handleHeroAction = () => {
     if (journeyClosed && journeyCode) {
@@ -388,7 +456,7 @@ export function Dashboard({
 
       <section className="dashboard-section tournament-panel">
         <div className="tournament-panel__stack">
-          {tournamentSections.map((section) => {
+          {computedSections.map((section) => {
             const collapsed = Boolean(isSectionCollapsed(section.id));
 
             return (

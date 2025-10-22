@@ -1,10 +1,11 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Download, Loader2, Share2, X } from 'lucide-react';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 import { Dashboard } from './components/Dashboard';
 import { LoginScreen, type UserProfile } from './components/LoginScreen';
 import { Navbar } from './components/Navbar';
 import { PodiumPage } from './components/PodiumPage';
+import AperturaJornada15 from './imports/AperturaJornada15';
 import {
   MATCHES,
   QUINIELA_STORAGE_KEY,
@@ -20,7 +21,7 @@ import { formatParticipantName, sanitizeDisplayName } from './utils/formatPartic
 
 // Definición centralizada de la jornada mostrada
 const CURRENT_JOURNEY = 15;
-const BUILD_VERSION = 'V 13';
+const BUILD_VERSION = 'V 18';
 const QUICK_ACCESS_STORAGE_KEY = 'quiniela-quick-access-profile';
 
 const shouldShowDebugGrid = (): boolean => {
@@ -44,10 +45,6 @@ const ensureDisplayName = (value: string): string => {
   const cleaned = sanitizeDisplayName(value);
   return cleaned.length > 0 ? cleaned : 'Invitado rápido';
 };
-
-// Carga lazy del componente principal para mejorar performance
-const AperturaJornada15 = lazy(() => import('./imports/AperturaJornada15'));
-
 
 type StoredSubmissions = Record<string, QuinielaSubmission | (Omit<QuinielaSubmission, 'journey'> & { journey?: number })>;
 
@@ -617,7 +614,6 @@ export default function App() {
           <div
             className="canvas-wrapper"
           >
-            <Suspense fallback={<LoadingSpinner />}>
             <AperturaJornada15
               selections={quinielaSelections}
               onSelect={handleSelectionChange}
@@ -626,7 +622,6 @@ export default function App() {
               participantName={participantDisplayName}
               showGrid={showDebugGrid}
             />
-        </Suspense>
           </div>
         </div>
       </div>

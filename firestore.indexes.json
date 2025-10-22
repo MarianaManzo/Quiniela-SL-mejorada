@@ -1,4 +1,13 @@
 {
   "indexes": [],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "quinielas",
+      "fieldPath": "jornada",
+      "indexes": [
+        { "order": "ASCENDING" },
+        { "order": "DESCENDING" }
+      ]
+    }
+  ]
 }

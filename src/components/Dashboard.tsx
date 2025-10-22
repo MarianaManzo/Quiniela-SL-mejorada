@@ -314,19 +314,17 @@ export function Dashboard({
     .find((section) => section.id === "regular")
     ?.cards.find((card) => card.tone === "current");
   const activeJourneyCode = journeyCode ?? activeJourney?.code ?? "";
-  const heroButtonLabel = (
-    hasSubmitted
+  const heroButtonLabel = hasSubmitted
+    ? activeJourneyCode
+      ? `Ver ${activeJourneyCode}`
+      : "Ver"
+    : journeyClosed
       ? activeJourneyCode
-        ? `Ver ${activeJourneyCode}`
-        : "Ver"
-      : journeyClosed
-        ? activeJourneyCode
-          ? `Expirada ${activeJourneyCode}`
-          : "Expirada"
-        : activeJourneyCode
-          ? `Participar ${activeJourneyCode}`
-          : "Participar"
-  ).trim();
+        ? `Expirada ${activeJourneyCode}`
+        : "Expirada"
+      : activeJourneyCode
+        ? `Participar ${activeJourneyCode}`
+        : "Participar";
   const previousSubmitted = Boolean(previousJourneySubmittedAt);
   const heroActionDisabled = journeyClosed && !hasSubmitted;
 
@@ -356,17 +354,18 @@ export function Dashboard({
 
       const cards = section.cards.map((card) => {
         if (card.code === journeyCode) {
+          if (hasSubmitted && journeySubmittedAt) {
+            return {
+              ...card,
+              tone: "success" as JourneyTone,
+              statusLabel: "Enviado",
+              meta: `Pronóstico enviado el ${formatSubmissionDate(journeySubmittedAt)}`,
+              ctaLabel: "Ver",
+              ctaMobileLabel: "Ver",
+            };
+          }
+
           if (journeyClosed) {
-            if (hasSubmitted && journeySubmittedAt) {
-              return {
-                ...card,
-                tone: "success" as JourneyTone,
-                statusLabel: "Enviado",
-                meta: `Pronóstico enviado el ${formatSubmissionDate(journeySubmittedAt)}`,
-                ctaLabel: "Ver",
-                ctaMobileLabel: "Ver",
-              };
-            }
             const closedLabel = journeyClosedLabel ?? journeyCloseLabel ?? "La jornada cerró";
             return {
               ...card,
@@ -388,11 +387,7 @@ export function Dashboard({
           };
         }
 
-        if (
-          previousJourneyCode &&
-          previousJourneyClosedLabel &&
-          card.code === previousJourneyCode
-        ) {
+        if (previousJourneyCode && card.code === previousJourneyCode) {
           if (previousSubmitted && previousJourneySubmittedAt) {
             return {
               ...card,
@@ -407,8 +402,8 @@ export function Dashboard({
           return {
             ...card,
             tone: "warning" as JourneyTone,
-            statusLabel: "Expirado",
-            meta: previousJourneyClosedLabel,
+            statusLabel: previousJourneyClosedLabel ? "Expirado" : "Expirado",
+            meta: previousJourneyClosedLabel ?? 'La jornada cerró',
             ctaLabel: undefined,
             ctaMobileLabel: undefined,
           };

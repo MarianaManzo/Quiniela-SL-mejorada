@@ -85,7 +85,7 @@ const formatJourneyDateParts = (date: Date): { dayMonth: string; time: string } 
 
 const buildCloseLabel = (prefix: 'Cierra' | 'Cerró', date: Date): string => {
   const { dayMonth, time } = formatJourneyDateParts(date);
-  return `${prefix} el ${dayMonth} - ${time}`;
+  return `${prefix} el ${dayMonth} - ${time} hrs`;
 };
 
 type StoredSubmissions = Record<string, QuinielaSubmission | (Omit<QuinielaSubmission, 'journey'> & { journey?: number })>;

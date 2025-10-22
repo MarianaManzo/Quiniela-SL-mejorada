@@ -342,7 +342,7 @@ export function Dashboard({
       minute: "2-digit",
       hour12: false,
     });
-    return monthPart ? `${dayPart} ${monthPart} - ${time}` : `${dayPart} - ${time}`;
+    return monthPart ? `${dayPart} ${monthPart} - ${time} hrs` : `${dayPart} - ${time} hrs`;
   };
   const formatSubmissionDate = (iso: string): string => formatDisplayDate(new Date(iso));
 

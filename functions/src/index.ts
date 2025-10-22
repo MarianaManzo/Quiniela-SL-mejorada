@@ -71,11 +71,35 @@ export const calcularPuntosUsuario = onRequest(async (req, res) => {
       }
     }
 
+    const previousPointsRaw = quinielaDoc.get("puntosObtenidos");
+    const previousPoints =
+      typeof previousPointsRaw === "number" && Number.isFinite(previousPointsRaw)
+        ? previousPointsRaw
+        : 0;
+    const delta = puntos - previousPoints;
+
     await quinielaRef.update({
       puntosObtenidos: puntos,
-      fechaActualizacion: new Date(),
+      fechaActualizacion: FieldValue.serverTimestamp(),
       estadoQuiniela: "cerrada",
+      quinielaEnviada: true,
     });
+
+    const userRef = db.doc(`Usuarios/${uid}`);
+    const userUpdates: Record<string, unknown> = {
+      fechaActualizacion: FieldValue.serverTimestamp(),
+      puntosjornada: puntos,
+    };
+
+    if (delta !== 0) {
+      userUpdates.puntos = FieldValue.increment(delta);
+    }
+
+    await userRef.set(userUpdates, {merge: true});
+
+    if (delta !== 0) {
+      logger.info("Puntos del usuario actualizados", {uid, jornada, delta, total: puntos});
+    }
 
     res.status(200).json({puntos});
   } catch (error) {

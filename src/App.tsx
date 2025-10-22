@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Download, Loader2, Share2, X } from 'lucide-react';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
-import { doc, onSnapshot, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, Timestamp } from 'firebase/firestore';
 import { Dashboard } from './components/Dashboard';
 import { LoginScreen, type UserProfile } from './components/LoginScreen';
 import { Navbar } from './components/Navbar';
@@ -22,7 +22,7 @@ import { formatParticipantName, sanitizeDisplayName } from './utils/formatPartic
 
 // Definición centralizada de la jornada mostrada
 const CURRENT_JOURNEY = 16;
-const BUILD_VERSION = 'V 21';
+const BUILD_VERSION = 'V 22';
 const QUICK_ACCESS_STORAGE_KEY = 'quiniela-quick-access-profile';
 
 const shouldShowDebugGrid = (): boolean => {
@@ -127,6 +127,34 @@ const persistSubmissionForUser = (email: string, submission: QuinielaSubmission)
   const submissions = readStoredSubmissions();
   submissions[email] = submission;
   window.localStorage.setItem(QUINIELA_STORAGE_KEY, JSON.stringify(submissions));
+};
+
+const normalizeSelection = (value: unknown): Selection | null => {
+  if (typeof value === 'string') {
+    const upper = value.trim().toUpperCase();
+    if (upper === 'L' || upper === 'E' || upper === 'V') {
+      return upper as Selection;
+    }
+  }
+
+  return null;
+};
+
+const buildSelectionsFromPronosticos = (values: unknown): QuinielaSelections | null => {
+  if (!Array.isArray(values) || values.length === 0) {
+    return null;
+  }
+
+  const result = createEmptySelections();
+
+  MATCHES.forEach((match, index) => {
+    const selection = normalizeSelection(values[index]);
+    if (selection) {
+      result[match.id] = selection;
+    }
+  });
+
+  return result;
 };
 
 // Componente de loading simple
@@ -677,28 +705,71 @@ export default function App() {
   ]);
 
   const handleViewSubmission = useCallback(
-    (journeyCode: string) => {
+    async (journeyCode: string) => {
       if (!user) {
         showToast('Inicia sesión para ver la quiniela.', 'error');
         return;
       }
 
       const journeyNumber = parseInt(journeyCode.replace(/\D/g, ''), 10);
-      const stored = loadSubmissionForUser(user.email);
-
-      if (!stored || Number.isNaN(journeyNumber) || stored.journey !== journeyNumber) {
+      if (!firebaseUser || Number.isNaN(journeyNumber)) {
         showToast('No encontramos esa quiniela guardada.', 'error');
         return;
       }
 
-      setQuinielaSelections({ ...stored.selections });
-      setLastSubmittedAt(stored.submittedAt);
-      setIsReadOnlyView(true);
-      setView('quiniela');
-      setShowSelectionErrors(false);
-      hideSubmitTooltip();
+      try {
+        const quinielaRef = doc(
+          firebaseFirestore,
+          'Usuarios',
+          firebaseUser.uid,
+          'quinielas',
+          journeyNumber.toString(),
+        );
+        const snapshot = await getDoc(quinielaRef);
+
+        if (!snapshot.exists()) {
+          showToast('No encontramos esa quiniela guardada.', 'error');
+          return;
+        }
+
+        const data = snapshot.data() as {
+          pronosticos?: unknown;
+          puntosObtenidos?: unknown;
+          fechaActualizacion?: unknown;
+          fechaCreacion?: unknown;
+        };
+
+        const remoteSelections = buildSelectionsFromPronosticos(data.pronosticos);
+
+        if (!remoteSelections) {
+          showToast('La quiniela guardada no tiene pronósticos válidos.', 'error');
+          return;
+        }
+
+        const submittedAt =
+          toIsoString(data?.fechaActualizacion ?? data?.fechaCreacion) ?? new Date().toISOString();
+
+        const submission: QuinielaSubmission = {
+          user,
+          selections: remoteSelections,
+          submittedAt,
+          journey: journeyNumber,
+        };
+
+        persistSubmissionForUser(user.email, submission);
+
+        setQuinielaSelections({ ...remoteSelections });
+        setLastSubmittedAt(submittedAt);
+        setIsReadOnlyView(true);
+        setView('quiniela');
+        setShowSelectionErrors(false);
+        hideSubmitTooltip();
+      } catch (error) {
+        console.error('No se pudo cargar la quiniela', error);
+        showToast('No se pudo cargar la quiniela. Intenta de nuevo.', 'error');
+      }
     },
-    [user, showToast, hideSubmitTooltip]
+    [firebaseUser, hideSubmitTooltip, showToast, user]
   );
 
   const handleDownloadJpg = useCallback(async () => {

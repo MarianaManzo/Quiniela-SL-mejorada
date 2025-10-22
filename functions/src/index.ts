@@ -1,6 +1,7 @@
 import {onRequest} from "firebase-functions/v1/https";
+import {logger} from "firebase-functions";
 import {initializeApp} from "firebase-admin/app";
-import {getFirestore} from "firebase-admin/firestore";
+import {FieldValue, getFirestore} from "firebase-admin/firestore";
 
 initializeApp();
 
@@ -79,6 +80,96 @@ export const calcularPuntosUsuario = onRequest(async (req, res) => {
     res.status(200).json({puntos});
   } catch (error) {
     console.error("Error al calcular puntos:", error);
+    res.status(500).send("Error interno");
+  }
+});
+
+type CloseSummary = {
+  jornada: number;
+  updated: number;
+};
+
+const closeExpiredJourneys = async (): Promise<{
+  closedJourneys: CloseSummary[];
+  checkedJourneys: number;
+}> => {
+  const db = getFirestore();
+  const now = new Date();
+
+  const jornadasSnapshot = await db
+    .collection("jornadas")
+    .where("fechaCierre", "<=", now)
+    .get();
+
+  if (jornadasSnapshot.empty) {
+    logger.info("No hay jornadas con fecha de cierre vencida");
+    return {closedJourneys: [], checkedJourneys: 0};
+  }
+
+  const summaries: CloseSummary[] = [];
+
+  for (const jornadaDoc of jornadasSnapshot.docs) {
+    const jornadaNumber = Number.parseInt(jornadaDoc.id, 10);
+    if (Number.isNaN(jornadaNumber)) {
+      logger.warn("Id de jornada inválido", jornadaDoc.id);
+      continue;
+    }
+
+    const abiertosSnapshot = await db
+      .collectionGroup("quinielas")
+      .where("jornada", "==", jornadaNumber)
+      .where("estadoQuiniela", "==", "abierta")
+      .get();
+
+    if (abiertosSnapshot.empty) {
+      continue;
+    }
+
+    let batch = db.batch();
+    let operations = 0;
+    let updated = 0;
+
+    for (const quinielaDoc of abiertosSnapshot.docs) {
+      batch.update(quinielaDoc.ref, {
+        estadoQuiniela: "cerrada",
+        quinielaCerradaAutomaticamente: true,
+        fechaActualizacion: FieldValue.serverTimestamp(),
+      });
+      operations += 1;
+      updated += 1;
+
+      if (operations === 400) {
+        await batch.commit();
+        batch = db.batch();
+        operations = 0;
+      }
+    }
+
+    if (operations > 0) {
+      await batch.commit();
+    }
+
+    summaries.push({jornada: jornadaNumber, updated});
+    logger.info("Jornada cerrada automáticamente", {jornada: jornadaNumber, updated});
+  }
+
+  return {
+    closedJourneys: summaries,
+    checkedJourneys: jornadasSnapshot.size,
+  };
+};
+
+export const cerrarQuinielasManualmente = onRequest(async (req, res) => {
+  if (req.method !== "POST") {
+    res.status(405).send("Método no permitido. Usa POST.");
+    return;
+  }
+
+  try {
+    const summary = await closeExpiredJourneys();
+    res.status(200).json(summary);
+  } catch (error) {
+    logger.error("Error al cerrar quinielas manualmente", error);
     res.status(500).send("Error interno");
   }
 });

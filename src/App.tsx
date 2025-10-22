@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Download, Loader2, Share2, X } from 'lucide-react';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
+import { doc, onSnapshot, Timestamp } from 'firebase/firestore';
 import { Dashboard } from './components/Dashboard';
 import { LoginScreen, type UserProfile } from './components/LoginScreen';
 import { Navbar } from './components/Navbar';
@@ -14,14 +15,14 @@ import {
   type QuinielaSubmission,
   type Selection,
 } from './quiniela/config';
-import { firebaseAuth } from './firebase';
+import { firebaseAuth, firebaseFirestore } from './firebase';
 import { useDownloadQuiniela } from './hooks/useDownloadQuiniela';
 import { crearOActualizarUsuario, guardarQuiniela } from './services/firestoreService';
 import { formatParticipantName, sanitizeDisplayName } from './utils/formatParticipantName';
 
 // Definición centralizada de la jornada mostrada
-const CURRENT_JOURNEY = 15;
-const BUILD_VERSION = 'V 18';
+const CURRENT_JOURNEY = 16;
+const BUILD_VERSION = 'V 19';
 const QUICK_ACCESS_STORAGE_KEY = 'quiniela-quick-access-profile';
 
 const shouldShowDebugGrid = (): boolean => {
@@ -105,6 +106,8 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [quinielaSelections, setQuinielaSelections] = useState<QuinielaSelections>(() => createEmptySelections());
   const [isSaving, setIsSaving] = useState(false);
+  const [journeyCloseDate, setJourneyCloseDate] = useState<Date | null>(null);
+  const [now, setNow] = useState<Date>(() => new Date());
   const [lastSubmittedAt, setLastSubmittedAt] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
   const toastTimeoutRef = useRef<number | null>(null);
@@ -112,6 +115,54 @@ export default function App() {
   const [showSelectionErrors, setShowSelectionErrors] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [manualSaveDataUrl, setManualSaveDataUrl] = useState<string | null>(null);
+  const journeyClosed = useMemo(() => {
+    if (!journeyCloseDate) {
+      return false;
+    }
+    return now.getTime() >= journeyCloseDate.getTime();
+  }, [journeyCloseDate, now]);
+  const journeyCloseLabel = useMemo(() => {
+    if (!journeyCloseDate) {
+      return null;
+    }
+
+    const dateLabel = journeyCloseDate.toLocaleDateString('es-MX', {
+      day: 'numeric',
+      month: 'long',
+    });
+    const timeLabel = journeyCloseDate.toLocaleTimeString('es-MX', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    return `Cierra el ${dateLabel} · ${timeLabel} h (CDMX)`;
+  }, [journeyCloseDate]);
+  const journeyTimeRemaining = useMemo(() => {
+    if (!journeyCloseDate) {
+      return null;
+    }
+
+    const diffMs = journeyCloseDate.getTime() - now.getTime();
+    if (diffMs <= 0) {
+      return null;
+    }
+
+    const totalMinutes = Math.floor(diffMs / 60000);
+    const days = Math.floor(totalMinutes / (60 * 24));
+    const hours = Math.floor((totalMinutes - days * 60 * 24) / 60);
+    const minutes = totalMinutes - days * 60 * 24 - hours * 60;
+
+    const segments: string[] = [];
+    if (days > 0) {
+      segments.push(`${days} ${days === 1 ? 'día' : 'días'}`);
+    }
+    if (hours > 0) {
+      segments.push(`${hours} h`);
+    }
+    segments.push(`${minutes} min`);
+
+    return `Faltan ${segments.join(' ')} para cerrar`;
+  }, [journeyCloseDate, now]);
   const showDebugGrid = useMemo(() => shouldShowDebugGrid(), []);
   const participantDisplayName = useMemo(
     () => formatParticipantName(user?.name, user?.email),
@@ -137,7 +188,7 @@ export default function App() {
   );
   const totalMatches = useMemo(() => Object.keys(quinielaSelections).length, [quinielaSelections]);
   const needsMoreSelections = completedSelections < totalMatches;
-  const isSubmitDisabled = isSaving || isReadOnlyView;
+  const isSubmitDisabled = isSaving || isReadOnlyView || journeyClosed;
   const showToast = useCallback((message: string, tone: 'success' | 'error') => {
     if (typeof window === 'undefined') {
       setToast({ message, tone });
@@ -162,6 +213,60 @@ export default function App() {
         window.clearTimeout(toastTimeoutRef.current);
       }
     };
+  }, []);
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const journeyRef = doc(firebaseFirestore, 'jornadas', CURRENT_JOURNEY.toString());
+    const unsubscribe = onSnapshot(
+      journeyRef,
+      (snapshot) => {
+        if (!snapshot.exists()) {
+          setJourneyCloseDate(null);
+          return;
+        }
+
+        const data = snapshot.data() as { fechaCierre?: Timestamp | Date | string } | undefined;
+        const rawClose = data?.fechaCierre;
+
+        if (rawClose instanceof Timestamp) {
+          setJourneyCloseDate(rawClose.toDate());
+          return;
+        }
+
+        if (rawClose instanceof Date) {
+          setJourneyCloseDate(rawClose);
+          return;
+        }
+
+        if (typeof rawClose === 'string') {
+          const parsed = new Date(rawClose);
+          setJourneyCloseDate(Number.isNaN(parsed.getTime()) ? null : parsed);
+          return;
+        }
+
+        setJourneyCloseDate(null);
+      },
+      (error) => {
+        console.error('No se pudo obtener la fecha de cierre de la jornada', error);
+        setJourneyCloseDate(null);
+      },
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const updateNow = () => setNow(new Date());
+    updateNow();
+    const intervalId = window.setInterval(updateNow, 60000);
+    return () => window.clearInterval(intervalId);
   }, []);
   useEffect(() => {
     let isMounted = true;
@@ -354,11 +459,11 @@ export default function App() {
     resetDownloadState();
     setManualSaveDataUrl(null);
     setIsShareOpen(false);
-    setIsReadOnlyView(false);
+    setIsReadOnlyView(journeyClosed);
     setShowSelectionErrors(false);
     hideSubmitTooltip();
     setView('quiniela');
-  }, [createEmptySelections, hideSubmitTooltip, resetDownloadState]);
+  }, [createEmptySelections, hideSubmitTooltip, journeyClosed, resetDownloadState]);
 
   const handleEnterPodium = useCallback(() => {
     resetDownloadState();
@@ -409,6 +514,12 @@ export default function App() {
       return;
     }
 
+    if (journeyClosed) {
+      showToast('La jornada está cerrada y ya no admite envíos.', 'error');
+      setIsReadOnlyView(true);
+      return;
+    }
+
     setIsSaving(true);
 
     const submission: QuinielaSubmission = {
@@ -440,7 +551,16 @@ export default function App() {
     } finally {
       setIsSaving(false);
     }
-  }, [firebaseUser, user, needsMoreSelections, quinielaSelections, showToast, isReadOnlyView, hideSubmitTooltip]);
+  }, [
+    firebaseUser,
+    user,
+    needsMoreSelections,
+    quinielaSelections,
+    showToast,
+    isReadOnlyView,
+    hideSubmitTooltip,
+    journeyClosed,
+  ]);
 
   const handleViewSubmission = useCallback(
     (journeyCode: string) => {
@@ -664,6 +784,10 @@ export default function App() {
             onEnterQuiniela={handleEnterQuiniela}
             onViewQuiniela={handleViewSubmission}
             onViewPodium={handleEnterPodium}
+            journeyCode={`J${CURRENT_JOURNEY.toString().padStart(2, '0')}`}
+            journeyCloseLabel={journeyCloseLabel}
+            journeyTimeRemaining={journeyTimeRemaining}
+            journeyClosed={journeyClosed}
           />
         </div>
       ) : (

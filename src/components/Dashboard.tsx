@@ -21,6 +21,10 @@ interface DashboardProps {
   onEnterQuiniela: () => void;
   onViewQuiniela?: (journeyCode: string) => void;
   onViewPodium?: () => void;
+  journeyCode?: string;
+  journeyCloseLabel?: string | null;
+  journeyTimeRemaining?: string | null;
+  journeyClosed?: boolean;
 }
 
 const communityNotes = [
@@ -287,14 +291,29 @@ export function Dashboard({ user, onEnterQuiniela, onViewQuiniela, onViewPodium 
     );
   };
 
+  const { journeyCode, journeyCloseLabel, journeyTimeRemaining, journeyClosed = false } = props;
   const firstName = user.name.trim().split(" ")[0] || user.name;
   const activeJourney = tournamentSections
     .find((section) => section.id === "regular")
     ?.cards.find((card) => card.tone === "current");
-  const activeJourneyNumber = activeJourney?.code ? activeJourney.code.replace(/[^0-9]/g, "") : "";
-  const participateLabel = activeJourneyNumber
-    ? `Participa en jornada ${activeJourneyNumber}`
-    : "Participa en jornada";
+  const activeJourneyCode = journeyCode ?? activeJourney?.code ?? "";
+  const participateLabel = journeyClosed
+    ? activeJourneyCode
+      ? `Ver ${activeJourneyCode}`
+      : "Ver jornada"
+    : activeJourneyCode
+      ? `Participa en ${activeJourneyCode}`
+      : "Participa en jornada";
+  const participateMobileLabel = journeyClosed ? "Ver" : "Participa";
+  const heroActionDisabled = journeyClosed && !onViewQuiniela;
+
+  const handleHeroAction = () => {
+    if (journeyClosed && journeyCode) {
+      onViewQuiniela?.(journeyCode);
+      return;
+    }
+    onEnterQuiniela();
+  };
 
   return (
     <div className="dashboard-page">
@@ -309,11 +328,30 @@ export function Dashboard({ user, onEnterQuiniela, onViewQuiniela, onViewPodium 
             Sumemos voz a la liga femenil con intuición y juego limpio. Completa tu pronóstico, compártelo con tu equipo
             y celebremos cada gol juntas.
           </p>
+          {journeyCloseLabel && (
+            <div className="hero-countdown" role="status">
+              <Clock size={18} aria-hidden="true" />
+              <div className="hero-countdown__content">
+                <span className="hero-countdown__label">{journeyCloseLabel}</span>
+                <span className="hero-countdown__time">
+                  {journeyClosed
+                    ? "La jornada está cerrada. Revisa tu pronóstico."
+                    : journeyTimeRemaining ?? "Cierre inminente"}
+                </span>
+              </div>
+            </div>
+          )}
 
           <div className="hero-actions">
-            <button type="button" className="btn btn-primary" onClick={onEnterQuiniela}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleHeroAction}
+              disabled={heroActionDisabled}
+              aria-disabled={heroActionDisabled}
+            >
               <span className="btn__label btn__label--desktop">{participateLabel}</span>
-              <span className="btn__label btn__label--mobile">Participa</span>
+              <span className="btn__label btn__label--mobile">{participateMobileLabel}</span>
               <ArrowRight size={18} />
             </button>
           </div>

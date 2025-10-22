@@ -331,6 +331,42 @@
   color: rgba(248, 250, 252, 0.78);
 }
 
+.hero-countdown {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 14px 18px;
+  margin-top: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(15, 16, 19, 0.65);
+  color: #f8fafc;
+  box-shadow: 0 24px 54px -40px rgba(15, 16, 19, 0.8);
+}
+
+.hero-countdown svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.hero-countdown__content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hero-countdown__label {
+  font-weight: 600;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.hero-countdown__time {
+  font-size: 14px;
+  color: rgba(248, 250, 252, 0.82);
+}
+
 .hero-banner {
   background: rgba(15, 16, 19, 0.92);
   border-radius: 36px;
@@ -371,6 +407,13 @@
 
 .hero-actions .btn-primary {
   margin-left: auto;
+}
+
+.hero-actions .btn[disabled],
+.hero-actions .btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: none;
 }
 
 .btn {

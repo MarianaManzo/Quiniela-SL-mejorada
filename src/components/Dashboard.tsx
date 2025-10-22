@@ -26,6 +26,8 @@ interface DashboardProps {
   journeyClosedLabel?: string | null;
   journeyClosed?: boolean;
   journeySubmittedAt?: string | null;
+  previousJourneyClosedLabel?: string | null;
+  previousJourneySubmittedAt?: string | null;
 }
 
 const communityNotes = [
@@ -246,6 +248,8 @@ export function Dashboard({
   journeyClosedLabel,
   journeyClosed = false,
   journeySubmittedAt,
+  previousJourneyClosedLabel,
+  previousJourneySubmittedAt,
 }: DashboardProps) {
   const [sectionState, setSectionState] = useState<TournamentSectionState[]>(
     tournamentSections.map((section) => ({
@@ -347,42 +351,66 @@ export function Dashboard({
       }
 
       const cards = section.cards.map((card) => {
-        if (card.code !== journeyCode) {
-          return card;
+        if (card.code === journeyCode) {
+          if (journeyClosed) {
+            if (hasSubmitted && journeySubmittedAt) {
+              return {
+                ...card,
+                tone: "success" as JourneyTone,
+                statusLabel: "Enviado",
+                meta: `Pronóstico enviado el ${formatSubmissionDate(journeySubmittedAt)}`,
+                ctaLabel: "Ver",
+                ctaMobileLabel: "Ver",
+              };
+            }
+            const closedLabel = journeyClosedLabel ?? journeyCloseLabel ?? "La jornada cerró";
+            return {
+              ...card,
+              tone: "warning" as JourneyTone,
+              statusLabel: "Expirado",
+              meta: closedLabel,
+              ctaLabel: undefined,
+              ctaMobileLabel: undefined,
+            };
+          }
+
+          return {
+            ...card,
+            tone: "current" as JourneyTone,
+            statusLabel: "En curso",
+            meta: journeyCloseLabel ?? card.meta,
+            ctaLabel: "Participar",
+            ctaMobileLabel: "Participa",
+          };
         }
 
-        if (journeyClosed) {
-          if (hasSubmitted && journeySubmittedAt) {
+        if (
+          journeyClosed &&
+          previousJourneyClosedLabel &&
+          card.code === `J${(parseInt(journeyCode.replace(/\D/g, ""), 10) - 1).toString().padStart(2, "0")}`
+        ) {
+          if (previousJourneySubmittedAt) {
             return {
               ...card,
               tone: "success" as JourneyTone,
               statusLabel: "Enviado",
-              meta: `Pronóstico enviado el ${formatSubmissionDate(journeySubmittedAt)}`,
+              meta: `Pronóstico enviado el ${formatSubmissionDate(previousJourneySubmittedAt)}`,
               ctaLabel: "Ver",
               ctaMobileLabel: "Ver",
             };
           }
 
-          const closedLabel = journeyClosedLabel ?? journeyCloseLabel ?? "La jornada cerró";
           return {
             ...card,
             tone: "warning" as JourneyTone,
             statusLabel: "Expirado",
-            meta: closedLabel,
+            meta: previousJourneyClosedLabel,
             ctaLabel: undefined,
             ctaMobileLabel: undefined,
           };
         }
 
-        const metaLabel = journeyCloseLabel ?? card.meta;
-        return {
-          ...card,
-          tone: "current" as JourneyTone,
-          statusLabel: "En curso",
-          meta: metaLabel,
-          ctaLabel: "Participar",
-          ctaMobileLabel: "Participa",
-        };
+        return card;
       });
 
       return {
@@ -390,7 +418,16 @@ export function Dashboard({
         cards,
       };
     });
-  }, [hasSubmitted, journeyClosed, journeyClosedLabel, journeyCloseLabel, journeyCode, journeySubmittedAt]);
+  }, [
+    hasSubmitted,
+    journeyClosed,
+    journeyClosedLabel,
+    journeyCloseLabel,
+    journeyCode,
+    journeySubmittedAt,
+    previousJourneyClosedLabel,
+    previousJourneySubmittedAt,
+  ]);
 
   const handleHeroAction = () => {
     if (heroActionDisabled) {

@@ -92,7 +92,7 @@ const loadSubmissionForUser = (email: string): QuinielaSubmission | null => {
   const submissions = readStoredSubmissions();
   const submission = submissions[email];
 
-  if (!submission || submission.journey !== CURRENT_JOURNEY) {
+  if (!submission) {
     return null;
   }
 
@@ -154,6 +154,15 @@ export default function App() {
     }
     return buildCloseLabel('Cerró', journeyCloseDate);
   }, [journeyCloseDate]);
+  const previousJourneyCloseLabel = useMemo(() => {
+    const previous = loadSubmissionForUser(user?.email ?? '');
+    if (!journeyCloseDate) {
+      return null;
+    }
+    const previousDate = new Date(journeyCloseDate.getTime());
+    previousDate.setDate(previousDate.getDate() - 7);
+    return buildCloseLabel('Cerró', previousDate);
+  }, [journeyCloseDate, user?.email]);
   const showDebugGrid = useMemo(() => shouldShowDebugGrid(), []);
   const participantDisplayName = useMemo(
     () => formatParticipantName(user?.name, user?.email),
@@ -408,7 +417,7 @@ export default function App() {
     const stored = loadSubmissionForUser(user.email);
     setQuinielaSelections(createEmptySelections());
     setLastSubmittedAt(stored?.submittedAt ?? null);
-    setIsReadOnlyView(false);
+    setIsReadOnlyView(Boolean(stored && stored.journey === CURRENT_JOURNEY));
     setShowSelectionErrors(false);
     hideSubmitTooltip();
   }, [user, createEmptySelections, hideSubmitTooltip, resetDownloadState]);
@@ -781,6 +790,8 @@ export default function App() {
             journeyClosedLabel={journeyClosedLabel}
             journeyClosed={journeyClosed}
             journeySubmittedAt={lastSubmittedAt}
+            previousJourneyClosedLabel={previousJourneyCloseLabel}
+            previousJourneySubmittedAt={lastSubmittedAt && loadSubmissionForUser(user.email)?.journey === CURRENT_JOURNEY - 1 ? lastSubmittedAt : null}
           />
         </div>
       ) : (

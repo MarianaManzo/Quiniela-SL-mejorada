@@ -1,86 +1,84 @@
-import * as functions from "firebase-functions/v1";
-import * as admin from "firebase-admin";
+import {onRequest} from "firebase-functions/v1/https";
+import {initializeApp} from "firebase-admin/app";
+import {getFirestore} from "firebase-admin/firestore";
 
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
+initializeApp();
 
-const db = admin.firestore();
+/**
+ * HTTP endpoint para calcular puntos de una quiniela puntual.
+ */
+export const calcularPuntosUsuario = onRequest(async (req, res) => {
+  const uid = (req.query.uid as string) ?? "";
+  const jornadaParam = (req.query.jornada as string) ?? "";
 
-export const calcularPuntos = functions.firestore
-  .document("jornadas/{jornadaId}")
-  .onWrite(async (change, context) => {
-    const jornadaId = context.params.jornadaId;
-    const afterData = change.after.exists ? change.after.data() : null;
+  if (!uid || !jornadaParam) {
+    res.status(400).send("Faltan parámetros uid o jornada");
+    return;
+  }
 
-    if (!afterData) {
-      functions.logger.info(`Documento de jornada ${jornadaId} eliminado. No se recalcularán puntos.`);
-      return null;
+  const jornada = Number.parseInt(jornadaParam, 10);
+  if (Number.isNaN(jornada)) {
+    res.status(400).send("Parámetro jornada inválido");
+    return;
+  }
+
+  const db = getFirestore();
+
+  try {
+    const quinielaByNumber = db.doc(`Usuarios/${uid}/quinielas/${jornada}`);
+    const quinielaByName = db.doc(
+      `Usuarios/${uid}/quinielas/jornada_${jornada}`,
+    );
+    const resultadosRef = db.doc(`jornadas/${jornada}`);
+
+    const [snapNumber, snapName, resultadosSnap] = await Promise.all([
+      quinielaByNumber.get(),
+      quinielaByName.get(),
+      resultadosRef.get(),
+    ]);
+
+    const quinielaDoc = snapNumber.exists ? snapNumber : snapName;
+    const quinielaRef = snapNumber.exists
+      ? quinielaByNumber
+      : snapName.exists
+        ? quinielaByName
+        : null;
+
+    if (!quinielaDoc || !quinielaRef) {
+      res.status(404).send("Quiniela no encontrada");
+      return;
     }
 
-    const oficiales = afterData.resultadosOficiales as string[] | undefined;
-    if (!Array.isArray(oficiales) || oficiales.length !== 9) {
-      functions.logger.warn(`Resultados oficiales incompletos para jornada ${jornadaId}.`);
-      return null;
+    if (!resultadosSnap.exists) {
+      res.status(404).send("Resultados oficiales no encontrados");
+      return;
     }
 
-    const jornadaNumero = Number(jornadaId);
-    if (Number.isNaN(jornadaNumero)) {
-      functions.logger.error(`ID de jornada inválido: ${jornadaId}`);
-      return null;
-    }
+    const pronosticosRaw = quinielaDoc.get("pronosticos");
+    const oficialesRaw = resultadosSnap.get("resultadosOficiales");
+    const pronosticos = Array.isArray(pronosticosRaw) ? pronosticosRaw : [];
+    const oficiales = Array.isArray(oficialesRaw) ? oficialesRaw : [];
 
-    const quinielasSnapshot = await db
-      .collectionGroup("quinielas")
-      .where("jornada", "==", jornadaNumero)
-      .get();
+    let puntos = 0;
+    const limite = Math.min(pronosticos.length, oficiales.length);
 
-    if (quinielasSnapshot.empty) {
-      functions.logger.info(`No se encontraron quinielas para jornada ${jornadaNumero}.`);
-      return null;
-    }
-
-    const batch = db.batch();
-
-    quinielasSnapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      const pronosticos = Array.isArray(data.pronosticos) ? data.pronosticos : [];
-      const anterior = typeof data.puntosObtenidos === "number" ? data.puntosObtenidos : 0;
-
-      let puntos = 0;
-      for (let i = 0; i < oficiales.length; i += 1) {
-        if (pronosticos[i] === oficiales[i]) {
-          puntos += 1;
-        }
+    for (let i = 0; i < limite; i += 1) {
+      const prono = (pronosticos[i] || "").toString().trim().toUpperCase();
+      const oficial = (oficiales[i] || "").toString().trim().toUpperCase();
+      if (prono === oficial) {
+        puntos += 1;
       }
+    }
 
-      const delta = puntos - anterior;
-
-      batch.set(
-        docSnap.ref,
-        {
-          puntosObtenidos: puntos,
-          estadoQuiniela: "cerrada",
-          fechaActualizacion: admin.firestore.FieldValue.serverTimestamp(),
-        },
-        { merge: true },
-      );
-
-      const userRef = docSnap.ref.parent?.parent;
-      if (userRef && delta !== 0) {
-        batch.set(
-          userRef,
-          {
-            puntos: admin.firestore.FieldValue.increment(delta),
-            fechaActualizacion: admin.firestore.FieldValue.serverTimestamp(),
-            ultimaJornada: jornadaNumero,
-          },
-          { merge: true },
-        );
-      }
+    await quinielaRef.update({
+      puntosObtenidos: puntos,
+      fechaActualizacion: new Date(),
+      estadoQuiniela: "cerrada",
     });
 
-    await batch.commit();
-    functions.logger.info(`Puntos calculados para jornada ${jornadaNumero}`);
-    return null;
-  });
+    res.status(200).json({puntos});
+  } catch (error) {
+    console.error("Error al calcular puntos:", error);
+    res.status(500).send("Error interno");
+  }
+});

@@ -22,7 +22,7 @@ import { formatParticipantName, sanitizeDisplayName } from './utils/formatPartic
 
 // Definición centralizada de la jornada mostrada
 const CURRENT_JOURNEY = 16;
-const BUILD_VERSION = 'V 20';
+const BUILD_VERSION = 'V 21';
 const QUICK_ACCESS_STORAGE_KEY = 'quiniela-quick-access-profile';
 
 const shouldShowDebugGrid = (): boolean => {

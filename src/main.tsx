@@ -20,6 +20,15 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
     navigator.serviceWorker
       .register('/service-worker.js')
       .catch((error) => console.error('No se pudo registrar el Service Worker', error));
+
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) {
+        return;
+      }
+      refreshing = true;
+      window.location.reload();
+    });
   });
 }
 

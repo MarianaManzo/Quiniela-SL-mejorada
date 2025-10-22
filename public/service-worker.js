@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v7';
+const CACHE_VERSION = 'v21';
 const STATIC_CACHE = `somos-locales-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `somos-locales-runtime-${CACHE_VERSION}`;
 

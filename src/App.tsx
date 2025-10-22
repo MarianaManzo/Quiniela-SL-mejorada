@@ -330,7 +330,7 @@ export default function App() {
 
         setIsReadOnlyView(submitted);
         setCurrentSubmissionAt(submittedAt);
-      });
+      }),
     );
 
     if (previousJourneyNumber > 0) {

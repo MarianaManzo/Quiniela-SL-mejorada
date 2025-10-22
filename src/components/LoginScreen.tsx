@@ -10,6 +10,7 @@ import {
 import logoSomosLocales from "figma:asset/logo-somos-locales.png";
 import "../styles/login.css";
 import { firebaseAuth, googleAuthProvider } from "../firebase";
+import { sanitizeDisplayName, sanitizeDisplayNameInput } from "../utils/formatParticipantName";
 
 export interface UserProfile {
   name: string;
@@ -22,6 +23,8 @@ export const ROLE_LABELS: Record<UserProfile["role"], string> = {
   staff: "Staff Somos Locales",
   invitado: "Invitado especial",
 };
+
+const sanitizeFullNameForValidation = (raw: string): string => sanitizeDisplayName(raw);
 
 interface LoginScreenProps {
   onLogin?: (user: UserProfile) => void;
@@ -65,13 +68,17 @@ export function LoginScreen({ onLogin, onQuickAccess }: LoginScreenProps) {
       return null;
     }
 
-    const value = name.trim();
+    const value = sanitizeFullNameForValidation(name);
     if (!value) {
       return 'Ingresa tu nombre completo.';
     }
 
     if (value.length < 4) {
       return 'El nombre es demasiado corto.';
+    }
+
+    if (/\d/.test(value)) {
+      return 'El nombre no puede incluir números.';
     }
 
     if (value.split(' ').filter(Boolean).length < 2) {
@@ -124,7 +131,7 @@ export function LoginScreen({ onLogin, onQuickAccess }: LoginScreenProps) {
     try {
       const emailTrimmed = email.trim();
       const passwordTrimmed = password.trim();
-      const displayName = name.trim();
+      const displayName = sanitizeFullNameForValidation(name);
       const shouldUpdateName = displayName.length > 0;
 
       const credential =
@@ -143,7 +150,7 @@ export function LoginScreen({ onLogin, onQuickAccess }: LoginScreenProps) {
         || emailTrimmed.split('@')[0];
 
       onLogin?.({
-        name: resolvedName,
+        name: sanitizeFullNameForValidation(resolvedName),
         email: credential.user.email ?? emailTrimmed,
         role: 'aficion',
       });
@@ -220,7 +227,7 @@ export function LoginScreen({ onLogin, onQuickAccess }: LoginScreenProps) {
                 placeholder="Ej. Mariana López"
                 value={name}
                 onChange={(event) => {
-                  const nextValue = event.target.value;
+                  const nextValue = sanitizeDisplayNameInput(event.target.value);
                   setName(nextValue);
                   if (touched.name) {
                     setFormMessage(null);

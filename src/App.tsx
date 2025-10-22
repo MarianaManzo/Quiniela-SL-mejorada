@@ -16,10 +16,11 @@ import {
 import { firebaseAuth } from './firebase';
 import { useDownloadQuiniela } from './hooks/useDownloadQuiniela';
 import { crearOActualizarUsuario, guardarQuiniela } from './services/firestoreService';
+import { formatParticipantName, sanitizeDisplayName } from './utils/formatParticipantName';
 
 // Definición centralizada de la jornada mostrada
 const CURRENT_JOURNEY = 15;
-const BUILD_VERSION = 'V S9';
+const BUILD_VERSION = 'V 13';
 const QUICK_ACCESS_STORAGE_KEY = 'quiniela-quick-access-profile';
 
 const shouldShowDebugGrid = (): boolean => {
@@ -37,6 +38,11 @@ const createQuickAccessProfile = (): UserProfile => {
     email: `invitado-${uniqueSegment}@quiniela.demo`,
     role: 'invitado',
   };
+};
+
+const ensureDisplayName = (value: string): string => {
+  const cleaned = sanitizeDisplayName(value);
+  return cleaned.length > 0 ? cleaned : 'Invitado rápido';
 };
 
 // Carga lazy del componente principal para mejorar performance
@@ -110,10 +116,14 @@ export default function App() {
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [manualSaveDataUrl, setManualSaveDataUrl] = useState<string | null>(null);
   const showDebugGrid = useMemo(() => shouldShowDebugGrid(), []);
+  const participantDisplayName = useMemo(
+    () => formatParticipantName(user?.name, user?.email),
+    [user?.name, user?.email],
+  );
   const getExportData = useCallback(() => ({
     selections: quinielaSelections,
-    participantName: user?.name ?? null,
-  }), [quinielaSelections, user?.name]);
+    participantName: participantDisplayName,
+  }), [quinielaSelections, participantDisplayName]);
 
   const {
     isPreparingDownload,
@@ -157,31 +167,62 @@ export default function App() {
     };
   }, []);
   useEffect(() => {
+    let isMounted = true;
+
     const unsubscribe = onAuthStateChanged(firebaseAuth, (authUser) => {
       if (authUser) {
         const displayName = authUser.displayName?.trim();
         const email = authUser.email ?? '';
-        const fallbackName = email ? email.split('@')[0] : 'Participante';
+        const fallbackName = displayName && displayName.length > 0
+          ? displayName
+          : email
+            ? email.split('@')[0]
+            : 'Participante';
 
         setFirebaseUser(authUser);
-        void crearOActualizarUsuario(authUser).catch((error) => {
-          console.error('No se pudo sincronizar el usuario en Firestore', error);
-        });
-
         setUser({
-          name: displayName && displayName.length > 0 ? displayName : fallbackName,
+          name: fallbackName,
           email,
           role: 'aficion',
         });
+
+        void crearOActualizarUsuario(authUser)
+          .then((profileData) => {
+            if (!isMounted) {
+              return;
+            }
+            const resolvedName = profileData.nombreApellido?.trim()?.length
+              ? profileData.nombreApellido.trim()
+              : fallbackName;
+            const resolvedEmail = profileData.email?.trim()?.length ? profileData.email : email;
+            const resolvedRole: UserProfile['role'] =
+              profileData.rol === 'staff' || profileData.rol === 'invitado'
+                ? profileData.rol
+                : 'aficion';
+
+            setUser({
+              name: resolvedName,
+              email: resolvedEmail,
+              role: resolvedRole,
+            });
+          })
+          .catch((error) => {
+            console.error('No se pudo sincronizar el usuario en Firestore', error);
+          });
+
         setView((current) => (current === 'quiniela' || current === 'podium' ? current : 'dashboard'));
       } else {
         setFirebaseUser(null);
         setUser(null);
+        setView('login');
       }
       setAuthReady(true);
     });
 
-    return unsubscribe;
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -207,7 +248,11 @@ export default function App() {
               parsed.role === 'aficion' || parsed.role === 'staff' || parsed.role === 'invitado'
                 ? parsed.role
                 : 'invitado';
-            profile = { name: parsed.name, email: parsed.email, role };
+            profile = {
+              name: ensureDisplayName(parsed.name),
+              email: parsed.email,
+              role,
+            };
           }
         }
       } catch (error) {
@@ -216,13 +261,29 @@ export default function App() {
     }
 
     if (!profile) {
-      profile = createQuickAccessProfile();
+      const generated = createQuickAccessProfile();
+      profile = {
+        ...generated,
+        name: ensureDisplayName(generated.name),
+      };
       if (typeof window !== 'undefined') {
         try {
-          window.localStorage.setItem(QUICK_ACCESS_STORAGE_KEY, JSON.stringify(profile));
+          window.localStorage.setItem(
+            QUICK_ACCESS_STORAGE_KEY,
+            JSON.stringify(profile),
+          );
         } catch (error) {
           console.warn('No se pudo guardar el perfil de acceso rápido.', error);
         }
+      }
+    } else if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem(
+          QUICK_ACCESS_STORAGE_KEY,
+          JSON.stringify(profile),
+        );
+      } catch (error) {
+        console.warn('No se pudo guardar el perfil de acceso rápido.', error);
       }
     }
 
@@ -269,6 +330,9 @@ export default function App() {
     setIsReadOnlyView(false);
     setShowSelectionErrors(false);
     hideSubmitTooltip();
+    setView('login');
+    setUser(null);
+    setFirebaseUser(null);
 
     try {
       await signOut(firebaseAuth);
@@ -559,7 +623,7 @@ export default function App() {
               onSelect={handleSelectionChange}
               isReadOnly={isReadOnlyView}
               showSelectionErrors={showSelectionErrors}
-              participantName={user?.name}
+              participantName={participantDisplayName}
               showGrid={showDebugGrid}
             />
         </Suspense>

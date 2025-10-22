@@ -3,6 +3,14 @@ import type { User } from "firebase/auth";
 import { firebaseFirestore } from "../firebase";
 import type { Selection } from "../quiniela/config";
 
+export type FirestoreUserProfile = {
+  nombreApellido: string;
+  email: string;
+  rol: string;
+  puntos: number;
+  ultimaJornada: number;
+};
+
 export type PodiumUser = {
   id: string;
   nombre: string;
@@ -23,7 +31,7 @@ type GuardarQuinielaPayload = {
  * Crea o actualiza el documento del usuario dentro de la colección `Usuarios`.
  * Si el usuario ya existe se conservan sus datos actuales.
  */
-export const crearOActualizarUsuario = async (user: User): Promise<void> => {
+export const crearOActualizarUsuario = async (user: User): Promise<FirestoreUserProfile> => {
   const userRef = doc(firebaseFirestore, "Usuarios", user.uid);
 
   const snapshot = await getDoc(userRef);
@@ -51,11 +59,12 @@ export const crearOActualizarUsuario = async (user: User): Promise<void> => {
     },
     { merge: true },
   );
+  return basePayload;
 };
 
 /**
  * Guarda la quiniela del usuario en la subcolección `Usuarios/{uid}/quinielas`.
- * El identificador del documento será `jornada_${jornada}` para que sea único por jornada.
+ * El identificador del documento se define como el número de jornada en texto.
  */
 export const guardarQuiniela = async ({
   uid,
@@ -68,7 +77,7 @@ export const guardarQuiniela = async ({
     throw new Error("La quiniela debe incluir 9 pronósticos.");
   }
 
-  const quinielaRef = doc(firebaseFirestore, "Usuarios", uid, "quinielas", `jornada_${jornada}`);
+  const quinielaRef = doc(firebaseFirestore, "Usuarios", uid, "quinielas", jornada.toString());
 
   await setDoc(quinielaRef, {
     jornada,

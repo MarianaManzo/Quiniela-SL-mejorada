@@ -11,6 +11,7 @@ import {
   DEFAULT_QUINIELA_ASSETS,
   type QuinielaAssetBundle,
 } from '../quiniela/assets';
+import { formatParticipantName } from '../utils/formatParticipantName';
 
 type LayoutVariant = 'default' | 'export';
 
@@ -280,6 +281,9 @@ function Frame26({
 }
 
 function PieDePagina({ participantName }: { participantName?: string | null }) {
+  const displayName =
+    formatParticipantName(participantName ?? null, undefined) ?? 'JUEGA LA QUINIELA';
+
   return (
     <div className="basis-0 grow min-h-px min-w-px opacity-[0.64] relative shrink-0 w-full">
       <div className="flex flex-row items-center size-full">
@@ -314,7 +318,7 @@ function PieDePagina({ participantName }: { participantName?: string | null }) {
                   whiteSpace: 'nowrap',
                 }}
               >
-                {participantName?.trim() ? participantName.toUpperCase() : 'JUEGA LA QUINIELA'}
+                {displayName.toUpperCase()}
               </span>
             </div>
           </div>

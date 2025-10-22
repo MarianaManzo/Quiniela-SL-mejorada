@@ -15,13 +15,23 @@ interface NavbarProps {
 }
 
 function getInitials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("")
-    .padEnd(2, "L");
+  const cleaned = name.trim();
+  if (!cleaned) {
+    return "LL";
+  }
+
+  const parts = cleaned.split(/[\s._-]+/).filter(Boolean);
+  const firstInitial = parts[0]?.[0]?.toUpperCase() ?? "";
+  const secondSource =
+    parts.length >= 2
+      ? parts[parts.length - 1]
+      : cleaned.replace(/[^A-Za-zÀ-ÿ]/g, "");
+  const secondInitial = secondSource?.[0]?.toUpperCase() ?? "";
+
+  const resolvedFirst = firstInitial || "L";
+  const resolvedSecond = secondInitial || resolvedFirst || "L";
+
+  return `${resolvedFirst}${resolvedSecond}`;
 }
 
 export function Navbar({

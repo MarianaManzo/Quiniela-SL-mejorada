@@ -235,7 +235,16 @@ const tournamentSections: TournamentSection[] = [
   },
 ];
 
-export function Dashboard({ user, onEnterQuiniela, onViewQuiniela, onViewPodium }: DashboardProps) {
+export function Dashboard({
+  user,
+  onEnterQuiniela,
+  onViewQuiniela,
+  onViewPodium,
+  journeyCode,
+  journeyCloseLabel,
+  journeyTimeRemaining,
+  journeyClosed = false,
+}: DashboardProps) {
   const [sectionState, setSectionState] = useState<TournamentSectionState[]>(
     tournamentSections.map((section) => ({
       id: section.id,
@@ -291,7 +300,6 @@ export function Dashboard({ user, onEnterQuiniela, onViewQuiniela, onViewPodium 
     );
   };
 
-  const { journeyCode, journeyCloseLabel, journeyTimeRemaining, journeyClosed = false } = props;
   const firstName = user.name.trim().split(" ")[0] || user.name;
   const activeJourney = tournamentSections
     .find((section) => section.id === "regular")

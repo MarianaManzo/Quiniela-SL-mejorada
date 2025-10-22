@@ -397,6 +397,7 @@ export default function App() {
     resetDownloadState();
     setIsShareOpen(false);
     setManualSaveDataUrl(null);
+    setAuthReady(true);
   }, [hideSubmitTooltip, resetDownloadState]);
 
   useEffect(() => {
@@ -625,6 +626,10 @@ export default function App() {
     setIsShareOpen(false);
     setManualSaveDataUrl(null);
   }, []);
+
+  if (!authReady && !user) {
+    return null;
+  }
 
   if (!user) {
     return (

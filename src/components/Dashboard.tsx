@@ -13,7 +13,7 @@ import {
 import { ROLE_LABELS, type UserProfile } from "./LoginScreen";
 import { TOP_RANKING } from "../data/podium";
 import { obtenerUsuariosParaPodio } from "../services/firestoreService";
-import logoSomosLocales from "figma:asset/logo-somos-locales.png";
+import logoSomosLocales from "../assets/logo-somos-locales.png?inline";
 import "../styles/dashboard.css";
 
 interface DashboardProps {

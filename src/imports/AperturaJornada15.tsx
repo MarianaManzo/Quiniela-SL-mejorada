@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   MATCHES,
@@ -9,6 +9,7 @@ import {
 } from '../quiniela/config';
 import {
   DEFAULT_QUINIELA_ASSETS,
+  INLINE_QUINIELA_ASSETS,
   type QuinielaAssetBundle,
 } from '../quiniela/assets';
 import { formatParticipantName } from '../utils/formatParticipantName';
@@ -389,17 +390,36 @@ export default function AperturaJornada15({
   layoutVariant = 'default',
   showGrid = false,
 }: AperturaJornada15Props) {
+  const [shouldUseInlineAssets, setShouldUseInlineAssets] = useState(false);
+
+  useEffect(() => {
+    if (typeof navigator === 'undefined') {
+      return;
+    }
+
+    const ua = navigator.userAgent ?? '';
+    const safariLike = /Safari/i.test(ua) && !/Chrome|CriOS|Chromium|Android/i.test(ua);
+    setShouldUseInlineAssets(safariLike);
+  }, []);
+
+  const resolvedAssets = useMemo<QuinielaAssetBundle>(() => {
+    if (shouldUseInlineAssets) {
+      return INLINE_QUINIELA_ASSETS;
+    }
+    return assets;
+  }, [assets, shouldUseInlineAssets]);
+
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
     }
 
-    Object.values(assets.teamLogos).forEach((src) => {
+    Object.values(resolvedAssets.teamLogos).forEach((src) => {
       const preloader = new Image();
       preloader.decoding = 'async';
       preloader.src = src;
     });
-  }, [assets]);
+  }, [resolvedAssets]);
 
   const handleSelect = useCallback(
     (matchId: string, value: Selection) => {
@@ -417,7 +437,7 @@ export default function AperturaJornada15({
       <img
         alt="Fondo Liga MX Femenil"
         className="absolute inset-0 max-w-none object-cover pointer-events-none size-full"
-        src={assets.backgroundImage}
+        src={resolvedAssets.backgroundImage}
         loading="eager"
         decoding="async"
       />
@@ -427,7 +447,7 @@ export default function AperturaJornada15({
         readOnly={isReadOnly}
         showValidation={showSelectionErrors}
         participantName={participantName}
-        assets={assets}
+        assets={resolvedAssets}
         contentOffsetY={contentOffsetY}
         variant={layoutVariant}
         showGrid={showGrid}

@@ -1,31 +1,31 @@
 import { memo } from 'react';
 
 // Importaciones principales optimizadas
-import logoLigaBBVA from 'figma:asset/logo-liga-bbva.png';
-import logoSomosLocales from 'figma:asset/logo-somos-locales.png';
-import iconoEstadio from 'figma:asset/icono-estadio.png';
+import logoLigaBBVA from '../assets/logo-liga-bbva.png';
+import logoSomosLocales from '../assets/logo-somos-locales.png';
+import iconoEstadio from '../assets/icono-estadio.png';
 import iconoTV from '../Icon/tv.svg';
-import backgroundImage from 'figma:asset/background.jpg';
+import backgroundImage from '../assets/background.jpg';
 
 // Importaciones de logos de equipos
-import logoQueretaro from 'figma:asset/logo-queretaro.png';
-import logoPumas from 'figma:asset/logo-pumas.png';
-import logoJuarez from 'figma:asset/logo-juarez.png';
-import logoTigres from 'figma:asset/logo-tigres.png';
-import logoTijuana from 'figma:asset/logo-tijuana.png';
-import logoToluca from 'figma:asset/logo-toluca.png';
-import logoAmerica from 'figma:asset/logo-america.png';
-import logoAtlas from 'figma:asset/logo-atlas.png';
-import logoChivas from 'figma:asset/logo-chivas.png';
-import logoCruzAzul from 'figma:asset/logo-cruz-azul.png';
-import logoLeon from 'figma:asset/logo-leon.png';
-import logoMazatlan from 'figma:asset/logo-mazatlan.png';
-import logoNecaxa from 'figma:asset/logo-necaxa.png';
-import logoPachuca from 'figma:asset/logo-pachuca.png';
-import logoPuebla from 'figma:asset/logo-puebla.png';
-import logoRayadas from 'figma:asset/logo-rayadas.png';
-import logoSanLuis from 'figma:asset/logo-san-luis.png';
-import logoSantos from 'figma:asset/logo-santos.png';
+import logoQueretaro from '../assets/logo-queretaro.png';
+import logoPumas from '../assets/logo-pumas.png';
+import logoJuarez from '../assets/logo-juarez.png';
+import logoTigres from '../assets/logo-tigres.png';
+import logoTijuana from '../assets/logo-tijuana.png';
+import logoToluca from '../assets/logo-toluca.png';
+import logoAmerica from '../assets/logo-america.png';
+import logoAtlas from '../assets/logo-atlas.png';
+import logoChivas from '../assets/logo-chivas.png';
+import logoCruzAzul from '../assets/logo-cruz-azul.png';
+import logoLeon from '../assets/logo-leon.png';
+import logoMazatlan from '../assets/logo-mazatlan.png';
+import logoNecaxa from '../assets/logo-necaxa.png';
+import logoPachuca from '../assets/logo-pachuca.png';
+import logoPuebla from '../assets/logo-puebla.png';
+import logoRayadas from '../assets/logo-rayadas.png';
+import logoSanLuis from '../assets/logo-san-luis.png';
+import logoSantos from '../assets/logo-santos.png';
 
 // Componentes de iconos simples para reemplazar las imágenes
 // Componentes optimizados con lazy loading

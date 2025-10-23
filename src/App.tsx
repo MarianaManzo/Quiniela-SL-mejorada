@@ -22,7 +22,7 @@ import { formatParticipantName, sanitizeDisplayName } from './utils/formatPartic
 
 // Definición centralizada de la jornada mostrada
 const CURRENT_JOURNEY = 16;
-const BUILD_VERSION = 'V 22';
+const BUILD_VERSION = 'V 24';
 const QUICK_ACCESS_STORAGE_KEY = 'quiniela-quick-access-profile';
 
 const shouldShowDebugGrid = (): boolean => {
@@ -155,6 +155,53 @@ const buildSelectionsFromPronosticos = (values: unknown): QuinielaSelections | n
   });
 
   return result;
+};
+
+const hasCompletedSelections = (selections: QuinielaSelections | null): boolean => {
+  if (!selections) {
+    return false;
+  }
+
+  return Object.values(selections).some((value) => value !== null);
+};
+
+type QuinielaDocData = {
+  pronosticos?: unknown;
+  estadoQuiniela?: unknown;
+  quinielaEnviada?: unknown;
+  fechaActualizacion?: unknown;
+  fechaCreacion?: unknown;
+  puntosObtenidos?: unknown;
+};
+
+const resolveSubmissionMetadata = (data: QuinielaDocData | undefined) => {
+  if (!data) {
+    return {
+      submitted: false,
+      submittedAt: null as string | null,
+      selections: null as QuinielaSelections | null,
+      puntosObtenidos: 0,
+    };
+  }
+
+  const rawEstado = typeof data.estadoQuiniela === 'string' ? data.estadoQuiniela.toLowerCase() : '';
+  const selections = buildSelectionsFromPronosticos(data.pronosticos);
+  const submitted =
+    (rawEstado.length > 0 && rawEstado !== 'abierta') ||
+    Boolean(data.quinielaEnviada) ||
+    hasCompletedSelections(selections);
+  const submittedAt = submitted
+    ? toIsoString(data.fechaActualizacion ?? data.fechaCreacion) ?? new Date().toISOString()
+    : null;
+  const puntosObtenidos =
+    typeof data.puntosObtenidos === 'number' && Number.isFinite(data.puntosObtenidos) ? data.puntosObtenidos : 0;
+
+  return {
+    submitted,
+    submittedAt,
+    selections,
+    puntosObtenidos,
+  };
 };
 
 // Componente de loading simple
@@ -346,18 +393,13 @@ export default function App() {
           return;
         }
 
-        const data = snapshot.data() as {
-          estadoQuiniela?: string;
-          quinielaEnviada?: boolean;
-          fechaActualizacion?: unknown;
-          fechaCreacion?: unknown;
-        };
+        const meta = resolveSubmissionMetadata(snapshot.data() as QuinielaDocData);
 
-        const submitted = data?.estadoQuiniela !== 'abierta' || Boolean(data?.quinielaEnviada);
-        const submittedAt = submitted ? toIsoString(data?.fechaActualizacion ?? data?.fechaCreacion) : null;
-
-        setIsReadOnlyView(submitted);
-        setCurrentSubmissionAt(submittedAt);
+        setIsReadOnlyView(meta.submitted);
+        setCurrentSubmissionAt(meta.submittedAt);
+        if (meta.submittedAt) {
+          setLastSubmittedAt(meta.submittedAt);
+        }
       }),
     );
 
@@ -376,33 +418,91 @@ export default function App() {
             setPreviousSubmissionAt(null);
             return;
           }
-
-          const data = snapshot.data() as {
-            estadoQuiniela?: string;
-            quinielaEnviada?: boolean;
-            fechaActualizacion?: unknown;
-            fechaCreacion?: unknown;
-          };
-
-          const submitted = data?.estadoQuiniela !== 'abierta' || Boolean(data?.quinielaEnviada);
-          const submittedAt = submitted ? toIsoString(data?.fechaActualizacion ?? data?.fechaCreacion) : null;
-          setPreviousSubmissionAt(submittedAt);
+          const meta = resolveSubmissionMetadata(snapshot.data() as QuinielaDocData);
+          setPreviousSubmissionAt(meta.submittedAt);
         }),
       );
     } else {
       setPreviousSubmissionAt(null);
     }
 
-    return () => {
-      unsubscribeFns.forEach((fn) => fn());
-    };
-  }, [firebaseUser, previousJourneyNumber]);
-  useEffect(() => {
-    let isMounted = true;
+  return () => {
+    unsubscribeFns.forEach((fn) => fn());
+  };
+}, [firebaseUser, previousJourneyNumber]);
+useEffect(() => {
+  if (!firebaseUser || !user) {
+    return;
+  }
 
-    const unsubscribe = onAuthStateChanged(firebaseAuth, (authUser) => {
-      if (authUser) {
-        const displayName = authUser.displayName?.trim();
+  let cancelled = false;
+
+  const synchronizeRemoteSubmissions = async () => {
+    try {
+      const currentRef = doc(
+        firebaseFirestore,
+        'Usuarios',
+        firebaseUser.uid,
+        'quinielas',
+        CURRENT_JOURNEY.toString(),
+      );
+      const currentSnap = await getDoc(currentRef);
+
+      if (!cancelled && currentSnap.exists()) {
+        const meta = resolveSubmissionMetadata(currentSnap.data() as QuinielaDocData);
+        if (meta.submitted) {
+          setIsReadOnlyView(true);
+          setCurrentSubmissionAt(meta.submittedAt);
+          if (meta.submittedAt) {
+            setLastSubmittedAt(meta.submittedAt);
+          }
+
+          if (meta.selections && hasCompletedSelections(meta.selections)) {
+            const submission: QuinielaSubmission = {
+              user,
+              selections: meta.selections,
+              submittedAt: meta.submittedAt ?? new Date().toISOString(),
+              journey: CURRENT_JOURNEY,
+            };
+            persistSubmissionForUser(user.email, submission);
+          }
+        }
+      }
+
+      if (cancelled || previousJourneyNumber <= 0) {
+        return;
+      }
+
+      const previousRef = doc(
+        firebaseFirestore,
+        'Usuarios',
+        firebaseUser.uid,
+        'quinielas',
+        previousJourneyNumber.toString(),
+      );
+      const previousSnap = await getDoc(previousRef);
+
+      if (!cancelled && previousSnap.exists()) {
+        const meta = resolveSubmissionMetadata(previousSnap.data() as QuinielaDocData);
+        setPreviousSubmissionAt(meta.submittedAt);
+      }
+    } catch (error) {
+      console.error('No se pudo sincronizar la quiniela del usuario', error);
+    }
+  };
+
+  void synchronizeRemoteSubmissions();
+
+  return () => {
+    cancelled = true;
+  };
+}, [firebaseUser, previousJourneyNumber, user]);
+useEffect(() => {
+  let isMounted = true;
+
+  const unsubscribe = onAuthStateChanged(firebaseAuth, (authUser) => {
+    if (authUser) {
+      const displayName = authUser.displayName?.trim();
         const email = authUser.email ?? '';
         const fallbackName = displayName && displayName.length > 0
           ? displayName
@@ -595,16 +695,74 @@ export default function App() {
     hideSubmitTooltip();
   }, [hideSubmitTooltip, resetDownloadState]);
 
-  const handleEnterQuiniela = useCallback(() => {
-    setQuinielaSelections(createEmptySelections());
+  const handleEnterQuiniela = useCallback(async () => {
     resetDownloadState();
     setManualSaveDataUrl(null);
     setIsShareOpen(false);
-    setIsReadOnlyView(journeyClosed);
     setShowSelectionErrors(false);
     hideSubmitTooltip();
+
+    let nextSelections = createEmptySelections();
+    let nextReadOnly = journeyClosed;
+    let submissionDetected = false;
+
+    if (firebaseUser) {
+      try {
+        const quinielaRef = doc(
+          firebaseFirestore,
+          'Usuarios',
+          firebaseUser.uid,
+          'quinielas',
+          CURRENT_JOURNEY.toString(),
+        );
+        const snapshot = await getDoc(quinielaRef);
+
+        if (snapshot.exists()) {
+          const meta = resolveSubmissionMetadata(snapshot.data() as QuinielaDocData);
+          if (meta.selections && hasCompletedSelections(meta.selections)) {
+            nextSelections = { ...meta.selections };
+          }
+          if (meta.submitted) {
+            nextReadOnly = true;
+            submissionDetected = true;
+            if (meta.submittedAt) {
+              setCurrentSubmissionAt(meta.submittedAt);
+              setLastSubmittedAt(meta.submittedAt);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('No se pudo recuperar la quiniela almacenada antes de abrir el formulario', error);
+      }
+    }
+
+    if (!submissionDetected && user) {
+      const stored = loadSubmissionForUser(user.email);
+      if (stored && stored.journey === CURRENT_JOURNEY && hasCompletedSelections(stored.selections)) {
+        nextSelections = { ...stored.selections };
+        nextReadOnly = true;
+        submissionDetected = true;
+        setCurrentSubmissionAt(stored.submittedAt);
+        setLastSubmittedAt(stored.submittedAt);
+      }
+    }
+
+    setQuinielaSelections(nextSelections);
+    setIsReadOnlyView(nextReadOnly);
     setView('quiniela');
-  }, [createEmptySelections, hideSubmitTooltip, journeyClosed, resetDownloadState]);
+
+    if (submissionDetected && !journeyClosed) {
+      showToast('Esta jornada ya fue enviada. Mostramos la versión guardada.', 'success');
+    }
+  }, [
+    createEmptySelections,
+    firebaseUser,
+    hideSubmitTooltip,
+    journeyClosed,
+    resetDownloadState,
+    showToast,
+    user,
+  ]);
 
   const handleEnterPodium = useCallback(() => {
     resetDownloadState();
@@ -732,22 +890,15 @@ export default function App() {
           return;
         }
 
-        const data = snapshot.data() as {
-          pronosticos?: unknown;
-          puntosObtenidos?: unknown;
-          fechaActualizacion?: unknown;
-          fechaCreacion?: unknown;
-        };
+        const meta = resolveSubmissionMetadata(snapshot.data() as QuinielaDocData);
+        const remoteSelections = meta.selections;
 
-        const remoteSelections = buildSelectionsFromPronosticos(data.pronosticos);
-
-        if (!remoteSelections) {
+        if (!remoteSelections || !hasCompletedSelections(remoteSelections)) {
           showToast('La quiniela guardada no tiene pronósticos válidos.', 'error');
           return;
         }
 
-        const submittedAt =
-          toIsoString(data?.fechaActualizacion ?? data?.fechaCreacion) ?? new Date().toISOString();
+        const submittedAt = meta.submittedAt ?? new Date().toISOString();
 
         const submission: QuinielaSubmission = {
           user,

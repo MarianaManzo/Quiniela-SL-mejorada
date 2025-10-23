@@ -1,6 +1,6 @@
-import imgTijuana from "figma:asset/bfcd42b510b890edc41631fab3d2ac8f984d1684.png";
-import imgQueretaro from "figma:asset/3bf9523da2b028168e26c4774584c76a97dc34f4.png";
-import imgEstadioIcono from "figma:asset/icono-estadio.png";
+import imgTijuana from "../assets/logo-tijuana.png";
+import imgQueretaro from "../assets/logo-queretaro.png";
+import imgEstadioIcono from "../assets/icono-estadio.png";
 import imgTransmisionIcono from "../Icon/tv.svg";
 
 function DiaYHora() {

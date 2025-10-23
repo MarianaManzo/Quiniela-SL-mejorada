@@ -218,7 +218,7 @@ function JornadaCenter() {
     <div className="flex items-center justify-center h-full">
       <div className="flex flex-col items-center justify-center leading-[0] text-center">
         <p className="leading-[normal] text-[24px] font-['Antonio'] font-bold text-white uppercase mb-[4px] tracking-[2px]">APERTURA 2025</p>
-        <p className="leading-[normal] text-[40px] font-['Antonio'] font-bold text-[rgba(63,63,63,1)] uppercase tracking-[1px]">JORNADA 15</p>
+        <p className="leading-[normal] text-[40px] font-['Antonio'] font-bold text-[rgba(63,63,63,1)] uppercase tracking-[1px]">JORNADA 17</p>
       </div>
     </div>
   );
@@ -439,7 +439,7 @@ export default function AperturaJornada15({
   );
 
   return (
-    <div className="relative size-full" data-name="Apertura / JORNADA 15">
+    <div className="relative size-full" data-name="Apertura / JORNADA 17">
       <img
         alt="Fondo Liga MX Femenil"
         className="absolute inset-0 max-w-none object-cover pointer-events-none size-full"

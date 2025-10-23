@@ -13,7 +13,6 @@ import {
 import { ROLE_LABELS, type UserProfile } from "./LoginScreen";
 import { TOP_RANKING } from "../data/podium";
 import { obtenerUsuariosParaPodio } from "../services/firestoreService";
-import logoSomosLocales from "../assets/logo-somos-locales.png?inline";
 import "../styles/dashboard.css";
 
 interface DashboardProps {
@@ -21,6 +20,7 @@ interface DashboardProps {
   onEnterQuiniela: () => void;
   onViewQuiniela?: (journeyCode: string) => void;
   onViewPodium?: () => void;
+  journeyCards: DashboardJourneyCard[];
   journeyCode?: string;
   journeyCloseLabel?: string | null;
   journeyClosedLabel?: string | null;
@@ -30,24 +30,24 @@ interface DashboardProps {
   previousJourneySubmittedAt?: string | null;
 }
 
-const communityNotes = [
-  "Toda la pasión de la grada se siente en cada pronóstico.",
-  "Prepara tus datos, suma intuición y juega con corazón local.",
-  "Tu voz inspira a más fans a vivir el fútbol femenil.",
-];
-
-const tips = [
-  "Revisa la energía con la que llegan tus equipos a la jornada.",
-  "Activa recordatorios 30 minutos antes de que cierre la quiniela.",
-  "Comparte tus picks en el grupo de la comunidad Somos Locales.",
-];
-
 interface TournamentSectionState {
   id: string;
   collapsed: boolean;
 }
 
 type JourneyTone = "current" | "success" | "warning" | "upcoming";
+
+type JourneyCardAction = "participate" | "view" | null;
+
+interface DashboardJourneyCard {
+  id: string;
+  code: string;
+  number: number;
+  statusLabel: string;
+  meta: string;
+  tone: JourneyTone;
+  action: JourneyCardAction;
+}
 
 interface JourneyCard {
   id: string;
@@ -57,6 +57,7 @@ interface JourneyCard {
   tone: JourneyTone;
   ctaLabel?: string;
   ctaMobileLabel?: string;
+  action?: JourneyCardAction;
 }
 
 type StatusTagTone = "progress" | "neutral";
@@ -70,172 +71,10 @@ interface TournamentSection {
   cards: JourneyCard[];
 }
 
-const COLLAPSED_SECTIONS = new Set(["regular", "liguilla"]);
-
-const tournamentSections: TournamentSection[] = [
-  {
-    id: "regular",
-    appearance: "regular",
-    title: "Torneo Regular",
-    statusTags: [
-      { id: "progress", label: "Jornadas (10/17)", tone: "progress" },
-    ],
-    cards: [
-      {
-        id: "j17",
-        code: "J17",
-        statusLabel: "Próximamente",
-        meta: "Publicamos el rol de juegos el 28 de octubre",
-        tone: "upcoming",
-      },
-      {
-        id: "j16",
-        code: "J16",
-        statusLabel: "Próximamente",
-        meta: "Inicia el 20 de octubre",
-        tone: "upcoming",
-      },
-      {
-        id: "j15",
-        code: "J15",
-        statusLabel: "En curso",
-        meta: "Cierra 12 de octubre · 18:00 h",
-        tone: "current",
-        ctaLabel: "Participar",
-        ctaMobileLabel: "Participa",
-      },
-      {
-        id: "j14",
-        code: "J14",
-        statusLabel: "Enviado",
-        meta: "Pronóstico enviado el 05 de octubre",
-        tone: "success",
-      },
-      {
-        id: "j13",
-        code: "J13",
-        statusLabel: "Enviado",
-        meta: "Resultado final publicado",
-        tone: "success",
-      },
-      {
-        id: "j12",
-        code: "J12",
-        statusLabel: "Enviado",
-        meta: "Tu pronóstico quedó registrado",
-        tone: "success",
-      },
-      {
-        id: "j11",
-        code: "J11",
-        statusLabel: "Expirado",
-        meta: "Cerró el 18 de septiembre",
-        tone: "warning",
-      },
-      {
-        id: "j10",
-        code: "J10",
-        statusLabel: "Expirado",
-        meta: "Cerró el 11 de septiembre",
-        tone: "warning",
-      },
-      {
-        id: "j9",
-        code: "J09",
-        statusLabel: "Expirado",
-        meta: "Repasa los resultados finales",
-        tone: "warning",
-      },
-      {
-        id: "j8",
-        code: "J08",
-        statusLabel: "Expirado",
-        meta: "Cerró el 28 de agosto",
-        tone: "warning",
-      },
-      {
-        id: "j7",
-        code: "J07",
-        statusLabel: "Expirado",
-        meta: "Cerró el 21 de agosto",
-        tone: "warning",
-      },
-      {
-        id: "j6",
-        code: "J06",
-        statusLabel: "Expirado",
-        meta: "Cerró el 14 de agosto",
-        tone: "warning",
-      },
-      {
-        id: "j5",
-        code: "J05",
-        statusLabel: "Expirado",
-        meta: "Cerró el 7 de agosto",
-        tone: "warning",
-      },
-      {
-        id: "j4",
-        code: "J04",
-        statusLabel: "Expirado",
-        meta: "Cerró el 31 de julio",
-        tone: "warning",
-      },
-      {
-        id: "j3",
-        code: "J03",
-        statusLabel: "Expirado",
-        meta: "Cerró el 24 de julio",
-        tone: "warning",
-      },
-      {
-        id: "j2",
-        code: "J02",
-        statusLabel: "Expirado",
-        meta: "Cerró el 17 de julio",
-        tone: "warning",
-      },
-      {
-        id: "j1",
-        code: "J01",
-        statusLabel: "Expirado",
-        meta: "Cerró el 10 de julio",
-        tone: "warning",
-      },
-    ],
-  },
-  {
-    id: "liguilla",
-    appearance: "elimination",
-    title: "Liguilla",
-    subtitle: "4 jornadas por disputar",
-    statusTags: [
-      { id: "available", label: "Disponible pronto", tone: "neutral" },
-    ],
-    cards: [
-      {
-        id: "cuartos",
-        code: "C1",
-        statusLabel: "Próximamente",
-        meta: "Publicamos llaves el 5 de noviembre",
-        tone: "upcoming",
-      },
-      {
-        id: "semis",
-        code: "S1",
-        statusLabel: "Próximamente",
-        meta: "Se define tras cuartos",
-        tone: "upcoming",
-      },
-      {
-        id: "final",
-        code: "F1",
-        statusLabel: "Próximamente",
-        meta: "La gran final se confirma en diciembre",
-        tone: "upcoming",
-      },
-    ],
-  },
+const DEFAULT_SECTION_ID = "regular";
+const SECTION_DEFAULT_STATE: TournamentSectionState[] = [
+  { id: "regular", collapsed: false },
+  { id: "liguilla", collapsed: true },
 ];
 
 export function Dashboard({
@@ -243,20 +82,16 @@ export function Dashboard({
   onEnterQuiniela,
   onViewQuiniela,
   onViewPodium,
+  journeyCards,
   journeyCode,
   journeyCloseLabel,
   journeyClosedLabel,
   journeyClosed = false,
   journeySubmittedAt,
-  previousJourneyClosedLabel,
-  previousJourneySubmittedAt,
+  previousJourneyClosedLabel: _previousJourneyClosedLabel,
+  previousJourneySubmittedAt: _previousJourneySubmittedAt,
 }: DashboardProps) {
-  const [sectionState, setSectionState] = useState<TournamentSectionState[]>(
-    tournamentSections.map((section) => ({
-      id: section.id,
-      collapsed: COLLAPSED_SECTIONS.has(section.id),
-    }))
-  );
+  const [sectionState, setSectionState] = useState<TournamentSectionState[]>(SECTION_DEFAULT_STATE);
   const [topRanking, setTopRanking] = useState(
     TOP_RANKING.slice(0, 4).map((entry, index) => ({
       id: String(entry.id),
@@ -306,136 +141,108 @@ export function Dashboard({
     );
   };
 
+  const orderedJourneyCards = useMemo(() => {
+    return [...journeyCards].sort((a, b) => b.number - a.number);
+  }, [journeyCards]);
+
   const firstName = user.name.trim().split(" ")[0] || user.name;
   const hasSubmitted = Boolean(journeySubmittedAt);
-  const journeyNumber = journeyCode ? Number.parseInt(journeyCode.replace(/\D/g, ''), 10) : null;
-  const previousJourneyCode = journeyNumber && journeyNumber > 1 ? `J${String(journeyNumber - 1).padStart(2, '0')}` : null;
-  const activeJourney = tournamentSections
-    .find((section) => section.id === "regular")
-    ?.cards.find((card) => card.tone === "current");
-  const activeJourneyCode = journeyCode ?? activeJourney?.code ?? "";
-  const heroButtonLabel = hasSubmitted
+  const activeJourneyCard = orderedJourneyCards.find((card) => card.code === journeyCode)
+    ?? orderedJourneyCards.find((card) => card.tone === "current")
+    ?? null;
+  const activeJourneyCode = journeyCode ?? activeJourneyCard?.code ?? "";
+  const heroActionType: JourneyCardAction | null = activeJourneyCard?.action ?? (hasSubmitted ? "view" : null);
+  const heroButtonLabel = heroActionType === "view"
     ? activeJourneyCode
       ? `Ver ${activeJourneyCode}`
       : "Ver"
-    : journeyClosed
+    : heroActionType === "participate"
       ? activeJourneyCode
-        ? `Expirada ${activeJourneyCode}`
-        : "Expirada"
-      : activeJourneyCode
         ? `Participar ${activeJourneyCode}`
-        : "Participar";
-  const previousSubmitted = Boolean(previousJourneySubmittedAt);
-  const heroActionDisabled = journeyClosed && !hasSubmitted;
+        : "Participar"
+      : journeyClosed
+        ? activeJourneyCode
+          ? `Expirada ${activeJourneyCode}`
+          : "Expirada"
+        : activeJourneyCode
+          ? `Ver ${activeJourneyCode}`
+          : "Ver";
+  const heroActionDisabled = !heroActionType;
 
-  const heroCountdownVisible = !journeyClosed && !hasSubmitted && Boolean(journeyCloseLabel);
-  const heroClosedMessage = journeyClosed && !hasSubmitted ? journeyClosedLabel ?? "La jornada está cerrada." : null;
-
-  const formatDisplayDate = (date: Date): string => {
-    const dateFormatter = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short" });
-    const raw = dateFormatter.format(date).replace('.', '').toUpperCase().trim();
-    const parts = raw.split(' ').filter(Boolean);
-    const dayPart = parts[0] ?? raw;
-    const monthPart = parts[1] ?? '';
-    const time = date.toLocaleTimeString("es-MX", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-    return monthPart ? `${dayPart} ${monthPart} - ${time} hrs` : `${dayPart} - ${time} hrs`;
-  };
-  const formatSubmissionDate = (iso: string): string => formatDisplayDate(new Date(iso));
+  const heroCountdownVisible = heroActionType === "participate" && Boolean(journeyCloseLabel);
+  const heroClosedMessage = journeyClosed && heroActionType !== "view" ? journeyClosedLabel ?? "La jornada está cerrada." : null;
 
   const computedSections: TournamentSection[] = useMemo(() => {
-    return tournamentSections.map((section) => {
-      if (section.id !== "regular" || !journeyCode) {
-        return section;
-      }
+    const cards: JourneyCard[] = orderedJourneyCards.map((card) => ({
+      id: card.id,
+      code: card.code,
+      statusLabel: card.statusLabel,
+      meta: card.meta,
+      tone: card.tone,
+      ctaLabel: card.action === "participate" ? "Participar" : undefined,
+      ctaMobileLabel: card.action === "participate" ? "Participa" : undefined,
+      action: card.action,
+    }));
 
-      const cards = section.cards.map((card) => {
-        if (card.code === journeyCode) {
-          if (hasSubmitted && journeySubmittedAt) {
-            return {
-              ...card,
-              tone: "success" as JourneyTone,
-              statusLabel: "Enviado",
-              meta: `Pronóstico enviado el ${formatSubmissionDate(journeySubmittedAt)}`,
-              ctaLabel: undefined,
-              ctaMobileLabel: undefined,
-            };
-          }
+    const totalLabel = cards.length > 0 ? `Jornadas (${cards.length})` : "Sin jornadas";
+    const totalTone: StatusTagTone = cards.length > 0 ? "progress" : "neutral";
 
-          if (journeyClosed) {
-            const closedLabel = journeyClosedLabel ?? journeyCloseLabel ?? "La jornada cerró";
-            return {
-              ...card,
-              tone: "warning" as JourneyTone,
-              statusLabel: "Expirado",
-              meta: closedLabel,
-              ctaLabel: undefined,
-              ctaMobileLabel: undefined,
-            };
-          }
-
-          return {
-            ...card,
-            tone: "current" as JourneyTone,
-            statusLabel: "En curso",
-            meta: journeyCloseLabel ?? card.meta,
-            ctaLabel: "Participar",
-            ctaMobileLabel: "Participa",
-          };
-        }
-
-        if (previousJourneyCode && card.code === previousJourneyCode) {
-          if (previousSubmitted && previousJourneySubmittedAt) {
-            return {
-              ...card,
-              tone: "success" as JourneyTone,
-              statusLabel: "Enviado",
-              meta: `Pronóstico enviado el ${formatSubmissionDate(previousJourneySubmittedAt)}`,
-              ctaLabel: undefined,
-              ctaMobileLabel: undefined,
-            };
-          }
-
-          return {
-            ...card,
-            tone: "warning" as JourneyTone,
-            statusLabel: previousJourneyClosedLabel ? "Expirado" : "Expirado",
-            meta: previousJourneyClosedLabel ?? 'La jornada cerró',
-            ctaLabel: undefined,
-            ctaMobileLabel: undefined,
-          };
-        }
-
-        return card;
-      });
-
-      return {
-        ...section,
-        cards,
-      };
-    });
-  }, [
-    hasSubmitted,
-    journeyClosed,
-    journeyClosedLabel,
-    journeyCloseLabel,
-    journeyCode,
-    journeySubmittedAt,
-    previousJourneyClosedLabel,
-    previousJourneySubmittedAt,
-  ]);
+    return [
+      {
+        id: DEFAULT_SECTION_ID,
+        appearance: "regular",
+        title: "Torneo Regular",
+      statusTags: [
+        { id: "progress", label: totalLabel, tone: totalTone },
+      ],
+      cards,
+      },
+      {
+        id: "liguilla",
+        appearance: "elimination",
+        title: "Liguilla",
+        subtitle: "Disponible pronto",
+        statusTags: [{ id: "available", label: "Llaves por anunciar", tone: "neutral" }],
+        cards: [
+          {
+            id: "liguilla-cuartos",
+            code: "C1",
+            statusLabel: "Próximamente",
+            meta: "Publicamos llaves el 5 de noviembre",
+            tone: "upcoming",
+          },
+          {
+            id: "liguilla-semis",
+            code: "S1",
+            statusLabel: "Próximamente",
+            meta: "Se define tras cuartos",
+            tone: "upcoming",
+          },
+          {
+            id: "liguilla-final",
+            code: "F1",
+            statusLabel: "Próximamente",
+            meta: "La gran final se confirma en diciembre",
+            tone: "upcoming",
+          },
+        ],
+      },
+    ];
+  }, [orderedJourneyCards]);
 
   const handleHeroAction = () => {
-    if (heroActionDisabled) {
+    if (!heroActionType) {
       return;
     }
-    if ((journeyClosed || hasSubmitted) && journeyCode) {
-      onViewQuiniela?.(journeyCode);
+
+    if (heroActionType === "view") {
+      const targetCode = activeJourneyCode || orderedJourneyCards[0]?.code;
+      if (targetCode) {
+        onViewQuiniela?.(targetCode);
+      }
       return;
     }
+
     onEnterQuiniela();
   };
 
@@ -579,7 +386,7 @@ export function Dashboard({
                               </span>
                             </button>
                           ) : null}
-                          {card.tone === "success" ? (
+                          {card.action === "view" ? (
                             <button
                               type="button"
                               className="journey-card__link journey-card__link--inline"

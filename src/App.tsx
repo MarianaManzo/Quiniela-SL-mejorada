@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Download, Loader2, Share2, X } from 'lucide-react';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, onSnapshot, Timestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, onSnapshot, Timestamp } from 'firebase/firestore';
 import { Dashboard } from './components/Dashboard';
 import { LoginScreen, type UserProfile } from './components/LoginScreen';
 import { Navbar } from './components/Navbar';
@@ -22,7 +22,7 @@ import { formatParticipantName, sanitizeDisplayName } from './utils/formatPartic
 
 // Definición centralizada de la jornada mostrada
 const CURRENT_JOURNEY = 16;
-const BUILD_VERSION = 'V 24';
+const BUILD_VERSION = 'V 25';
 const QUICK_ACCESS_STORAGE_KEY = 'quiniela-quick-access-profile';
 
 const shouldShowDebugGrid = (): boolean => {
@@ -86,6 +86,42 @@ const formatJourneyDateParts = (date: Date): { dayMonth: string; time: string } 
 const buildCloseLabel = (prefix: 'Cierra' | 'Cerró', date: Date): string => {
   const { dayMonth, time } = formatJourneyDateParts(date);
   return `${prefix} el ${dayMonth} - ${time} hrs`;
+};
+
+const buildStartLabel = (date: Date): string => {
+  const { dayMonth, time } = formatJourneyDateParts(date);
+  return `Inicia el ${dayMonth} - ${time} hrs`;
+};
+
+const buildSubmittedLabel = (isoString: string | null): string => {
+  if (!isoString) {
+    return 'Pronóstico enviado';
+  }
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) {
+    return 'Pronóstico enviado';
+  }
+  const { dayMonth, time } = formatJourneyDateParts(date);
+  return `Pronóstico enviado el ${dayMonth} - ${time} hrs`;
+};
+
+const parseJourneyNumber = (id: string): number | null => {
+  if (!id) {
+    return null;
+  }
+
+  const numericId = Number.parseInt(id, 10);
+  if (!Number.isNaN(numericId)) {
+    return numericId;
+  }
+
+  const match = id.match(/\d+/);
+  if (match) {
+    const parsed = Number.parseInt(match[0], 10);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+
+  return null;
 };
 
 type StoredSubmissions = Record<string, QuinielaSubmission | (Omit<QuinielaSubmission, 'journey'> & { journey?: number })>;
@@ -174,6 +210,37 @@ type QuinielaDocData = {
   puntosObtenidos?: unknown;
 };
 
+type JornadaDocData = {
+  fechaInicio?: unknown;
+  fechaApertura?: unknown;
+  fechaCierre?: unknown;
+  resultadosOficiales?: unknown;
+  titulo?: unknown;
+};
+
+type JourneyRecord = {
+  id: string;
+  number: number;
+  fechaInicio: Date | null;
+  fechaCierre: Date | null;
+  resultadosOficiales: Selection[];
+  rawData: JornadaDocData;
+};
+
+type JourneyTone = 'current' | 'success' | 'warning' | 'upcoming';
+type JourneyCardAction = 'participate' | 'view' | null;
+
+type JourneyCardViewModel = {
+  id: string;
+  code: string;
+  number: number;
+  statusLabel: string;
+  meta: string;
+  tone: JourneyTone;
+  action: JourneyCardAction;
+  submittedAt: string | null;
+};
+
 const resolveSubmissionMetadata = (data: QuinielaDocData | undefined) => {
   if (!data) {
     return {
@@ -235,6 +302,8 @@ export default function App() {
   const [showSelectionErrors, setShowSelectionErrors] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [manualSaveDataUrl, setManualSaveDataUrl] = useState<string | null>(null);
+  const [journeys, setJourneys] = useState<JourneyRecord[]>([]);
+  const [userQuinielasMap, setUserQuinielasMap] = useState<Record<number, QuinielaDocData>>({});
   const journeyClosed = useMemo(() => {
     if (!journeyCloseDate) {
       return false;
@@ -266,6 +335,72 @@ export default function App() {
     () => formatParticipantName(user?.name, user?.email),
     [user?.name, user?.email],
   );
+  const journeyCards = useMemo<JourneyCardViewModel[]>(() => {
+    if (journeys.length === 0) {
+      return [];
+    }
+
+    const cards = journeys
+      .map((journey) => {
+        const code = `J${journey.number.toString().padStart(2, '0')}`;
+        const submissionMeta = resolveSubmissionMetadata(userQuinielasMap[journey.number]);
+
+        let tone: JourneyTone = 'upcoming';
+        let statusLabel = 'Próximamente';
+        let action: JourneyCardAction = null;
+        let meta = journey.fechaInicio ? buildStartLabel(journey.fechaInicio) : 'Próximamente';
+
+        if (submissionMeta.submitted) {
+          tone = 'success';
+          statusLabel = 'Enviado';
+          meta = buildSubmittedLabel(submissionMeta.submittedAt);
+          action = 'view';
+        } else if (journey.fechaInicio && now.getTime() < journey.fechaInicio.getTime()) {
+          tone = 'upcoming';
+          statusLabel = 'Próximamente';
+          meta = buildStartLabel(journey.fechaInicio);
+        } else if (journey.fechaCierre && now.getTime() >= journey.fechaCierre.getTime()) {
+          tone = 'warning';
+          statusLabel = 'Expirado';
+          meta = buildCloseLabel('Cerró', journey.fechaCierre);
+        } else {
+          tone = 'current';
+          statusLabel = 'En curso';
+          meta = journey.fechaCierre ? buildCloseLabel('Cierra', journey.fechaCierre) : 'Jornada en curso';
+          action = 'participate';
+        }
+
+        return {
+          id: `journey-${journey.number}`,
+          code,
+          number: journey.number,
+          statusLabel,
+          meta,
+          tone,
+          action,
+          submittedAt: submissionMeta.submittedAt,
+        } satisfies JourneyCardViewModel;
+      })
+      .sort((a, b) => b.number - a.number);
+
+    const upcomingJourneyNumber = CURRENT_JOURNEY + 1;
+    const hasUpcoming = cards.some((card) => card.number === upcomingJourneyNumber);
+
+    if (!hasUpcoming) {
+      cards.push({
+        id: `journey-${upcomingJourneyNumber}`,
+        code: `J${upcomingJourneyNumber.toString().padStart(2, '0')}`,
+        number: upcomingJourneyNumber,
+        statusLabel: 'Próximamente',
+        meta: 'Publicamos el rol de juegos muy pronto',
+        tone: 'upcoming',
+        action: null,
+        submittedAt: null,
+      });
+    }
+
+    return cards.sort((a, b) => b.number - a.number);
+  }, [journeys, now, userQuinielasMap]);
   const getExportData = useCallback(() => ({
     selections: quinielaSelections,
     participantName: participantDisplayName,
@@ -313,50 +448,59 @@ export default function App() {
     };
   }, []);
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
+    const jornadasRef = collection(firebaseFirestore, 'jornadas');
 
-    const unsubscribeFns: Array<() => void> = [];
+    const unsubscribe = onSnapshot(
+      jornadasRef,
+      (snapshot) => {
+        const records: JourneyRecord[] = snapshot.docs
+          .map((docSnap) => {
+            const number = parseJourneyNumber(docSnap.id);
+            if (number === null) {
+              return null;
+            }
 
-    const journeyRef = doc(firebaseFirestore, 'jornadas', CURRENT_JOURNEY.toString());
-    unsubscribeFns.push(
-      onSnapshot(
-        journeyRef,
-        (snapshot) => {
-          const data = snapshot.exists() ? snapshot.data() : undefined;
-          setJourneyCloseDate(toDate((data as { fechaCierre?: unknown } | undefined)?.fechaCierre));
-        },
-        (error) => {
-          console.error('No se pudo obtener la fecha de cierre de la jornada', error);
-          setJourneyCloseDate(null);
-        },
-      ),
+            const data = docSnap.data() as JornadaDocData;
+            const fechaInicio = toDate(data?.fechaInicio ?? data?.fechaApertura ?? null);
+            const fechaCierre = toDate(data?.fechaCierre ?? null);
+            const resultados =
+              Array.isArray(data?.resultadosOficiales) && data.resultadosOficiales.length > 0
+                ? (data.resultadosOficiales.map((value) => normalizeSelection(value)) as Selection[])
+                : [];
+
+            return {
+              id: docSnap.id,
+              number,
+              fechaInicio,
+              fechaCierre,
+              resultadosOficiales: resultados.filter((value): value is Selection => Boolean(value)),
+              rawData: data,
+            } satisfies JourneyRecord;
+          })
+          .filter((value): value is JourneyRecord => value !== null)
+          .sort((a, b) => b.number - a.number);
+
+        setJourneys(records);
+      },
+      (error) => {
+        console.error('No se pudieron cargar las jornadas desde Firestore', error);
+        setJourneys([]);
+      },
     );
 
+    return () => unsubscribe();
+  }, []);
+  useEffect(() => {
+    const currentJourney = journeys.find((journey) => journey.number === CURRENT_JOURNEY);
+    setJourneyCloseDate(currentJourney?.fechaCierre ?? null);
+
     if (previousJourneyNumber > 0) {
-      const previousRef = doc(firebaseFirestore, 'jornadas', previousJourneyNumber.toString());
-      unsubscribeFns.push(
-        onSnapshot(
-          previousRef,
-          (snapshot) => {
-            const data = snapshot.exists() ? snapshot.data() : undefined;
-            setPreviousJourneyCloseDate(toDate((data as { fechaCierre?: unknown } | undefined)?.fechaCierre));
-          },
-          (error) => {
-            console.error('No se pudo obtener la fecha de cierre de la jornada previa', error);
-            setPreviousJourneyCloseDate(null);
-          },
-        ),
-      );
+      const previousJourney = journeys.find((journey) => journey.number === previousJourneyNumber);
+      setPreviousJourneyCloseDate(previousJourney?.fechaCierre ?? null);
     } else {
       setPreviousJourneyCloseDate(null);
     }
-
-    return () => {
-      unsubscribeFns.forEach((fn) => fn());
-    };
-  }, [previousJourneyNumber]);
+  }, [journeys, previousJourneyNumber]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -368,135 +512,83 @@ export default function App() {
     const intervalId = window.setInterval(updateNow, 60000);
     return () => window.clearInterval(intervalId);
   }, []);
-  useEffect(() => {
-    if (!firebaseUser) {
-      setCurrentSubmissionAt(null);
-      setPreviousSubmissionAt(null);
-      return undefined;
-    }
+useEffect(() => {
+  if (!firebaseUser) {
+    setCurrentSubmissionAt(null);
+    setPreviousSubmissionAt(null);
+    setUserQuinielasMap({});
+    return undefined;
+  }
 
-    const unsubscribeFns: Array<() => void> = [];
+  const quinielasRef = collection(firebaseFirestore, 'Usuarios', firebaseUser.uid, 'quinielas');
 
-    const currentQuinielaRef = doc(
-      firebaseFirestore,
-      'Usuarios',
-      firebaseUser.uid,
-      'quinielas',
-      CURRENT_JOURNEY.toString(),
-    );
+  const unsubscribe = onSnapshot(
+    quinielasRef,
+    (snapshot) => {
+      const map: Record<number, QuinielaDocData> = {};
 
-    unsubscribeFns.push(
-      onSnapshot(currentQuinielaRef, (snapshot) => {
-        if (!snapshot.exists()) {
-          setCurrentSubmissionAt(null);
-          setIsReadOnlyView(false);
+      snapshot.forEach((docSnap) => {
+        const journeyNumber = parseJourneyNumber(docSnap.id);
+        if (journeyNumber === null) {
           return;
         }
+        map[journeyNumber] = docSnap.data() as QuinielaDocData;
+      });
 
-        const meta = resolveSubmissionMetadata(snapshot.data() as QuinielaDocData);
-
-        setIsReadOnlyView(meta.submitted);
-        setCurrentSubmissionAt(meta.submittedAt);
-        if (meta.submittedAt) {
-          setLastSubmittedAt(meta.submittedAt);
-        }
-      }),
-    );
-
-    if (previousJourneyNumber > 0) {
-      const previousQuinielaRef = doc(
-        firebaseFirestore,
-        'Usuarios',
-        firebaseUser.uid,
-        'quinielas',
-        previousJourneyNumber.toString(),
-      );
-
-      unsubscribeFns.push(
-        onSnapshot(previousQuinielaRef, (snapshot) => {
-          if (!snapshot.exists()) {
-            setPreviousSubmissionAt(null);
-            return;
-          }
-          const meta = resolveSubmissionMetadata(snapshot.data() as QuinielaDocData);
-          setPreviousSubmissionAt(meta.submittedAt);
-        }),
-      );
-    } else {
-      setPreviousSubmissionAt(null);
-    }
+      setUserQuinielasMap(map);
+    },
+    (error) => {
+      console.error('No se pudieron cargar las quinielas del usuario', error);
+      setUserQuinielasMap({});
+    },
+  );
 
   return () => {
-    unsubscribeFns.forEach((fn) => fn());
+    unsubscribe();
   };
-}, [firebaseUser, previousJourneyNumber]);
+}, [firebaseUser]);
+
 useEffect(() => {
-  if (!firebaseUser || !user) {
+  if (!firebaseUser) {
+    setIsReadOnlyView(false);
+    setCurrentSubmissionAt(null);
+    setPreviousSubmissionAt(null);
     return;
   }
 
-  let cancelled = false;
+  const currentMeta = resolveSubmissionMetadata(userQuinielasMap[CURRENT_JOURNEY]);
+  setIsReadOnlyView(currentMeta.submitted);
+  setCurrentSubmissionAt(currentMeta.submittedAt);
+  if (currentMeta.submittedAt) {
+    setLastSubmittedAt(currentMeta.submittedAt);
+  } else if (!currentMeta.submitted) {
+    setLastSubmittedAt(null);
+  }
 
-  const synchronizeRemoteSubmissions = async () => {
-    try {
-      const currentRef = doc(
-        firebaseFirestore,
-        'Usuarios',
-        firebaseUser.uid,
-        'quinielas',
-        CURRENT_JOURNEY.toString(),
-      );
-      const currentSnap = await getDoc(currentRef);
+  if (previousJourneyNumber > 0) {
+    const previousMeta = resolveSubmissionMetadata(userQuinielasMap[previousJourneyNumber]);
+    setPreviousSubmissionAt(previousMeta.submittedAt);
+  } else {
+    setPreviousSubmissionAt(null);
+  }
+}, [firebaseUser, previousJourneyNumber, userQuinielasMap]);
 
-      if (!cancelled && currentSnap.exists()) {
-        const meta = resolveSubmissionMetadata(currentSnap.data() as QuinielaDocData);
-        if (meta.submitted) {
-          setIsReadOnlyView(true);
-          setCurrentSubmissionAt(meta.submittedAt);
-          if (meta.submittedAt) {
-            setLastSubmittedAt(meta.submittedAt);
-          }
+useEffect(() => {
+  if (!user) {
+    return;
+  }
 
-          if (meta.selections && hasCompletedSelections(meta.selections)) {
-            const submission: QuinielaSubmission = {
-              user,
-              selections: meta.selections,
-              submittedAt: meta.submittedAt ?? new Date().toISOString(),
-              journey: CURRENT_JOURNEY,
-            };
-            persistSubmissionForUser(user.email, submission);
-          }
-        }
-      }
-
-      if (cancelled || previousJourneyNumber <= 0) {
-        return;
-      }
-
-      const previousRef = doc(
-        firebaseFirestore,
-        'Usuarios',
-        firebaseUser.uid,
-        'quinielas',
-        previousJourneyNumber.toString(),
-      );
-      const previousSnap = await getDoc(previousRef);
-
-      if (!cancelled && previousSnap.exists()) {
-        const meta = resolveSubmissionMetadata(previousSnap.data() as QuinielaDocData);
-        setPreviousSubmissionAt(meta.submittedAt);
-      }
-    } catch (error) {
-      console.error('No se pudo sincronizar la quiniela del usuario', error);
-    }
-  };
-
-  void synchronizeRemoteSubmissions();
-
-  return () => {
-    cancelled = true;
-  };
-}, [firebaseUser, previousJourneyNumber, user]);
+  const currentMeta = resolveSubmissionMetadata(userQuinielasMap[CURRENT_JOURNEY]);
+  if (currentMeta.submitted && currentMeta.selections && hasCompletedSelections(currentMeta.selections)) {
+    const submission: QuinielaSubmission = {
+      user,
+      selections: currentMeta.selections,
+      submittedAt: currentMeta.submittedAt ?? new Date().toISOString(),
+      journey: CURRENT_JOURNEY,
+    };
+    persistSubmissionForUser(user.email, submission);
+  }
+}, [user, userQuinielasMap]);
 useEffect(() => {
   let isMounted = true;
 
@@ -1120,6 +1212,7 @@ useEffect(() => {
             onEnterQuiniela={handleEnterQuiniela}
             onViewQuiniela={handleViewSubmission}
             onViewPodium={handleEnterPodium}
+            journeyCards={journeyCards}
             journeyCode={`J${CURRENT_JOURNEY.toString().padStart(2, '0')}`}
             journeyCloseLabel={journeyCloseLabel}
             journeyClosedLabel={journeyClosedLabel}

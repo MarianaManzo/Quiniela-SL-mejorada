@@ -390,7 +390,13 @@ export default function AperturaJornada15({
   layoutVariant = 'default',
   showGrid = false,
 }: AperturaJornada15Props) {
-  const [shouldUseInlineAssets, setShouldUseInlineAssets] = useState(false);
+  const [shouldUseInlineAssets, setShouldUseInlineAssets] = useState(() => {
+    if (typeof navigator === 'undefined') {
+      return false;
+    }
+    const ua = navigator.userAgent ?? '';
+    return /Safari/i.test(ua) && !/Chrome|CriOS|Chromium|Android/i.test(ua);
+  });
 
   useEffect(() => {
     if (typeof navigator === 'undefined') {

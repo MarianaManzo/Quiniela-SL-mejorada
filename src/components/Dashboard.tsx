@@ -349,7 +349,11 @@ export function Dashboard({
               <div className="tournament-panel__grid" data-hidden={collapsed}>
                 {section.cards.map((card) => {
                   return (
-                    <article key={card.id} className="journey-card" data-tone={card.tone}>
+                    <article
+                      key={card.id}
+                      className={`journey-card journey-card--${card.tone}`}
+                      data-tone={card.tone}
+                    >
                       <header className="journey-card__header">
                         <div className="journey-card__main">
                           <span className="journey-card__code">{card.code}</span>
@@ -377,6 +381,7 @@ export function Dashboard({
                               className="journey-card__cta"
                               data-tone={card.tone}
                               onClick={onEnterQuiniela}
+                              style={{ borderRadius: "18px" }}
                             >
                               <span className="journey-card__cta-label journey-card__cta-label--desktop">
                                 {card.ctaLabel}
@@ -391,6 +396,7 @@ export function Dashboard({
                               type="button"
                               className="journey-card__link journey-card__link--inline"
                               onClick={() => onViewQuiniela?.(card.code)}
+                              style={{ borderRadius: "18px" }}
                             >
                               Ver
                             </button>

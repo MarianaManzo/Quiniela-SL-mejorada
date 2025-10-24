@@ -59,7 +59,7 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 14px;
+  border-radius: 18px;
   border: 1px solid rgba(246, 212, 51, 0.35);
   background: rgba(246, 212, 51, 0.12);
   color: rgba(246, 212, 51, 0.88);
@@ -77,7 +77,7 @@
 .navbar__icon-button--signout {
   width: 44px;
   height: 44px;
-  border-radius: 16px;
+  border-radius: 18px;
   border-color: rgba(82, 82, 96, 0.45);
   background: rgba(36, 38, 45, 0.9);
   color: rgba(248, 250, 252, 0.92);
@@ -96,7 +96,7 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 12px;
+  border-radius: 18px;
   border: 1px solid rgba(246, 212, 51, 0.35);
   background: rgba(15, 16, 19, 0.6);
   color: #f8fafc;
@@ -211,7 +211,7 @@
 .navbar__avatar {
   width: 36px;
   height: 36px;
-  border-radius: 14px;
+  border-radius: 18px;
   border: 1px solid transparent;
   background: rgba(246, 212, 51, 0.22);
   display: grid;
@@ -374,7 +374,7 @@
     margin-top: 8px;
     background: var(--so-yellow);
     color: var(--so-charcoal);
-    border-radius: 20px;
+    border-radius: 18px;
     padding: 12px 0;
     letter-spacing: 0.12em;
   }

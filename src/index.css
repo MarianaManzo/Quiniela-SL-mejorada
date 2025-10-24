@@ -185,6 +185,10 @@
     border-radius: 0;
   }
 
+  button {
+    border-radius: 18px;
+  }
+
   ::file-selector-button {
     font: inherit;
     font-feature-settings: inherit;
@@ -687,7 +691,7 @@
   justify-content: center;
   width: 52px;
   height: 52px;
-  border-radius: 12px;
+  border-radius: 18px;
   background-color: #f8d95b;
   color: #222222;
   border: 1px solid transparent;
@@ -1050,7 +1054,7 @@
   gap: 8px;
   padding: 12px 32px;
   border: none;
-  border-radius: 9999px;
+  border-radius: 18px;
   background: #030213;
   color: #fafaf9;
   text-transform: none;
@@ -1081,7 +1085,7 @@
 .icon-button {
   width: 52px;
   height: 52px;
-  border-radius: 50%;
+  border-radius: 18px;
   border: 1px solid rgba(3, 2, 19, 0.12);
   background: #030213;
   color: #fafaf9;
@@ -1212,7 +1216,7 @@
   align-items: center;
   justify-content: center;
   padding: 6px;
-  border-radius: 999px;
+  border-radius: 18px;
   transition: background 150ms ease, color 150ms ease;
 }
 

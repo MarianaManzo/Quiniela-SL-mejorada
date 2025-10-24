@@ -22,7 +22,7 @@ import { formatParticipantName, sanitizeDisplayName } from './utils/formatPartic
 
 // Definición centralizada de la jornada mostrada
 const CURRENT_JOURNEY = 16;
-const BUILD_VERSION = 'V 25';
+const BUILD_VERSION = 'V 26';
 const QUICK_ACCESS_STORAGE_KEY = 'quiniela-quick-access-profile';
 
 const shouldShowDebugGrid = (): boolean => {
@@ -193,13 +193,8 @@ const buildSelectionsFromPronosticos = (values: unknown): QuinielaSelections | n
   return result;
 };
 
-const hasCompletedSelections = (selections: QuinielaSelections | null): boolean => {
-  if (!selections) {
-    return false;
-  }
-
-  return Object.values(selections).some((value) => value !== null);
-};
+const hasCompletedSelections = (selections: QuinielaSelections | null): boolean =>
+  selections ? Object.values(selections).every((value) => value !== null) : false;
 
 type QuinielaDocData = {
   pronosticos?: unknown;
@@ -335,6 +330,10 @@ export default function App() {
     () => formatParticipantName(user?.name, user?.email),
     [user?.name, user?.email],
   );
+  const storedSubmission = useMemo(
+    () => (user ? loadSubmissionForUser(user.email) : null),
+    [user, lastSubmittedAt],
+  );
   const journeyCards = useMemo<JourneyCardViewModel[]>(() => {
     if (journeys.length === 0) {
       return [];
@@ -344,16 +343,24 @@ export default function App() {
       .map((journey) => {
         const code = `J${journey.number.toString().padStart(2, '0')}`;
         const submissionMeta = resolveSubmissionMetadata(userQuinielasMap[journey.number]);
+        const localSubmission =
+          storedSubmission &&
+          storedSubmission.journey === journey.number &&
+          hasCompletedSelections(storedSubmission.selections)
+            ? storedSubmission
+            : null;
+        const submittedAt = submissionMeta.submittedAt ?? localSubmission?.submittedAt ?? null;
+        const effectiveSubmitted = submissionMeta.submitted || Boolean(localSubmission);
 
         let tone: JourneyTone = 'upcoming';
         let statusLabel = 'Próximamente';
         let action: JourneyCardAction = null;
         let meta = journey.fechaInicio ? buildStartLabel(journey.fechaInicio) : 'Próximamente';
 
-        if (submissionMeta.submitted) {
+        if (effectiveSubmitted) {
           tone = 'success';
           statusLabel = 'Enviado';
-          meta = buildSubmittedLabel(submissionMeta.submittedAt);
+          meta = buildSubmittedLabel(submittedAt);
           action = 'view';
         } else if (journey.fechaInicio && now.getTime() < journey.fechaInicio.getTime()) {
           tone = 'upcoming';
@@ -378,7 +385,7 @@ export default function App() {
           meta,
           tone,
           action,
-          submittedAt: submissionMeta.submittedAt,
+          submittedAt,
         } satisfies JourneyCardViewModel;
       })
       .sort((a, b) => b.number - a.number);
@@ -400,7 +407,7 @@ export default function App() {
     }
 
     return cards.sort((a, b) => b.number - a.number);
-  }, [journeys, now, userQuinielasMap]);
+  }, [journeys, now, userQuinielasMap, storedSubmission]);
   const getExportData = useCallback(() => ({
     selections: quinielaSelections,
     participantName: participantDisplayName,

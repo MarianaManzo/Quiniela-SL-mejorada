@@ -108,7 +108,7 @@
 .quiniela-surface .icon-button {
   width: 44px;
   height: 44px;
-  border-radius: 16px;
+  border-radius: 18px;
   background: rgba(250, 250, 249, 0.12);
   border: 1px solid rgba(250, 250, 249, 0.22);
   color: #fafaf9;
@@ -417,7 +417,7 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  border-radius: 999px;
+  border-radius: 18px;
   border: none;
   padding: 16px 28px;
   font-size: 14px;
@@ -672,7 +672,7 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 999px;
+  border-radius: 18px;
   border: 1px solid rgba(20, 20, 28, 0.16);
   background: rgba(255, 255, 255, 0.92);
   color: rgba(20, 20, 28, 0.62);
@@ -777,6 +777,10 @@
   flex-shrink: 0;
 }
 
+.journey-card__actions > button {
+  border-radius: 18px !important;
+}
+
 .journey-card__actions[data-empty="true"] {
   display: none;
 }
@@ -787,8 +791,9 @@
   background: var(--so-yellow);
   color: var(--sl-black);
   border: none;
-  border-radius: 999px;
-  padding: 10px 20px;
+  border-radius: 18px !important;
+  padding: 12px 26px;
+  min-height: 48px;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -809,6 +814,12 @@
 .journey-card__cta:hover {
   transform: translateY(-2px);
   box-shadow: 0 22px 42px -24px rgba(246, 212, 51, 0.65);
+  border-radius: 18px !important;
+}
+
+.journey-card__cta:disabled,
+.journey-card__cta[aria-disabled="true"] {
+  border-radius: 18px !important;
 }
 
 .journey-card__link {
@@ -817,8 +828,9 @@
   font-size: 12px;
   font-weight: 600;
   color: rgba(20, 20, 28, 0.7);
-  border-radius: 999px;
-  padding: 8px 18px;
+  border-radius: 18px !important;
+  padding: 10px 22px;
+  min-height: 44px;
   cursor: pointer;
   transition: background 160ms ease, color 160ms ease, border 160ms ease;
 }
@@ -827,72 +839,90 @@
   background: rgba(20, 20, 28, 0.12);
   color: var(--sl-black);
   border-color: rgba(20, 20, 28, 0.2);
+  border-radius: 18px !important;
 }
 
-.journey-card[data-tone="current"] {
+.journey-card__link:focus-visible {
+  border-radius: 18px !important;
+}
+
+.journey-card[data-tone="current"],
+.journey-card--current {
   background: #fff3c4;
   border-color: rgba(246, 212, 51, 0.64);
 }
 
-.journey-card[data-tone="current"] .journey-card__status-tag {
+.journey-card[data-tone="current"] .journey-card__status-tag,
+.journey-card--current .journey-card__status-tag {
   background: rgba(246, 212, 51, 0.24);
   border-color: rgba(246, 212, 51, 0.5);
   color: rgba(33, 26, 10, 0.82);
 }
 
-.journey-card[data-tone="current"] .journey-card__status-icon {
+.journey-card[data-tone="current"] .journey-card__status-icon,
+.journey-card--current .journey-card__status-icon {
   background: rgba(246, 212, 51, 0.45);
   color: rgba(33, 26, 10, 0.85);
 }
 
-.journey-card[data-tone="current"] .journey-card__code {
+.journey-card[data-tone="current"] .journey-card__code,
+.journey-card--current .journey-card__code {
   background: rgba(247, 223, 154, 0.85);
 }
 
-.journey-card[data-tone="success"] {
+.journey-card[data-tone="success"],
+.journey-card--success {
   background: var(--sl-pink-soft);
   border-color: rgba(255, 111, 169, 0.4);
 }
 
-.journey-card[data-tone="success"] .journey-card__status-tag {
+.journey-card[data-tone="success"] .journey-card__status-tag,
+.journey-card--success .journey-card__status-tag {
   background: rgba(255, 111, 169, 0.18);
   border-color: rgba(255, 111, 169, 0.4);
   color: rgba(162, 30, 97, 0.86);
 }
 
-.journey-card[data-tone="success"] .journey-card__status-icon {
+.journey-card[data-tone="success"] .journey-card__status-icon,
+.journey-card--success .journey-card__status-icon {
   background: rgba(255, 111, 169, 0.36);
   color: rgba(162, 30, 97, 0.86);
 }
 
-.journey-card[data-tone="warning"] {
+.journey-card[data-tone="warning"],
+.journey-card--warning {
   background: rgba(20, 20, 28, 0.04);
   border-color: rgba(20, 20, 28, 0.12);
 }
 
-.journey-card[data-tone="warning"] .journey-card__status-tag {
+.journey-card[data-tone="warning"] .journey-card__status-tag,
+.journey-card--warning .journey-card__status-tag {
   background: rgba(20, 20, 28, 0.08);
   border-color: rgba(20, 20, 28, 0.12);
   color: rgba(20, 20, 28, 0.6);
 }
 
-.journey-card[data-tone="warning"] .journey-card__status-icon {
+.journey-card[data-tone="warning"] .journey-card__status-icon,
+.journey-card--warning .journey-card__status-icon {
   background: rgba(20, 20, 28, 0.16);
   color: rgba(20, 20, 28, 0.65);
 }
 
-.journey-card[data-tone="upcoming"] {
+.journey-card[data-tone="upcoming"],
+.journey-card--upcoming {
   background: #fafaf9;
   border-color: var(--sl-gray-200);
 }
 
-.journey-card[data-tone="upcoming"] .journey-card__status-tag {
+.journey-card[data-tone="upcoming"] .journey-card__status-tag,
+.journey-card--upcoming .journey-card__status-tag {
   background: rgba(20, 20, 28, 0.06);
   border-color: rgba(20, 20, 28, 0.12);
   color: rgba(20, 20, 28, 0.55);
 }
 
-.journey-card[data-tone="upcoming"] .journey-card__status-icon {
+.journey-card[data-tone="upcoming"] .journey-card__status-icon,
+.journey-card--upcoming .journey-card__status-icon {
   background: rgba(20, 20, 28, 0.16);
   color: rgba(20, 20, 28, 0.55);
 }
@@ -1270,7 +1300,7 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 50%;
+  border-radius: 18px;
   border: 1px solid rgba(250, 250, 249, 0.24);
   background: rgba(250, 250, 249, 0.08);
   color: #fafaf9;
@@ -1350,21 +1380,26 @@
     padding: 72px 0;
   }
 }
-.journey-card[data-tone="success"] .journey-card__code {
+.journey-card[data-tone="success"] .journey-card__code,
+.journey-card--success .journey-card__code {
   background: rgba(255, 111, 169, 0.22);
   color: rgba(162, 30, 97, 0.92);
 }
 
-.journey-card[data-tone="success"] .journey-card__link {
+.journey-card[data-tone="success"] .journey-card__link,
+.journey-card--success .journey-card__link {
   background: #ff6fa9;
   border: none;
   color: #fafaf9;
   box-shadow: 0 16px 26px -20px rgba(255, 111, 169, 0.65);
+  border-radius: 18px !important;
 }
 
-.journey-card[data-tone="success"] .journey-card__link:hover {
+.journey-card[data-tone="success"] .journey-card__link:hover,
+.journey-card--success .journey-card__link:hover {
   background: #ff4f90;
   color: #fafaf9;
+  border-radius: 18px !important;
 }
 
 @media (max-width: 960px) {

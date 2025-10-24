@@ -313,25 +313,27 @@ export function LoginScreen({ onLogin, onQuickAccess }: LoginScreenProps) {
         </form>
 
         <div className="login-social">
-          <span className="login-social__title">O ingresa con</span>
+          <span className="login-social__title">O</span>
           <div className="login-social__buttons">
             <button type="button" className="login-social__button" onClick={handleGoogleLogin} disabled={isSubmitting}>
               <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
-              Google
+              <span>Continuar con Google</span>
             </button>
           </div>
         </div>
 
         {onQuickAccess ? (
           <div className="login-quick">
-            <button
-              type="button"
-              className="login-quick__button"
-              onClick={onQuickAccess}
-              disabled={isSubmitting}
-            >
-              Acceso rápido (sin registro)
-            </button>
+            <div className="login-quick__button-wrapper">
+              <button
+                type="button"
+                className="login-quick__button"
+                onClick={onQuickAccess}
+                disabled={isSubmitting}
+              >
+                Acceso rápido (sin registro)
+              </button>
+            </div>
             <span className="login-quick__note">Tus selecciones se guardan solo en este dispositivo.</span>
           </div>
         ) : null}

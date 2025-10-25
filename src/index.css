@@ -85,8 +85,13 @@
 
   body, .app-body {
     line-height: inherit;
-    background-color: #262623;
+    background-color: #04050a;
     color: #f8fafc;
+    background-image: url('./assets/dashboard-background-dark.svg');
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-attachment: fixed;
+    background-position: top center;
   }
 
   hr {

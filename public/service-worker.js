@@ -17,7 +17,7 @@ messaging.onBackgroundMessage((payload) => {
   const title = notification.title ?? 'Somos Locales';
   const options = {
     body: notification.body,
-    icon: notification.icon ?? '/icons/icon-192.png',
+    icon: notification.icon ?? '/icons/notification-small.png',
     badge: notification.badge ?? '/icons/icon-192.png',
     data: {
       url: payload?.data?.url ?? '/',

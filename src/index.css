@@ -88,6 +88,7 @@
     background-color: #1C1C21;
     color: #f8fafc;
     background: #1C1C21;
+    overscroll-behavior-y: none;
   }
 
   hr {

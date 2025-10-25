@@ -16,6 +16,7 @@
   --sl-gray-500: #5f6270;
   --sl-pink: #ff6fa9;
   --sl-pink-soft: #ffe3f1;
+  --navbar-offset: calc(108px + env(safe-area-inset-top, 0px));
 }
 
 .dashboard-shell {
@@ -24,6 +25,7 @@
   color: var(--so-white);
   font-family: 'Albert Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background-color: #1C1C21;
+  padding-top: var(--navbar-offset);
 }
 
 .dashboard-shell::before {

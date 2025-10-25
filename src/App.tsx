@@ -27,7 +27,7 @@ import {
 import { formatParticipantName, sanitizeDisplayName } from './utils/formatParticipantName';
 
 // Definición centralizada de la jornada mostrada
-const CURRENT_JOURNEY = 16;
+const CURRENT_JOURNEY = 17;
 const BUILD_VERSION = 'V 27';
 const QUICK_ACCESS_STORAGE_KEY = 'quiniela-quick-access-profile';
 

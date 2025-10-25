@@ -1,5 +1,4 @@
 
-import fs from 'node:fs';
 import os from 'node:os';
 import path from 'path';
 import { defineConfig } from 'vite';
@@ -99,10 +98,7 @@ export default defineConfig({
     host: true,
     port: 5173,
     open: true,
-    https: {
-      key: fs.readFileSync(path.resolve(__dirname, 'localhost+2-key.pem')),
-      cert: fs.readFileSync(path.resolve(__dirname, 'localhost+2.pem')),
-    },
+    https: false,
     hmr: {
       host: localNetworkHost,
       port: 5173,

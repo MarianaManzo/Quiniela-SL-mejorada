@@ -14,9 +14,8 @@ if (typeof document !== 'undefined') {
     document.head.appendChild(styleTag);
   }
 }
-
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
+  if (import.meta.env.PROD) {
     navigator.serviceWorker
       .register('/service-worker.js')
       .catch((error) => console.error('No se pudo registrar el Service Worker', error));
@@ -29,7 +28,14 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       refreshing = true;
       window.location.reload();
     });
-  });
+  } else {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      registrations.forEach((registration) => registration.unregister());
+    });
+    if (typeof caches !== 'undefined') {
+      caches.keys().then((keys) => keys.forEach((key) => caches.delete(key)));
+    }
+  }
 }
 
 createRoot(document.getElementById('root')!).render(<App />);

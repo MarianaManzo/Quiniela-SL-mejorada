@@ -18,12 +18,7 @@ import {
 import { firebaseAuth, firebaseFirestore } from './firebase';
 import { useDownloadQuiniela } from './hooks/useDownloadQuiniela';
 import { crearOActualizarUsuario, guardarQuiniela, registrarTokenDispositivo } from './services/firestoreService';
-import {
-  ensureNotificationToken,
-  registerEnvMissingKeyListener,
-  subscribeToForegroundMessages,
-  type NotificationStatus,
-} from './services/messaging';
+import { ensureNotificationToken, registerEnvMissingKeyListener, type NotificationStatus } from './services/messaging';
 import { formatParticipantName, sanitizeDisplayName } from './utils/formatParticipantName';
 
 // Definición centralizada de la jornada mostrada
@@ -742,36 +737,7 @@ useEffect(() => {
   }
 }, [user, userQuinielasMap]);
 
-useEffect(() => {
-  let unsubscribe: (() => void) | undefined;
-  let cancelled = false;
-
-  void subscribeToForegroundMessages((payload) => {
-    const notification = payload.notification;
-    const message =
-      notification?.body ??
-      payload.data?.message ??
-      'Tienes una nueva actualización en Somos Locales.';
-    showToast(message, 'success');
-  })
-    .then((cleanup) => {
-      if (cancelled) {
-        cleanup();
-      } else {
-        unsubscribe = cleanup;
-      }
-    })
-    .catch((error) => {
-      console.warn('No se pudo registrar el listener de notificaciones en primer plano', error);
-    });
-
-  return () => {
-    cancelled = true;
-    if (unsubscribe) {
-      unsubscribe();
-    }
-  };
-}, [showToast]);
+// Ya no mostramos toasts para notificaciones en primer plano; el sistema gestiona los avisos push.
 useEffect(() => {
   let isMounted = true;
 

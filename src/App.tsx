@@ -18,12 +18,17 @@ import {
 import { firebaseAuth, firebaseFirestore } from './firebase';
 import { useDownloadQuiniela } from './hooks/useDownloadQuiniela';
 import { crearOActualizarUsuario, guardarQuiniela, registrarTokenDispositivo } from './services/firestoreService';
-import { ensureNotificationToken, subscribeToForegroundMessages, type NotificationStatus } from './services/messaging';
+import {
+  ensureNotificationToken,
+  registerEnvMissingKeyListener,
+  subscribeToForegroundMessages,
+  type NotificationStatus,
+} from './services/messaging';
 import { formatParticipantName, sanitizeDisplayName } from './utils/formatParticipantName';
 
 // Definición centralizada de la jornada mostrada
 const CURRENT_JOURNEY = 16;
-const BUILD_VERSION = 'V 26';
+const BUILD_VERSION = 'V 27';
 const QUICK_ACCESS_STORAGE_KEY = 'quiniela-quick-access-profile';
 
 const shouldShowDebugGrid = (): boolean => {
@@ -650,8 +655,15 @@ useEffect(() => {
 
   register();
 
+  const handleMissingKey = () => {
+    setNotificationStatus('missing-key');
+  };
+
+  const unsubscribeMissingKey = registerEnvMissingKeyListener(handleMissingKey);
+
   return () => {
     cancelled = true;
+    unsubscribeMissingKey();
   };
 }, [firebaseUser, syncDeviceToken]);
 
@@ -1378,6 +1390,9 @@ useEffect(() => {
             onNavigateToQuiniela={handleEnterQuiniela}
             onNavigateToPodium={handleEnterPodium}
             onSignOut={handleSignOut}
+            notificationStatus={notificationStatus}
+            onEnableNotifications={handleEnableNotifications}
+            notificationLoading={isNotificationLoading}
           />
           <Dashboard
             user={user}
@@ -1388,14 +1403,11 @@ useEffect(() => {
             journeyCode={`J${CURRENT_JOURNEY.toString().padStart(2, '0')}`}
             journeyCloseLabel={journeyCloseLabel}
             journeyClosedLabel={journeyClosedLabel}
-            journeyClosed={journeyClosed}
-            journeySubmittedAt={currentJourneySubmittedAt}
-            previousJourneyClosedLabel={previousJourneyClosedLabel}
-            previousJourneySubmittedAt={previousJourneySubmittedAt}
-            notificationStatus={notificationStatus}
-            onEnableNotifications={handleEnableNotifications}
-            notificationLoading={isNotificationLoading}
-          />
+          journeyClosed={journeyClosed}
+          journeySubmittedAt={currentJourneySubmittedAt}
+          previousJourneyClosedLabel={previousJourneyClosedLabel}
+          previousJourneySubmittedAt={previousJourneySubmittedAt}
+        />
         </div>
       ) : (
         view === 'podium' ? (
@@ -1406,6 +1418,9 @@ useEffect(() => {
               onNavigateToDashboard={handleBackToDashboard}
               onNavigateToPodium={handleEnterPodium}
               onSignOut={handleSignOut}
+              notificationStatus={notificationStatus}
+              onEnableNotifications={handleEnableNotifications}
+              notificationLoading={isNotificationLoading}
             />
             <PodiumPage />
           </div>

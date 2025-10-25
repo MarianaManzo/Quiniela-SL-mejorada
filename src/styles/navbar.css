@@ -84,6 +84,49 @@
   box-shadow: 0 18px 34px -28px rgba(0, 0, 0, 0.65);
 }
 
+.navbar__icon-button--notifications {
+  position: relative;
+  border-color: transparent;
+  background: transparent;
+  color: transparent;
+}
+
+.navbar__icon-button--notifications svg {
+  stroke: rgba(248, 250, 252, 0.7);
+}
+
+.navbar__icon-button--notifications[data-active="true"] {
+  color: transparent;
+}
+
+.navbar__icon-button--notifications[data-active="true"] svg {
+  stroke: #ffffff;
+  fill: #ffffff;
+}
+
+.navbar__icon-button--notifications:disabled,
+.navbar__icon-button--notifications[aria-busy="true"] {
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+}
+
+.navbar__icon-button--notifications::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(248, 250, 252, 0.8);
+}
+
+.navbar__icon-button--notifications[data-active="true"]::after {
+  background: #4ade80;
+  border-color: #0f172a;
+}
+
 .navbar__icon-button--signout:hover {
   background: rgba(52, 54, 63, 0.95);
   border-color: rgba(122, 122, 140, 0.5);

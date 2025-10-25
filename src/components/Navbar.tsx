@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { ROLE_LABELS, type UserProfile } from "./LoginScreen";
 import logoSomosLocales from "../assets/logo-somos-locales.png?inline";
-import { LogOut } from "lucide-react";
+import { BellRing, LogOut } from "lucide-react";
+import type { NotificationStatus } from "../services/messaging";
 import "../styles/navbar.css";
 
 interface NavbarProps {
@@ -12,6 +13,9 @@ interface NavbarProps {
   onNavigateToQuiniela?: () => void;
   onSignOut?: () => void;
   onShowLogin?: () => void;
+  notificationStatus?: NotificationStatus;
+  onEnableNotifications?: () => void;
+  notificationLoading?: boolean;
 }
 
 function getInitials(name: string) {
@@ -41,6 +45,9 @@ export function Navbar({
   onNavigateToPodium,
   onSignOut,
   onShowLogin,
+  notificationStatus = "default",
+  onEnableNotifications,
+  notificationLoading,
 }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -118,6 +125,32 @@ export function Navbar({
     setIsUserMenuOpen(true);
   };
 
+  const isNotificationEnabled = notificationStatus === "granted";
+  const notificationUnavailable =
+    notificationStatus === "unsupported" || notificationStatus === "missing-key";
+  const notificationBlocked = notificationStatus === "denied";
+  const canToggleNotifications = Boolean(onEnableNotifications) && !notificationUnavailable && !notificationBlocked;
+  const notificationButtonDisabled = notificationLoading || !canToggleNotifications;
+  const notificationTitle = (() => {
+    if (notificationLoading) {
+      return "Activando notificaciones";
+    }
+    if (notificationBlocked) {
+      return "Notificaciones bloqueadas en el navegador";
+    }
+    if (notificationUnavailable) {
+      return "Notificaciones no disponibles";
+    }
+    return isNotificationEnabled ? "Notificaciones activadas" : "Activar notificaciones";
+  })();
+
+  const handleNotificationsClick = () => {
+    if (notificationButtonDisabled || !onEnableNotifications) {
+      return;
+    }
+    onEnableNotifications();
+  };
+
   return (
     <nav className="navbar">
       <div className="navbar__container">
@@ -165,6 +198,21 @@ export function Navbar({
         </div>
 
         <div className="navbar__controls">
+          {user ? (
+            <button
+              type="button"
+              className="navbar__icon-button navbar__icon-button--notifications"
+              data-active={isNotificationEnabled ? "true" : undefined}
+              onClick={handleNotificationsClick}
+              title={notificationTitle}
+              aria-pressed={isNotificationEnabled}
+              aria-busy={notificationLoading || undefined}
+              disabled={notificationButtonDisabled}
+            >
+              <BellRing size={18} aria-hidden="true" />
+              {notificationBlocked ? <span className="sr-only">Notificaciones bloqueadas</span> : null}
+            </button>
+          ) : null}
           {user ? (
             <div className="navbar__profile" ref={userMenuRef}>
               <button

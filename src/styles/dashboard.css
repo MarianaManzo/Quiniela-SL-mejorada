@@ -401,34 +401,6 @@
   flex-shrink: 0;
 }
 
-.hero-action__notifications {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-width: 260px;
-}
-
-.hero-action__button--notifications {
-  justify-content: flex-start;
-  min-width: 0;
-}
-
-.hero-action__button-spinner {
-  animation: hero-spinner 1s linear infinite;
-}
-
-.hero-action__note {
-  font-size: 12px;
-  color: rgba(248, 250, 252, 0.7);
-  letter-spacing: 0.04em;
-}
-
-@keyframes hero-spinner {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .hero-actions .btn[disabled],
 .hero-actions .btn[aria-disabled="true"] {
   cursor: not-allowed;

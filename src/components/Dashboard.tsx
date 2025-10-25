@@ -2,20 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
-  BellRing,
   CalendarClock,
   Check,
   ChevronDown,
   ChevronUp,
   Clock,
   Flag,
-  Loader2,
   Trophy,
 } from "lucide-react";
 import { ROLE_LABELS, type UserProfile } from "./LoginScreen";
 import { TOP_RANKING } from "../data/podium";
 import { obtenerUsuariosParaPodio } from "../services/firestoreService";
-import type { NotificationStatus } from "../services/messaging";
 import "../styles/dashboard.css";
 
 interface DashboardProps {
@@ -31,9 +28,6 @@ interface DashboardProps {
   journeySubmittedAt?: string | null;
   previousJourneyClosedLabel?: string | null;
   previousJourneySubmittedAt?: string | null;
-  notificationStatus: NotificationStatus;
-  onEnableNotifications?: () => void;
-  notificationLoading?: boolean;
 }
 
 interface TournamentSectionState {
@@ -96,9 +90,6 @@ export function Dashboard({
   journeySubmittedAt,
   previousJourneyClosedLabel: _previousJourneyClosedLabel,
   previousJourneySubmittedAt: _previousJourneySubmittedAt,
-  notificationStatus,
-  onEnableNotifications,
-  notificationLoading,
 }: DashboardProps) {
   const [sectionState, setSectionState] = useState<TournamentSectionState[]>(SECTION_DEFAULT_STATE);
   const [topRanking, setTopRanking] = useState(
@@ -177,21 +168,6 @@ export function Dashboard({
           ? `Ver ${activeJourneyCode}`
           : "Ver";
   const heroActionDisabled = !heroActionType;
-
-  const shouldShowNotificationCTA = notificationStatus !== "granted";
-  const notificationCtaDisabled =
-    notificationStatus === "unsupported" ||
-    notificationStatus === "missing-key" ||
-    notificationStatus === "denied";
-  const canRequestNotifications = Boolean(onEnableNotifications) && !notificationCtaDisabled;
-  const notificationButtonDisabled = notificationLoading || !canRequestNotifications;
-  const notificationButtonLabel = notificationStatus === "denied"
-    ? "Notificaciones bloqueadas"
-    : notificationStatus === "unsupported"
-      ? "Dispositivo no compatible"
-      : notificationStatus === "missing-key"
-        ? "Configura la clave de FCM"
-        : "Activar notificaciones";
 
   const heroCountdownVisible = heroActionType === "participate" && Boolean(journeyCloseLabel);
   const heroClosedMessage = journeyClosed && heroActionType !== "view" ? journeyClosedLabel ?? "La jornada está cerrada." : null;
@@ -294,29 +270,6 @@ export function Dashboard({
               <div className="hero-action__label hero-action__label--muted" role="status">
                 <AlertTriangle size={18} aria-hidden="true" />
                 <span>{heroClosedMessage}</span>
-              </div>
-            ) : null}
-            {shouldShowNotificationCTA ? (
-              <div className="hero-action__notifications">
-                <button
-                  type="button"
-                  className="btn btn-secondary hero-action__button hero-action__button--notifications"
-                  onClick={notificationButtonDisabled ? undefined : onEnableNotifications}
-                  disabled={notificationButtonDisabled}
-                >
-                  {notificationLoading ? (
-                    <Loader2 size={16} aria-hidden="true" className="hero-action__button-spinner" />
-                  ) : (
-                    <BellRing size={16} aria-hidden="true" />
-                  )}
-                  <span>{notificationLoading ? "Activando…" : notificationButtonLabel}</span>
-                </button>
-                {notificationStatus === "denied" ? (
-                  <p className="hero-action__note">Habilítalas desde la configuración del navegador.</p>
-                ) : null}
-                {notificationStatus === "missing-key" ? (
-                  <p className="hero-action__note">Agrega la clave de notificaciones en el servidor.</p>
-                ) : null}
               </div>
             ) : null}
             <button

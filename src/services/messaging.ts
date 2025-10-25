@@ -42,6 +42,18 @@ const messagingInstance: Promise<Messaging | null> =
         .catch(() => null)
     : Promise.resolve(null);
 
+const onEnvMissingKey: (() => void)[] = [];
+
+export const registerEnvMissingKeyListener = (listener: () => void): (() => void) => {
+  onEnvMissingKey.push(listener);
+  return () => {
+    const index = onEnvMissingKey.indexOf(listener);
+    if (index >= 0) {
+      onEnvMissingKey.splice(index, 1);
+    }
+  };
+};
+
 export const ensureNotificationToken = async (
   forcePrompt = false,
 ): Promise<EnsureNotificationTokenResult> => {
@@ -56,7 +68,8 @@ export const ensureNotificationToken = async (
 
   const vapidKey = import.meta.env.VITE_FIREBASE_WEB_PUSH_KEY;
   if (!vapidKey) {
-    console.warn("Falta configurar VITE_FIREBASE_WEB_PUSH_KEY para las notificaciones push.");
+    console.warn("VITE_FIREBASE_WEB_PUSH_KEY no está definido.");
+    onEnvMissingKey.forEach((listener) => listener());
     return { status: "missing-key" };
   }
 

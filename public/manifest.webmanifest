@@ -5,8 +5,8 @@
   "description": "Gestiona y comparte tus pronósticos de la Quiniela Somos Locales desde cualquier dispositivo.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#F7E75D",
+  "theme_color": "#F7E75D",
   "orientation": "portrait",
   "lang": "es-MX",
   "icons": [

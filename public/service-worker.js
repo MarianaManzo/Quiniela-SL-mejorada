@@ -12,6 +12,20 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+const shouldShowSystemNotification = async () => {
+  try {
+    const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    if (clientList.length === 0) {
+      return true;
+    }
+
+    const hasVisibleClient = clientList.some((client) => client.visibilityState === 'visible');
+    return !hasVisibleClient;
+  } catch {
+    return true;
+  }
+};
+
 messaging.onBackgroundMessage((payload) => {
   const notification = payload.notification ?? {};
   const title = notification.title ?? 'Somos Locales';
@@ -25,7 +39,11 @@ messaging.onBackgroundMessage((payload) => {
     },
   };
 
-  self.registration.showNotification(title, options);
+  shouldShowSystemNotification().then((show) => {
+    if (show) {
+      self.registration.showNotification(title, options);
+    }
+  });
 });
 
 const handleNotificationClick = (event) => {

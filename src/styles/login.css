@@ -7,11 +7,7 @@
   align-items: center;
   justify-content: center;
   padding: clamp(56px, 10vh, 96px) 24px;
-  background-color: #121212;
-  background-image: url('../assets/dashboard-background-dark.svg');
-  background-repeat: no-repeat;
-  background-position: center top;
-  background-size: 100% auto;
+  background-color: #1C1C21;
 }
 
 .login-page::before {

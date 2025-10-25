@@ -3,7 +3,7 @@ import { getAnalytics, isSupported, type Analytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyB4fCVOyxAWBKuKE9VtGsdcq-Ay_gRRThc",
   authDomain: "somos-locales-femx.firebaseapp.com",
   projectId: "somos-locales-femx",

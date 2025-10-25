@@ -28,6 +28,13 @@ type GuardarQuinielaPayload = {
   quinielaEnviada?: boolean;
 };
 
+type RegistrarTokenDispositivoPayload = {
+  uid: string;
+  token: string;
+  plataforma?: string | null;
+  permiso?: string | null;
+};
+
 /**
  * Crea o actualiza el documento del usuario dentro de la colección `Usuarios`.
  * Si el usuario ya existe se conservan sus datos actuales.
@@ -93,6 +100,31 @@ export const guardarQuiniela = async ({
 
   const userRef = doc(firebaseFirestore, "Usuarios", uid);
   await updateDoc(userRef, { ultimaJornada: jornada });
+};
+
+export const registrarTokenDispositivo = async ({
+  uid,
+  token,
+  plataforma,
+  permiso,
+}: RegistrarTokenDispositivoPayload): Promise<void> => {
+  const deviceRef = doc(firebaseFirestore, "Usuarios", uid, "devices", token);
+
+  const resolvedPlatform = plataforma ?? (typeof navigator !== "undefined"
+    ? navigator.userAgent ?? navigator.platform ?? "web"
+    : "web");
+  const resolvedPermission = permiso ?? (typeof Notification !== "undefined" ? Notification.permission : null);
+
+  await setDoc(
+    deviceRef,
+    {
+      token,
+      plataforma: resolvedPlatform,
+      permiso: resolvedPermission,
+      actualizadoEn: serverTimestamp(),
+    },
+    { merge: true },
+  );
 };
 
 export const obtenerUsuariosParaPodio = async (limitResult = 0): Promise<PodiumUser[]> => {

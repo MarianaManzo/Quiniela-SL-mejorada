@@ -1,4 +1,60 @@
-const CACHE_VERSION = 'v21';
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+  apiKey: 'AIzaSyB4fCVOyxAWBKuKE9VtGsdcq-Ay_gRRThc',
+  authDomain: 'somos-locales-femx.firebaseapp.com',
+  projectId: 'somos-locales-femx',
+  storageBucket: 'somos-locales-femx.firebasestorage.app',
+  messagingSenderId: '923976377151',
+  appId: '1:923976377151:web:a5e3dc2fc644a53b6ea98a',
+});
+
+const messaging = firebase.messaging();
+
+messaging.onBackgroundMessage((payload) => {
+  const notification = payload.notification ?? {};
+  const title = notification.title ?? 'Somos Locales';
+  const options = {
+    body: notification.body,
+    icon: notification.icon ?? '/icons/icon-192.png',
+    badge: notification.badge ?? '/icons/icon-192.png',
+    data: {
+      url: payload?.data?.url ?? '/',
+      ...payload.data,
+    },
+  };
+
+  self.registration.showNotification(title, options);
+});
+
+const handleNotificationClick = (event) => {
+  event.notification.close();
+  const targetUrl = event.notification?.data?.url ?? '/';
+
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        for (const client of clientList) {
+          if ('focus' in client) {
+            const url = new URL(client.url);
+            if (url.pathname === targetUrl || targetUrl === '/') {
+              return client.focus();
+            }
+          }
+        }
+        if (self.clients.openWindow) {
+          return self.clients.openWindow(targetUrl);
+        }
+        return null;
+      })
+  );
+};
+
+self.addEventListener('notificationclick', handleNotificationClick);
+
+const CACHE_VERSION = 'v26';
 const STATIC_CACHE = `somos-locales-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `somos-locales-runtime-${CACHE_VERSION}`;
 

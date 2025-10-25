@@ -17,7 +17,8 @@ import {
 } from './quiniela/config';
 import { firebaseAuth, firebaseFirestore } from './firebase';
 import { useDownloadQuiniela } from './hooks/useDownloadQuiniela';
-import { crearOActualizarUsuario, guardarQuiniela } from './services/firestoreService';
+import { crearOActualizarUsuario, guardarQuiniela, registrarTokenDispositivo } from './services/firestoreService';
+import { ensureNotificationToken, subscribeToForegroundMessages } from './services/messaging';
 import { formatParticipantName, sanitizeDisplayName } from './utils/formatParticipantName';
 
 // Definición centralizada de la jornada mostrada
@@ -125,6 +126,32 @@ const parseJourneyNumber = (id: string): number | null => {
 };
 
 type StoredSubmissions = Record<string, QuinielaSubmission | (Omit<QuinielaSubmission, 'journey'> & { journey?: number })>;
+
+const PUSH_TOKEN_STORAGE_PREFIX = 'somos-locales-fcm-token:';
+
+const getStoredPushToken = (uid: string): string | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    return window.localStorage.getItem(`${PUSH_TOKEN_STORAGE_PREFIX}${uid}`);
+  } catch {
+    return null;
+  }
+};
+
+const setStoredPushToken = (uid: string, token: string) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(`${PUSH_TOKEN_STORAGE_PREFIX}${uid}`, token);
+  } catch {
+    // ignore storage errors
+  }
+};
 
 const readStoredSubmissions = (): StoredSubmissions => {
   if (typeof window === 'undefined') {
@@ -581,6 +608,47 @@ useEffect(() => {
 }, [firebaseUser, previousJourneyNumber, userQuinielasMap]);
 
 useEffect(() => {
+  if (!firebaseUser) {
+    return;
+  }
+
+  let cancelled = false;
+
+  const registerPushNotifications = async () => {
+    const storedToken = getStoredPushToken(firebaseUser.uid);
+    const result = await ensureNotificationToken();
+
+    if (cancelled) {
+      return;
+    }
+
+    if (result.status === 'granted' && result.token) {
+      if (storedToken === result.token) {
+        return;
+      }
+
+      try {
+        await registrarTokenDispositivo({
+          uid: firebaseUser.uid,
+          token: result.token,
+          permiso: result.status,
+          plataforma: typeof navigator !== 'undefined' ? navigator.userAgent : 'web',
+        });
+        setStoredPushToken(firebaseUser.uid, result.token);
+      } catch (error) {
+        console.error('No se pudo registrar el token de notificaciones push', error);
+      }
+    }
+  };
+
+  void registerPushNotifications();
+
+  return () => {
+    cancelled = true;
+  };
+}, [firebaseUser]);
+
+useEffect(() => {
   if (!user) {
     return;
   }
@@ -596,6 +664,37 @@ useEffect(() => {
     persistSubmissionForUser(user.email, submission);
   }
 }, [user, userQuinielasMap]);
+
+useEffect(() => {
+  let unsubscribe: (() => void) | undefined;
+  let cancelled = false;
+
+  void subscribeToForegroundMessages((payload) => {
+    const notification = payload.notification;
+    const message =
+      notification?.body ??
+      payload.data?.message ??
+      'Tienes una nueva actualización en Somos Locales.';
+    showToast(message, 'success');
+  })
+    .then((cleanup) => {
+      if (cancelled) {
+        cleanup();
+      } else {
+        unsubscribe = cleanup;
+      }
+    })
+    .catch((error) => {
+      console.warn('No se pudo registrar el listener de notificaciones en primer plano', error);
+    });
+
+  return () => {
+    cancelled = true;
+    if (unsubscribe) {
+      unsubscribe();
+    }
+  };
+}, [showToast]);
 useEffect(() => {
   let isMounted = true;
 

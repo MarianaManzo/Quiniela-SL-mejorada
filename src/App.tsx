@@ -18,7 +18,7 @@ import {
 import { firebaseAuth, firebaseFirestore } from './firebase';
 import { useDownloadQuiniela } from './hooks/useDownloadQuiniela';
 import { crearOActualizarUsuario, guardarQuiniela, registrarTokenDispositivo } from './services/firestoreService';
-import { ensureNotificationToken, subscribeToForegroundMessages } from './services/messaging';
+import { ensureNotificationToken, subscribeToForegroundMessages, type NotificationStatus } from './services/messaging';
 import { formatParticipantName, sanitizeDisplayName } from './utils/formatParticipantName';
 
 // Definición centralizada de la jornada mostrada
@@ -151,6 +151,36 @@ const setStoredPushToken = (uid: string, token: string) => {
   } catch {
     // ignore storage errors
   }
+};
+
+const useSyncDeviceToken = (
+  firebaseUser: FirebaseUser | null,
+): ((token: string, status: NotificationStatus) => Promise<void>) => {
+  return useCallback(
+    async (token: string, status: NotificationStatus) => {
+      if (!firebaseUser) {
+        return;
+      }
+
+      const storedToken = getStoredPushToken(firebaseUser.uid);
+      if (storedToken === token) {
+        return;
+      }
+
+      try {
+        await registrarTokenDispositivo({
+          uid: firebaseUser.uid,
+          token,
+          permiso: status,
+          plataforma: typeof navigator !== 'undefined' ? navigator.userAgent : 'web',
+        });
+        setStoredPushToken(firebaseUser.uid, token);
+      } catch (error) {
+        console.error('No se pudo registrar el token de notificaciones push', error);
+      }
+    },
+    [firebaseUser],
+  );
 };
 
 const readStoredSubmissions = (): StoredSubmissions => {
@@ -326,6 +356,11 @@ export default function App() {
   const [manualSaveDataUrl, setManualSaveDataUrl] = useState<string | null>(null);
   const [journeys, setJourneys] = useState<JourneyRecord[]>([]);
   const [userQuinielasMap, setUserQuinielasMap] = useState<Record<number, QuinielaDocData>>({});
+  const initialNotificationPermission =
+    (typeof Notification !== 'undefined' ? Notification.permission : 'default') as NotificationStatus;
+  const [notificationStatus, setNotificationStatus] = useState<NotificationStatus>(initialNotificationPermission);
+  const [isNotificationLoading, setIsNotificationLoading] = useState(false);
+  const syncDeviceToken = useSyncDeviceToken(firebaseUser);
   const journeyClosed = useMemo(() => {
     if (!journeyCloseDate) {
       return false;
@@ -584,6 +619,44 @@ useEffect(() => {
 
 useEffect(() => {
   if (!firebaseUser) {
+    setNotificationStatus(
+      (typeof Notification !== 'undefined' ? Notification.permission : 'default') as NotificationStatus,
+    );
+    return;
+  }
+
+  if (typeof Notification === 'undefined') {
+    setNotificationStatus('unsupported');
+    return;
+  }
+
+  if (Notification.permission !== 'granted') {
+    setNotificationStatus(Notification.permission as NotificationStatus);
+    return;
+  }
+
+  let cancelled = false;
+
+  const register = async () => {
+    const result = await ensureNotificationToken(false);
+    if (cancelled) {
+      return;
+    }
+    setNotificationStatus(result.status);
+    if (result.status === 'granted' && result.token) {
+      await syncDeviceToken(result.token, result.status);
+    }
+  };
+
+  register();
+
+  return () => {
+    cancelled = true;
+  };
+}, [firebaseUser, syncDeviceToken]);
+
+useEffect(() => {
+  if (!firebaseUser) {
     setIsReadOnlyView(false);
     setCurrentSubmissionAt(null);
     setPreviousSubmissionAt(null);
@@ -607,46 +680,38 @@ useEffect(() => {
   }
 }, [firebaseUser, previousJourneyNumber, userQuinielasMap]);
 
-useEffect(() => {
-  if (!firebaseUser) {
-    return;
-  }
-
-  let cancelled = false;
-
-  const registerPushNotifications = async () => {
-    const storedToken = getStoredPushToken(firebaseUser.uid);
-    const result = await ensureNotificationToken();
-
-    if (cancelled) {
+  const handleEnableNotifications = useCallback(async () => {
+    if (!firebaseUser) {
+      showToast('Inicia sesión para activar las notificaciones.', 'error');
       return;
     }
 
-    if (result.status === 'granted' && result.token) {
-      if (storedToken === result.token) {
-        return;
-      }
+    setIsNotificationLoading(true);
 
-      try {
-        await registrarTokenDispositivo({
-          uid: firebaseUser.uid,
-          token: result.token,
-          permiso: result.status,
-          plataforma: typeof navigator !== 'undefined' ? navigator.userAgent : 'web',
-        });
-        setStoredPushToken(firebaseUser.uid, result.token);
-      } catch (error) {
-        console.error('No se pudo registrar el token de notificaciones push', error);
+    try {
+      const result = await ensureNotificationToken(true);
+      setNotificationStatus(result.status);
+
+      if (result.status === 'granted' && result.token) {
+        await syncDeviceToken(result.token, result.status);
+        showToast('Notificaciones activadas correctamente.', 'success');
+      } else if (result.status === 'denied') {
+        showToast('Debes permitir las notificaciones desde la configuración del navegador.', 'error');
+      } else if (result.status === 'unsupported') {
+        showToast('Este dispositivo no soporta notificaciones push.', 'error');
+      } else if (result.status === 'missing-key') {
+        showToast('Falta configurar la clave de notificaciones.', 'error');
+      } else if (result.status === 'error') {
+        showToast('No pudimos activar las notificaciones. Intenta de nuevo.', 'error');
       }
+    } catch (error) {
+      console.error('No se pudo activar las notificaciones', error);
+      showToast('No pudimos activar las notificaciones. Intenta de nuevo.', 'error');
+    } finally {
+      setIsNotificationLoading(false);
     }
-  };
+  }, [firebaseUser, showToast, syncDeviceToken]);
 
-  void registerPushNotifications();
-
-  return () => {
-    cancelled = true;
-  };
-}, [firebaseUser]);
 
 useEffect(() => {
   if (!user) {
@@ -892,6 +957,7 @@ useEffect(() => {
     setShowSelectionErrors(false);
     hideSubmitTooltip();
   }, [hideSubmitTooltip, resetDownloadState]);
+
 
   const handleEnterQuiniela = useCallback(async () => {
     resetDownloadState();
@@ -1326,6 +1392,9 @@ useEffect(() => {
             journeySubmittedAt={currentJourneySubmittedAt}
             previousJourneyClosedLabel={previousJourneyClosedLabel}
             previousJourneySubmittedAt={previousJourneySubmittedAt}
+            notificationStatus={notificationStatus}
+            onEnableNotifications={handleEnableNotifications}
+            notificationLoading={isNotificationLoading}
           />
         </div>
       ) : (

@@ -2,7 +2,7 @@ import { getMessaging, getToken, isSupported, onMessage, type Messaging } from "
 
 import { firebaseApp } from "../firebase";
 
-type NotificationStatus =
+export type NotificationStatus =
   | "granted"
   | "denied"
   | "default"
@@ -11,7 +11,7 @@ type NotificationStatus =
   | "prompt-skipped"
   | "error";
 
-interface EnsureNotificationTokenResult {
+export interface EnsureNotificationTokenResult {
   status: NotificationStatus;
   token?: string;
   error?: unknown;
@@ -42,7 +42,9 @@ const messagingInstance: Promise<Messaging | null> =
         .catch(() => null)
     : Promise.resolve(null);
 
-export const ensureNotificationToken = async (): Promise<EnsureNotificationTokenResult> => {
+export const ensureNotificationToken = async (
+  forcePrompt = false,
+): Promise<EnsureNotificationTokenResult> => {
   if (typeof window === "undefined" || !("Notification" in window) || !navigator?.serviceWorker) {
     return { status: "unsupported" };
   }
@@ -61,7 +63,7 @@ export const ensureNotificationToken = async (): Promise<EnsureNotificationToken
   let permission = Notification.permission;
 
   if (permission === "default") {
-    if (getSessionPrompted()) {
+    if (!forcePrompt && getSessionPrompted()) {
       return { status: "prompt-skipped" };
     }
 

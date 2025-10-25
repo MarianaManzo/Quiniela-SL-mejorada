@@ -6,6 +6,7 @@
   backdrop-filter: blur(14px);
   border-bottom: 1px solid rgba(246, 212, 51, 0.16);
   border-radius: 0 0 64px 64px;
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 

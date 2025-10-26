@@ -9,6 +9,9 @@ export type FirestoreUserProfile = {
   rol: string;
   puntos: number;
   ultimaJornada: number;
+  pais?: string;
+  codigoPais?: string;
+  fechaNacimiento?: string;
 };
 
 export type PodiumUser = {
@@ -50,12 +53,15 @@ export const crearOActualizarUsuario = async (user: User): Promise<FirestoreUser
     (typeof existingData?.nombreApellido === "string" ? existingData.nombreApellido : "") ||
     (user.email ? user.email.split("@")[0] : "");
 
-  const basePayload = {
+  const basePayload: FirestoreUserProfile = {
     nombreApellido,
     email: user.email ?? existingData?.email ?? "",
     rol: existingData?.rol ?? "usuario",
     puntos: typeof existingData?.puntos === "number" ? existingData.puntos : 0,
     ultimaJornada: typeof existingData?.ultimaJornada === "number" ? existingData.ultimaJornada : 0,
+    pais: typeof existingData?.pais === "string" ? existingData.pais : undefined,
+    codigoPais: typeof existingData?.codigoPais === "string" ? existingData.codigoPais : undefined,
+    fechaNacimiento: typeof existingData?.fechaNacimiento === "string" ? existingData.fechaNacimiento : undefined,
   };
 
   await setDoc(
@@ -68,6 +74,29 @@ export const crearOActualizarUsuario = async (user: User): Promise<FirestoreUser
     { merge: true },
   );
   return basePayload;
+};
+
+export const actualizarPerfilUsuario = async (
+  uid: string,
+  data: { pais?: string; codigoPais?: string; fechaNacimiento?: string | null },
+): Promise<void> => {
+  const userRef = doc(firebaseFirestore, "Usuarios", uid);
+
+  const payload: Record<string, unknown> = {
+    fechaActualizacion: serverTimestamp(),
+  };
+
+  if (typeof data.pais === "string") {
+    payload.pais = data.pais;
+  }
+  if (typeof data.codigoPais === "string") {
+    payload.codigoPais = data.codigoPais;
+  }
+  if (typeof data.fechaNacimiento === "string" || data.fechaNacimiento === null) {
+    payload.fechaNacimiento = data.fechaNacimiento;
+  }
+
+  await updateDoc(userRef, payload);
 };
 
 /**

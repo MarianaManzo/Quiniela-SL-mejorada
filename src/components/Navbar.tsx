@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { ROLE_LABELS, type UserProfile } from "./LoginScreen";
+import { useEffect, useState } from "react";
+import { type UserProfile } from "./LoginScreen";
 import logoSomosLocales from "../assets/logo-somos-locales.png?inline";
 import { BellRing, LogOut } from "lucide-react";
 import type { NotificationStatus } from "../services/messaging";
@@ -7,10 +7,11 @@ import "../styles/navbar.css";
 
 interface NavbarProps {
   user: UserProfile | null;
-  currentView: "login" | "dashboard" | "quiniela" | "podium";
+  currentView: "login" | "dashboard" | "quiniela" | "podium" | "profile";
   onNavigateToDashboard: () => void;
   onNavigateToPodium?: () => void;
   onNavigateToQuiniela?: () => void;
+  onNavigateToProfile?: () => void;
   onSignOut?: () => void;
   onShowLogin?: () => void;
   notificationStatus?: NotificationStatus;
@@ -43,6 +44,7 @@ export function Navbar({
   currentView,
   onNavigateToDashboard,
   onNavigateToPodium,
+  onNavigateToProfile,
   onSignOut,
   onShowLogin,
   notificationStatus = "default",
@@ -50,48 +52,15 @@ export function Navbar({
   notificationLoading,
 }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setIsMenuOpen(false);
-    setIsUserMenuOpen(false);
   }, [user, currentView]);
-
-  useEffect(() => {
-    if (!isUserMenuOpen) {
-      return;
-    }
-
-    const handleDocumentClick = (event: MouseEvent) => {
-      if (!userMenuRef.current?.contains(event.target as Node)) {
-        setIsUserMenuOpen(false);
-      }
-    };
-
-    const handleDocumentKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsUserMenuOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleDocumentClick);
-    document.addEventListener("keydown", handleDocumentKey);
-
-    return () => {
-      document.removeEventListener("mousedown", handleDocumentClick);
-      document.removeEventListener("keydown", handleDocumentKey);
-    };
-  }, [isUserMenuOpen]);
 
   const handleBrandClick = user ? onNavigateToDashboard : onShowLogin ?? (() => {});
 
   const handleToggleMenu = () => {
     setIsMenuOpen((prev) => !prev);
-  };
-
-  const handleToggleUserMenu = () => {
-    setIsUserMenuOpen((prev) => !prev);
   };
 
   const handleNavigateDashboard = () => {
@@ -113,16 +82,14 @@ export function Navbar({
       onSignOut();
     }
     setIsMenuOpen(false);
-    setIsUserMenuOpen(false);
   };
 
-  const handleOpenProfileFromMenu = () => {
+  const handleProfileClick = () => {
     if (!user) {
       return;
     }
-
+    onNavigateToProfile?.();
     setIsMenuOpen(false);
-    setIsUserMenuOpen(true);
   };
 
   const isNotificationEnabled = notificationStatus === "granted";
@@ -214,23 +181,16 @@ export function Navbar({
             </button>
           ) : null}
           {user ? (
-            <div className="navbar__profile" ref={userMenuRef}>
+            <div className="navbar__profile">
               <button
                 type="button"
                 className="navbar__avatar"
-                onClick={handleToggleUserMenu}
-                aria-haspopup="menu"
-                aria-expanded={isUserMenuOpen}
-                aria-label={`Perfil de ${user.name}`}
+                onClick={handleProfileClick}
+                aria-label={`Abrir perfil de ${user.name}`}
+                data-active={currentView === "profile" ? "true" : undefined}
               >
                 {getInitials(user.name)}
               </button>
-              <div className="navbar__profile-menu" role="menu" data-open={isUserMenuOpen}>
-                <div className="navbar__profile-summary">
-                  <span className="navbar__profile-name">{user.name}</span>
-                  <span className="navbar__profile-role">{ROLE_LABELS[user.role]}</span>
-                </div>
-              </div>
             </div>
           ) : (
             <span className="navbar__hint">Inicia sesión para acceder a la quiniela</span>

@@ -6,6 +6,7 @@ import { Dashboard } from './components/Dashboard';
 import { LoginScreen, type UserProfile } from './components/LoginScreen';
 import { Navbar } from './components/Navbar';
 import { PodiumPage } from './components/PodiumPage';
+import { ProfilePage } from './components/ProfilePage';
 import AperturaJornada15 from './imports/AperturaJornada15';
 import {
   MATCHES,
@@ -20,11 +21,42 @@ import { useDownloadQuiniela } from './hooks/useDownloadQuiniela';
 import { crearOActualizarUsuario, guardarQuiniela, registrarTokenDispositivo } from './services/firestoreService';
 import { ensureNotificationToken, registerEnvMissingKeyListener, type NotificationStatus } from './services/messaging';
 import { formatParticipantName, sanitizeDisplayName } from './utils/formatParticipantName';
+import type { JourneyStat } from './types/profile';
 
 // Definición centralizada de la jornada mostrada
 const CURRENT_JOURNEY = 17;
 const BUILD_VERSION = 'V 32';
 const QUICK_ACCESS_STORAGE_KEY = 'quiniela-quick-access-profile';
+const DEFAULT_COUNTRY = 'México';
+const DEFAULT_COUNTRY_CODE = 'MX';
+
+const normalizeCountryCode = (value?: string | null): string => {
+  if (!value) {
+    return DEFAULT_COUNTRY_CODE;
+  }
+  const cleaned = value.trim();
+  if (!cleaned) {
+    return DEFAULT_COUNTRY_CODE;
+  }
+  return cleaned.slice(0, 2).toUpperCase();
+};
+
+const calculateAgeFromBirthdate = (value?: string | null): number | null => {
+  if (!value) {
+    return null;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  const now = new Date();
+  let age = now.getFullYear() - date.getFullYear();
+  const monthDiff = now.getMonth() - date.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < date.getDate())) {
+    age -= 1;
+  }
+  return age >= 0 ? age : null;
+};
 
 const shouldShowDebugGrid = (): boolean => {
   if (typeof window === 'undefined') {
@@ -40,6 +72,10 @@ const createQuickAccessProfile = (): UserProfile => {
     name: 'Invitado rápido',
     email: `invitado-${uniqueSegment}@quiniela.demo`,
     role: 'invitado',
+    country: DEFAULT_COUNTRY,
+    countryCode: DEFAULT_COUNTRY_CODE,
+    age: null,
+    birthdate: null,
   };
 };
 
@@ -335,7 +371,7 @@ function LoadingSpinner() {
 }
 
 export default function App() {
-  const [view, setView] = useState<'dashboard' | 'quiniela' | 'podium'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'quiniela' | 'podium' | 'profile'>('dashboard');
   const [user, setUser] = useState<UserProfile | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -756,6 +792,10 @@ useEffect(() => {
           name: fallbackName,
           email,
           role: 'aficion',
+          country: DEFAULT_COUNTRY,
+          countryCode: DEFAULT_COUNTRY_CODE,
+          age: null,
+          birthdate: null,
         });
 
         void crearOActualizarUsuario(authUser)
@@ -771,18 +811,26 @@ useEffect(() => {
               profileData.rol === 'staff' || profileData.rol === 'invitado'
                 ? profileData.rol
                 : 'aficion';
+            const resolvedCountry = profileData.pais?.trim()?.length ? profileData.pais.trim() : DEFAULT_COUNTRY;
+            const resolvedCountryCode = normalizeCountryCode(profileData.codigoPais);
+            const resolvedBirthdate = profileData.fechaNacimiento ?? null;
+            const resolvedAge = calculateAgeFromBirthdate(resolvedBirthdate);
 
             setUser({
               name: resolvedName,
               email: resolvedEmail,
               role: resolvedRole,
+              country: resolvedCountry,
+              countryCode: resolvedCountryCode,
+              age: resolvedAge,
+              birthdate: resolvedBirthdate,
             });
           })
           .catch((error) => {
             console.error('No se pudo sincronizar el usuario en Firestore', error);
           });
 
-        setView((current) => (current === 'quiniela' || current === 'podium' ? current : 'dashboard'));
+        setView((current) => (current === 'quiniela' || current === 'podium' || current === 'profile' ? current : 'dashboard'));
       } else {
         setFirebaseUser(null);
         setUser(null);
@@ -830,6 +878,10 @@ useEffect(() => {
               name: ensureDisplayName(parsed.name),
               email: parsed.email,
               role,
+              country: parsed.country ?? DEFAULT_COUNTRY,
+              countryCode: normalizeCountryCode(parsed.countryCode),
+              age: typeof parsed.age === 'number' ? parsed.age : null,
+              birthdate: parsed.birthdate ?? null,
             };
           }
         }
@@ -935,6 +987,13 @@ useEffect(() => {
     setShowSelectionErrors(false);
     hideSubmitTooltip();
   }, [hideSubmitTooltip, resetDownloadState]);
+
+  const handleOpenProfileView = useCallback(() => {
+    resetDownloadState();
+    setManualSaveDataUrl(null);
+    setIsShareOpen(false);
+    setView('profile');
+  }, [resetDownloadState]);
 
 
   const handleEnterQuiniela = useCallback(async () => {
@@ -1204,6 +1263,20 @@ useEffect(() => {
     setManualSaveDataUrl(null);
   }, []);
 
+  const journeyStats = useMemo<JourneyStat[]>(() =>
+    Object.entries(userQuinielasMap)
+      .map(([journeyNumber, data]) => {
+        const meta = resolveSubmissionMetadata(data);
+        return {
+          journeyNumber: Number(journeyNumber),
+          submitted: meta.submitted,
+          submittedAt: meta.submittedAt,
+          points: meta.puntosObtenidos,
+        } as JourneyStat;
+      })
+      .sort((a, b) => a.journeyNumber - b.journeyNumber),
+  [userQuinielasMap]);
+
   if (!authReady && !user) {
     return null;
   }
@@ -1340,6 +1413,49 @@ useEffect(() => {
     </div>
   );
 
+  if (view === 'quiniela') {
+    return (
+      <>
+        {toastBanner}
+        {manualSaveModal}
+        <div className="build-badge" aria-hidden="true">
+          Versión {BUILD_VERSION}
+        </div>
+        {quinielaView}
+      </>
+    );
+  }
+
+  let mainContent: JSX.Element = (
+    <Dashboard
+      user={user}
+      onEnterQuiniela={handleEnterQuiniela}
+      onViewQuiniela={handleViewSubmission}
+      onViewPodium={handleEnterPodium}
+      journeyCards={journeyCards}
+      journeyCode={`J${CURRENT_JOURNEY.toString().padStart(2, '0')}`}
+      journeyCloseLabel={journeyCloseLabel}
+      journeyClosedLabel={journeyClosedLabel}
+      journeyClosed={journeyClosed}
+      journeySubmittedAt={currentJourneySubmittedAt}
+      previousJourneyClosedLabel={previousJourneyClosedLabel}
+      previousJourneySubmittedAt={previousJourneySubmittedAt}
+    />
+  );
+
+  if (view === 'podium') {
+    mainContent = <PodiumPage />;
+  } else if (view === 'profile') {
+    mainContent = (
+      <ProfilePage
+        user={user}
+        totalJourneys={CURRENT_JOURNEY}
+        journeyStats={journeyStats}
+        onBack={handleBackToDashboard}
+      />
+    );
+  }
+
   return (
     <>
       {toastBanner}
@@ -1347,53 +1463,20 @@ useEffect(() => {
       <div className="build-badge" aria-hidden="true">
         Versión {BUILD_VERSION}
       </div>
-      {view === 'dashboard' ? (
-        <div className="dashboard-shell">
-          <Navbar
-            user={user}
-            currentView={currentView}
-            onNavigateToDashboard={handleBackToDashboard}
-            onNavigateToQuiniela={handleEnterQuiniela}
-            onNavigateToPodium={handleEnterPodium}
-            onSignOut={handleSignOut}
-            notificationStatus={notificationStatus}
-            onEnableNotifications={handleEnableNotifications}
-            notificationLoading={isNotificationLoading}
-          />
-          <Dashboard
-            user={user}
-            onEnterQuiniela={handleEnterQuiniela}
-            onViewQuiniela={handleViewSubmission}
-            onViewPodium={handleEnterPodium}
-            journeyCards={journeyCards}
-            journeyCode={`J${CURRENT_JOURNEY.toString().padStart(2, '0')}`}
-            journeyCloseLabel={journeyCloseLabel}
-            journeyClosedLabel={journeyClosedLabel}
-          journeyClosed={journeyClosed}
-          journeySubmittedAt={currentJourneySubmittedAt}
-          previousJourneyClosedLabel={previousJourneyClosedLabel}
-          previousJourneySubmittedAt={previousJourneySubmittedAt}
+      <div className="dashboard-shell">
+        <Navbar
+          user={user}
+          currentView={currentView}
+          onNavigateToDashboard={handleBackToDashboard}
+          onNavigateToPodium={handleEnterPodium}
+          onSignOut={handleSignOut}
+          notificationStatus={notificationStatus}
+          onEnableNotifications={handleEnableNotifications}
+          notificationLoading={isNotificationLoading}
+          onNavigateToProfile={handleOpenProfileView}
         />
-        </div>
-      ) : (
-        view === 'podium' ? (
-          <div className="dashboard-shell">
-            <Navbar
-              user={user}
-              currentView={currentView}
-              onNavigateToDashboard={handleBackToDashboard}
-              onNavigateToPodium={handleEnterPodium}
-              onSignOut={handleSignOut}
-              notificationStatus={notificationStatus}
-              onEnableNotifications={handleEnableNotifications}
-              notificationLoading={isNotificationLoading}
-            />
-            <PodiumPage />
-          </div>
-        ) : (
-          quinielaView
-        )
-      )}
+        {mainContent}
+      </div>
     </>
   );
 }

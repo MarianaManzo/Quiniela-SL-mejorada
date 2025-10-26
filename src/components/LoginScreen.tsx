@@ -16,6 +16,10 @@ export interface UserProfile {
   name: string;
   email: string;
   role: "aficion" | "staff" | "invitado";
+  country?: string;
+  countryCode?: string;
+  age?: number | null;
+  birthdate?: string | null;
 }
 
 export const ROLE_LABELS: Record<UserProfile["role"], string> = {

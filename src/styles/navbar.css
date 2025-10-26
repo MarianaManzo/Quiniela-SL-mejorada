@@ -33,7 +33,10 @@
   left: 0;
   right: 0;
   height: env(safe-area-inset-top, 0px);
-  background: #000000;
+  background: rgba(15, 16, 19, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-radius: 0 0 48px 48px;
   pointer-events: none;
   z-index: -2;
 }

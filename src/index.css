@@ -85,25 +85,12 @@
 
   body, .app-body {
     line-height: inherit;
-    background-color: #1C1C21;
+    background-color: #000000;
     color: #f8fafc;
     background: #1C1C21;
     overscroll-behavior-y: none;
   }
 
-  body::before {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: calc(env(safe-area-inset-top, 0px) + 12px);
-    background: rgba(15, 16, 19, 0.92);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    pointer-events: none;
-    z-index: 5;
-  }
 
   hr {
     height: 0;

@@ -80,14 +80,13 @@
     font-feature-settings: var(--default-font-feature-settings, normal);
     font-variation-settings: var(--default-font-variation-settings, normal);
     -webkit-tap-highlight-color: transparent;
-    background-color: #1C1C21;
+    background: linear-gradient(180deg, #131829 0%, #242c40 50%, #363f58 100%);
   }
 
   body, .app-body {
     line-height: inherit;
-    background-color: #000000;
     color: #f8fafc;
-    background: #1C1C21;
+    background: linear-gradient(180deg, #131829 0%, #242c40 50%, #363f58 100%);
     overscroll-behavior-y: none;
   }
 

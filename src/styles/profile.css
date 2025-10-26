@@ -5,6 +5,7 @@
   gap: 32px;
   padding: 32px clamp(16px, 5vw, 56px);
   color: #f8fafc;
+  background: #1c1c21;
 }
 
 .profile-header {
@@ -19,26 +20,27 @@
   gap: 6px;
   padding: 6px 14px;
   border-radius: 999px;
-  border: 1px solid rgba(248, 250, 252, 0.25);
-  background: transparent;
-  color: inherit;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  background: rgba(255, 255, 255, 0.7);
+  color: #0f172a;
   cursor: pointer;
   font-size: 0.85rem;
   transition: border 150ms ease, color 150ms ease, background 150ms ease;
 }
 
 .profile-back-button:hover {
-  border-color: rgba(246, 212, 51, 0.6);
-  color: #f6d433;
-  background: rgba(246, 212, 51, 0.1);
+  border-color: rgba(180, 83, 9, 0.4);
+  color: #b45309;
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .profile-card {
   border-radius: 28px;
   padding: clamp(20px, 4vw, 32px);
-  background: rgba(18, 21, 37, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 24px 60px rgba(5, 5, 8, 0.65);
+  background: #15161b;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 24px 45px rgba(0, 0, 0, 0.6);
+  color: #f8fafc;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -62,12 +64,9 @@
 }
 
 .profile-card__title-row p {
-  color: rgba(248, 250, 252, 0.65);
+  color: rgba(15, 23, 42, 0.5);
 }
 
-.profile-card__title-row h2 {
-  margin: 0;
-}
 
 
 .profile-summary-row {
@@ -88,7 +87,7 @@
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(248, 250, 252, 0.6);
+  color: rgba(248, 250, 252, 0.45);
 }
 
 .profile-summary-value {
@@ -101,8 +100,10 @@
 }
 
 .profile-email {
+  font-size: 1rem;
   display: inline-block;
   max-width: 100%;
+  opacity: 0.8;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -116,8 +117,8 @@
 
 .profile-card--glass {
   backdrop-filter: blur(18px);
-  background: rgba(16, 21, 40, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(12, 12, 14, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .profile-stat {
@@ -135,10 +136,11 @@
 .profile-stat__value {
   font-size: 2.5rem;
   font-weight: 700;
+  color: #f8fafc;
 }
 
 .profile-stat__caption {
-  color: rgba(248, 250, 252, 0.6);
+  color: rgba(248, 250, 252, 0.65);
 }
 
 .profile-circle-progress {
@@ -186,7 +188,7 @@
   border: 1px solid rgba(255, 255, 255, 0.25);
   display: grid;
   place-items: center;
-  color: rgba(248, 250, 252, 0.8);
+  color: rgba(248, 250, 252, 0.75);
   cursor: default;
 }
 

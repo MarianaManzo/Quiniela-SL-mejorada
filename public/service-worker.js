@@ -16,19 +16,38 @@ if (messaging?.onBackgroundMessage) {
   messaging.onBackgroundMessage((payload) => {
     const notification = payload?.notification ?? {};
     const data = payload?.data ?? {};
-    const notificationTitle = notification.title || "Somos Locales FEMx";
+
+    const hasNotificationPayload =
+      Boolean(notification.title) ||
+      Boolean(notification.body) ||
+      Boolean(notification.image) ||
+      Boolean(notification.icon);
+
+    const shouldForceDisplay = data.forceNotification === "true";
+    if (!shouldForceDisplay && hasNotificationPayload) {
+      // Firebase ya mostrará la notificación incluida en el payload.
+      return;
+    }
+
+    const notificationTitle = notification.title || data.title || "Somos Locales FEMx";
+
+    const defaultSmallIcon = "/icons/notification-small.png";
+    const defaultLargeIcon = "/icons/notification-large.png";
+    const resolvedImage = notification.image || data.image || defaultLargeIcon;
 
     const options = {
       body: notification.body || data.body || "Tienes una actualización en la quiniela.",
-      icon: notification.icon || data.icon || "/icons/icon-192.png",
-      badge: notification.badge || data.badge || "/icons/icon-192.png",
-      image: notification.image || data.image,
+      icon: notification.icon || data.icon || defaultSmallIcon,
+      badge: notification.badge || data.badge || defaultSmallIcon,
+      image: resolvedImage,
       tag: notification.tag || data.tag,
       renotify: data.renotify === "true",
       data: {
         ...data,
         url: data.url || notification.click_action || "/",
       },
+      // `image` suele mostrarse como large icon en Android; usamos un fallback si no llega en el payload.
+      ...(notification.image || data.image ? {} : { image: defaultLargeIcon }),
       vibrate: [200, 100, 200],
     };
 

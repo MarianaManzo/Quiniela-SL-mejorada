@@ -59,10 +59,17 @@ export const crearOActualizarUsuario = async (user: User): Promise<FirestoreUser
     rol: existingData?.rol ?? "usuario",
     puntos: typeof existingData?.puntos === "number" ? existingData.puntos : 0,
     ultimaJornada: typeof existingData?.ultimaJornada === "number" ? existingData.ultimaJornada : 0,
-    pais: typeof existingData?.pais === "string" ? existingData.pais : undefined,
-    codigoPais: typeof existingData?.codigoPais === "string" ? existingData.codigoPais : undefined,
-    fechaNacimiento: typeof existingData?.fechaNacimiento === "string" ? existingData.fechaNacimiento : undefined,
   };
+
+  if (typeof existingData?.pais === "string") {
+    basePayload.pais = existingData.pais;
+  }
+  if (typeof existingData?.codigoPais === "string") {
+    basePayload.codigoPais = existingData.codigoPais;
+  }
+  if (typeof existingData?.fechaNacimiento === "string") {
+    basePayload.fechaNacimiento = existingData.fechaNacimiento;
+  }
 
   await setDoc(
     userRef,

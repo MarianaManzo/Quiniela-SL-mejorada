@@ -12,6 +12,30 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+if (messaging?.onBackgroundMessage) {
+  messaging.onBackgroundMessage((payload) => {
+    const notification = payload?.notification ?? {};
+    const data = payload?.data ?? {};
+    const notificationTitle = notification.title || "Somos Locales FEMx";
+
+    const options = {
+      body: notification.body || data.body || "Tienes una actualización en la quiniela.",
+      icon: notification.icon || data.icon || "/icons/icon-192.png",
+      badge: notification.badge || data.badge || "/icons/icon-192.png",
+      image: notification.image || data.image,
+      tag: notification.tag || data.tag,
+      renotify: data.renotify === "true",
+      data: {
+        ...data,
+        url: data.url || notification.click_action || "/",
+      },
+      vibrate: [200, 100, 200],
+    };
+
+    self.registration.showNotification(notificationTitle, options);
+  });
+}
+
 const handleNotificationClick = (event) => {
   event.notification.close();
   const targetUrl = event.notification?.data?.url ?? '/';

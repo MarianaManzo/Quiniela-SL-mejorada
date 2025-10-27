@@ -666,9 +666,17 @@ useEffect(() => {
     return;
   }
 
-  if (Notification.permission !== 'granted') {
-    setNotificationStatus(Notification.permission as NotificationStatus);
-    return;
+  const currentPermission = Notification.permission as NotificationStatus;
+  if (currentPermission !== 'granted') {
+    setNotificationStatus(currentPermission);
+
+    const handleMissingKey = () => {
+      setNotificationStatus('missing-key');
+    };
+    const unsubscribeMissingKey = registerEnvMissingKeyListener(handleMissingKey);
+    return () => {
+      unsubscribeMissingKey();
+    };
   }
 
   let cancelled = false;
@@ -678,7 +686,12 @@ useEffect(() => {
     if (cancelled) {
       return;
     }
-    setNotificationStatus(result.status);
+    setNotificationStatus((prev) => {
+      if (result.status === 'error' && Notification.permission === 'granted') {
+        return prev === 'granted' ? 'granted' : 'error';
+      }
+      return result.status;
+    });
     if (result.status === 'granted' && result.token) {
       await syncDeviceToken(result.token, result.status);
     }

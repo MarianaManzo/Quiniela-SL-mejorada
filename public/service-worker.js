@@ -20,10 +20,9 @@ if (messaging?.onBackgroundMessage) {
 
     const notificationTitle = notification.title || data.title || "Somos Locales FEMx";
 
-    const defaultSmallIcon = "/icons/notification-small.png";
-    const defaultLargeIcon = "/icons/notification-large.png";
+    const defaultIcon = "/icons/icon-192.png";
+    const defaultBadge = "/icons/notification-small.png";
     const resolvedTag = notification.tag || data.tag || DEFAULT_NOTIFICATION_TAG;
-    const resolvedImage = notification.image || data.image || defaultLargeIcon;
 
     const notificationData = {
       ...data,
@@ -34,9 +33,8 @@ if (messaging?.onBackgroundMessage) {
 
     const options = {
       body: notification.body || data.body || "Tienes una actualización en la quiniela.",
-      icon: notification.icon || data.icon || defaultSmallIcon,
-      badge: notification.badge || data.badge || defaultSmallIcon,
-      image: resolvedImage,
+      icon: notification.icon || data.icon || defaultIcon,
+      badge: notification.badge || data.badge || defaultBadge,
       tag: resolvedTag,
       renotify: data.renotify === "true",
       data: notificationData,
@@ -86,7 +84,7 @@ const handleNotificationClick = (event) => {
 
 self.addEventListener('notificationclick', handleNotificationClick);
 
-const CACHE_VERSION = 'v27';
+const CACHE_VERSION = 'v29';
 const STATIC_CACHE = `somos-locales-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `somos-locales-runtime-${CACHE_VERSION}`;
 

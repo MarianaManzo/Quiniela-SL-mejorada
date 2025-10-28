@@ -22,7 +22,10 @@ if (messaging?.onBackgroundMessage) {
 
     const defaultIcon = "/icons/icon-192.png";
     const defaultBadge = "/icons/notification-small.png";
+    const defaultImage = "/icons/notification-placeholder.png";
     const resolvedTag = notification.tag || data.tag || DEFAULT_NOTIFICATION_TAG;
+    const resolvedRenotify = data.renotify === "false" ? false : true;
+    const resolvedSilent = data.silent === "true";
 
     const notificationData = {
       ...data,
@@ -35,8 +38,10 @@ if (messaging?.onBackgroundMessage) {
       body: notification.body || data.body || "Tienes una actualización en la quiniela.",
       icon: notification.icon || data.icon || defaultIcon,
       badge: notification.badge || data.badge || defaultBadge,
+      image: notification.image || data.image || defaultImage,
       tag: resolvedTag,
-      renotify: data.renotify === "true",
+      renotify: resolvedRenotify,
+      silent: resolvedSilent,
       data: notificationData,
       vibrate: [200, 100, 200],
     };
@@ -84,7 +89,7 @@ const handleNotificationClick = (event) => {
 
 self.addEventListener('notificationclick', handleNotificationClick);
 
-const CACHE_VERSION = 'v29';
+const CACHE_VERSION = 'v30';
 const STATIC_CACHE = `somos-locales-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `somos-locales-runtime-${CACHE_VERSION}`;
 

@@ -81,7 +81,7 @@ const handleNotificationClick = (event) => {
 
 self.addEventListener('notificationclick', handleNotificationClick);
 
-const CACHE_VERSION = 'v26';
+const CACHE_VERSION = 'v27';
 const STATIC_CACHE = `somos-locales-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `somos-locales-runtime-${CACHE_VERSION}`;
 

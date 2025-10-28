@@ -11,47 +11,52 @@ firebase.initializeApp({
 });
 
 const messaging = firebase.messaging();
+const DEFAULT_NOTIFICATION_TAG = "somos-locales-alert";
 
 if (messaging?.onBackgroundMessage) {
   messaging.onBackgroundMessage((payload) => {
     const notification = payload?.notification ?? {};
     const data = payload?.data ?? {};
 
-    const hasNotificationPayload =
-      Boolean(notification.title) ||
-      Boolean(notification.body) ||
-      Boolean(notification.image) ||
-      Boolean(notification.icon);
-
-    const shouldForceDisplay = data.forceNotification === "true";
-    if (!shouldForceDisplay && hasNotificationPayload) {
-      // Firebase ya mostrará la notificación incluida en el payload.
-      return;
-    }
-
     const notificationTitle = notification.title || data.title || "Somos Locales FEMx";
 
     const defaultSmallIcon = "/icons/notification-small.png";
     const defaultLargeIcon = "/icons/notification-large.png";
+    const resolvedTag = notification.tag || data.tag || DEFAULT_NOTIFICATION_TAG;
     const resolvedImage = notification.image || data.image || defaultLargeIcon;
+
+    const notificationData = {
+      ...data,
+      url: data.url || notification.click_action || "/",
+      origin: "somos-locales",
+      tag: resolvedTag,
+    };
 
     const options = {
       body: notification.body || data.body || "Tienes una actualización en la quiniela.",
       icon: notification.icon || data.icon || defaultSmallIcon,
       badge: notification.badge || data.badge || defaultSmallIcon,
       image: resolvedImage,
-      tag: notification.tag || data.tag,
+      tag: resolvedTag,
       renotify: data.renotify === "true",
-      data: {
-        ...data,
-        url: data.url || notification.click_action || "/",
-      },
-      // `image` suele mostrarse como large icon en Android; usamos un fallback si no llega en el payload.
-      ...(notification.image || data.image ? {} : { image: defaultLargeIcon }),
+      data: notificationData,
       vibrate: [200, 100, 200],
     };
 
-    self.registration.showNotification(notificationTitle, options);
+    const showNotification = async () => {
+      const existing = await self.registration.getNotifications();
+      existing.forEach((item) => {
+        if (item.data?.origin !== "somos-locales") {
+          item.close();
+        }
+      });
+
+      await self.registration.showNotification(notificationTitle, options);
+    };
+
+    showNotification().catch((error) => {
+      console.warn("No se pudo mostrar la notificación personalizada", error);
+    });
   });
 }
 

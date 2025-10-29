@@ -106,12 +106,11 @@ const cloneJourneyForUsers = async (targetJourney: number): Promise<void> => {
     const quinielasRef = userDoc.ref.collection("quinielas");
     const sourceSnap = await quinielasRef.doc(sourceDocId).get();
 
+    const sourceData = sourceSnap.exists ? sourceSnap.data() ?? {} : {};
     if (!sourceSnap.exists) {
-      console.warn(`El usuario ${userId} no tiene la jornada ${sourceDocId}, se omite.`);
-      continue;
+      console.warn(`El usuario ${userId} no tiene la jornada ${sourceDocId}; se generará una quiniela vacía para ${targetDocId}.`);
     }
 
-    const sourceData = sourceSnap.data() ?? {};
     const pronosticosBase = createEmptyPronosticos(sourceData.pronosticos);
 
     await quinielasRef.doc(targetDocId).set(

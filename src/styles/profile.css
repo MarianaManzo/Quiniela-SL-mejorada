@@ -211,8 +211,9 @@
 
 .profile-tooltip {
   position: absolute;
-  top: calc(100% + 12px);
-  right: -4px;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translate(-50%, 6px);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -226,7 +227,7 @@
   letter-spacing: 0.01em;
   box-shadow: 0 24px 40px -28px rgba(0, 0, 0, 0.68);
   opacity: 0;
-  transform: translateY(6px);
+  transform: translate(-50%, 6px);
   pointer-events: none;
   transition: opacity 160ms ease, transform 160ms ease;
   z-index: 30;
@@ -235,16 +236,15 @@
 .profile-tooltip::after {
   content: "";
   position: absolute;
-  top: -10px;
-  right: 16px;
-  width: 18px;
-  height: 18px;
-  transform: rotate(45deg);
-  background: inherit;
-  border-top: inherit;
-  border-left: inherit;
-  border-right: none;
-  border-bottom: none;
+  top: 100%;
+  left: 50%;
+  transform: translate(-50%, -4px) rotate(45deg);
+  width: 16px;
+  height: 16px;
+  background: rgba(16, 18, 25, 0.95);
+  border: 1px solid rgba(246, 212, 51, 0.28);
+  border-left: none;
+  border-top: none;
   filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.35));
 }
 

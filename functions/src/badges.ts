@@ -53,9 +53,9 @@ export const CONSTANCY_BADGES: ConstancyBadgeDefinition[] = [
   },
   {
     id: "goat-local",
-    title: "GOAT Local",
+    title: "MVP",
     threshold: 21,
-    notificationMessage: "🐐 ¡GOAT Local desbloqueado! 21 seguidas. Eres historia de la quiniela 🏆🔥",
+    notificationMessage: "🐐 ¡MVP desbloqueado! 21 seguidas. No eres el mejor del mundo, pero sí del rumbo 🏆🔥",
   },
 ];
 

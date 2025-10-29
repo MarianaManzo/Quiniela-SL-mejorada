@@ -1,11 +1,11 @@
-import { ArrowLeft, Info } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { ArrowLeft, ChevronDown, ChevronUp, Lock } from "lucide-react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { UserProfile } from "./LoginScreen";
 import type { JourneyStat } from "../types/profile";
 import { obtenerUsuariosParaPodio } from "../services/firestoreService";
 import "../styles/profile.css";
 import { CONSTANCY_BADGES } from "../data/constancyBadges";
-import type { ConstancyBadgeDefinition } from "../data/constancyBadges";
+import type { ConstancyBadgeDefinition, ConstancyBadgeTheme } from "../data/constancyBadges";
 
 interface ProfilePageProps {
   user: UserProfile;
@@ -28,11 +28,18 @@ const RARITY_LABELS: Record<ConstancyBadgeDefinition["rarity"], string> = {
   "mitica-ultra": "Mítica Ultra",
 };
 
+const LOCKED_BADGE_THEME: ConstancyBadgeTheme = {
+  background: "linear-gradient(135deg, rgba(21, 24, 32, 0.95), rgba(15, 18, 24, 0.9))",
+  border: "rgba(124, 134, 150, 0.3)",
+  badgeBackground: "linear-gradient(135deg, rgba(34, 38, 48, 0.85), rgba(24, 27, 35, 0.85))",
+  badgeColor: "rgba(196, 204, 216, 0.55)",
+  accent: "rgba(152, 160, 176, 0.45)",
+};
+
 export function ProfilePage({ user, journeyStats, totalJourneys, onBack }: ProfilePageProps) {
   const [ranking, setRanking] = useState<RankingSnapshot | null>(null);
   const [isRankingLoading, setIsRankingLoading] = useState(true);
-  const [isBadgesTooltipVisible, setIsBadgesTooltipVisible] = useState(false);
-  const badgeInfoContainerRef = useRef<HTMLDivElement | null>(null);
+  const [areBadgesCollapsed, setAreBadgesCollapsed] = useState(true);
 
   useEffect(() => {
     let active = true;
@@ -99,44 +106,17 @@ export function ProfilePage({ user, journeyStats, totalJourneys, onBack }: Profi
   const nextBadge = badgeStates.find((state) => !state.unlocked) ?? null;
   const unlockedBadgeCount = badgeStates.filter((state) => state.unlocked).length;
   const nextBadgeProgress = nextBadge ? Math.min(nextBadge.progress, 1) : 1;
+  const badgeGridId = "profile-badge-grid";
   const nextBadgeLabel = nextBadge
     ? nextBadge.remaining <= 0
-      ? `Listo para ${nextBadge.badge.title}`
-      : `A ${nextBadge.remaining} quiniela${nextBadge.remaining === 1 ? '' : 's'} de ${nextBadge.badge.title}`
-    : "¡GOAT Local desbloqueado! Eres leyenda de la quiniela.";
+      ? "¡Insignia especial lista para desbloquear!"
+      : `A ${nextBadge.remaining} quiniela${nextBadge.remaining === 1 ? '' : 's'} de desbloquear una insignia especial`
+    : "¡MVP desbloqueado! No eres el mejor del mundo, pero sí del rumbo.";
 
   const dateFormatter = useMemo(
     () => new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }),
     [],
   );
-
-  useEffect(() => {
-    if (!isBadgesTooltipVisible) {
-      return;
-    }
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (!badgeInfoContainerRef.current?.contains(event.target as Node)) {
-        setIsBadgesTooltipVisible(false);
-      }
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsBadgesTooltipVisible(false);
-      }
-    };
-
-      document.addEventListener("mousedown", handleClickOutside);
-      document.addEventListener("touchstart", handleClickOutside);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("touchstart", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [isBadgesTooltipVisible]);
 
   const positionLabel = isRankingLoading
     ? "Calculando…"
@@ -148,9 +128,14 @@ export function ProfilePage({ user, journeyStats, totalJourneys, onBack }: Profi
     <div className="profile-page">
       <header className="profile-header">
         {onBack ? (
-          <button type="button" className="profile-back-button" onClick={onBack}>
-            <ArrowLeft size={16} aria-hidden="true" />
-            Volver al dashboard
+          <button
+            type="button"
+            className="profile-back-button"
+            onClick={onBack}
+            aria-label="Volver"
+            title="Volver"
+          >
+            <ArrowLeft size={18} aria-hidden="true" />
           </button>
         ) : null}
       </header>
@@ -183,41 +168,33 @@ export function ProfilePage({ user, journeyStats, totalJourneys, onBack }: Profi
           <p className="profile-summary-card__caption">{Math.round(completionProgress * 100)}% del torneo jugado</p>
         </div>
         <div className="profile-summary-card profile-summary-card--stat">
-          <span className="profile-summary-card__label">Predicciones acertadas por jornada</span>
-          <div className="profile-summary-card__stat-value">{averageHits.toFixed(1)}</div>
+          <span className="profile-summary-card__label">Predicciones acertadas</span>
+          <div className="profile-summary-card__stat-value">
+            {Number.isFinite(averageHits) ? averageHits.toFixed(1) : "0.0"}
+            <span className="profile-summary-card__stat-suffix">%</span>
+          </div>
           <p className="profile-summary-card__caption">
-            Promedio obtenido en {completedJourneys > 0 ? `${completedJourneys} jornadas` : "aún sin envíos"}
+            Promedio obtenido por jornada
           </p>
         </div>
       </section>
 
       <section className="profile-stats">
         <div className="profile-card profile-card--glass profile-stat profile-stat--badges">
-          <div className="profile-stat__label profile-stat__label--with-icon">
-            <span>Insignias conseguidas</span>
-            <div className="profile-badges__info" ref={badgeInfoContainerRef}>
-              <button
-                type="button"
-                className="profile-badges__info-button"
-                aria-label="Cómo ganar insignias"
-                aria-expanded={isBadgesTooltipVisible}
-                onClick={() => {
-                  setIsBadgesTooltipVisible((prev) => !prev);
-                }}
-              >
-                <Info size={16} aria-hidden="true" />
-              </button>
-              <div
-                className="profile-tooltip"
-                role="tooltip"
-                data-visible={isBadgesTooltipVisible ? "true" : undefined}
-              >
-                <strong>¡Colecciona insignias!</strong>
-                <span>
-                  Envía tu quiniela en <em>tres jornadas consecutivas</em> para desbloquear una insignia especial.
-                </span>
-              </div>
-            </div>
+          <div className="profile-stat__label">
+            <span>Insignias coleccionables</span>
+            <button
+              type="button"
+              className="profile-badge-toggle"
+              onClick={() => {
+                setAreBadgesCollapsed((prev) => !prev);
+              }}
+              aria-expanded={!areBadgesCollapsed}
+              aria-controls={badgeGridId}
+              aria-label={areBadgesCollapsed ? "Mostrar insignias" : "Ocultar insignias"}
+            >
+              {areBadgesCollapsed ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronUp size={16} aria-hidden="true" />}
+            </button>
           </div>
           <div className="profile-badge-summary">
             <div className="profile-badge-summary__streak">
@@ -239,14 +216,20 @@ export function ProfilePage({ user, journeyStats, totalJourneys, onBack }: Profi
               <span className="profile-badge-progress__label">{nextBadgeLabel}</span>
             </div>
           </div>
-          <div className="profile-badge-grid" role="list">
+          <div
+            className="profile-badge-grid"
+            role="list"
+            data-collapsed={areBadgesCollapsed ? "true" : undefined}
+            id={badgeGridId}
+          >
             {badgeStates.map(({ badge, unlocked, unlockedAt, progress, remaining }) => {
+              const palette = unlocked ? badge.theme : LOCKED_BADGE_THEME;
               const styles: CSSProperties = {
-                "--badge-card-bg": badge.theme.background,
-                "--badge-card-border": badge.theme.border,
-                "--badge-card-badge-bg": badge.theme.badgeBackground,
-                "--badge-card-badge-color": badge.theme.badgeColor,
-                "--badge-card-accent": badge.theme.accent,
+                "--badge-card-bg": palette.background,
+                "--badge-card-border": palette.border,
+                "--badge-card-badge-bg": palette.badgeBackground,
+                "--badge-card-badge-color": palette.badgeColor,
+                "--badge-card-accent": palette.accent,
               } as CSSProperties;
 
               const imageSrc = unlocked && badge.image ? badge.image : null;
@@ -274,33 +257,39 @@ export function ProfilePage({ user, journeyStats, totalJourneys, onBack }: Profi
                         <span className={`profile-badge-card__rarity profile-badge-card__rarity--${badge.rarity}`}>
                           {RARITY_LABELS[badge.rarity]}
                         </span>
-                        <p>{badge.description}</p>
-                        <span className="profile-badge-card__threshold">{badge.threshold} quinielas seguidas</span>
+                        <p className="profile-badge-card__description">{badge.description}</p>
                       </div>
                     </>
                   ) : (
                     <div className="profile-badge-card__locked">
                       <span className="profile-badge-card__locked-icon" aria-hidden="true">
-                        🔒
-                      </span>
-                      <span className="profile-badge-card__locked-progress">
-                        Faltan {Math.max(remaining, 0)} quiniela{remaining === 1 ? '' : 's'}
+                        <Lock size={26} strokeWidth={2.2} />
                       </span>
                     </div>
-                  )}
-                  {!unlocked ? (
-                    <div className="profile-badge-card__progress profile-badge-card__progress--locked">
-                      <span
-                        className="profile-badge-card__progress-fill"
-                        style={
-                          {
-                            "--badge-card-progress": progress,
-                          } as CSSProperties
-                        }
-                        aria-hidden="true"
-                      />
-                    </div>
-                  ) : null}
+                 )}
+                 <div className="profile-badge-card__footer">
+                    {!unlocked ? (
+                      <>
+                        <div className="profile-badge-card__progress profile-badge-card__progress--locked">
+                          <span
+                            className="profile-badge-card__progress-fill"
+                            style={
+                              {
+                                "--badge-card-progress": progress,
+                              } as CSSProperties
+                            }
+                            aria-hidden="true"
+                          />
+                        </div>
+                        <span className="profile-badge-card__locked-progress profile-badge-card__locked-progress--footer">
+                          Faltan {Math.max(remaining, 0)} quiniela{remaining === 1 ? '' : 's'}
+                        </span>
+                      </>
+                    ) : null}
+                    {unlocked ? (
+                      <span className="profile-badge-card__threshold">{badge.threshold} quinielas seguidas</span>
+                    ) : null}
+                  </div>
                 </article>
               );
             })}

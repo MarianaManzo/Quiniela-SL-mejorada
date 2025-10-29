@@ -125,12 +125,12 @@ export const CONSTANCY_BADGES: ConstancyBadgeDefinition[] = [
   },
   {
     id: "goat-local",
-    title: "GOAT Local",
+    title: "MVP",
     threshold: 21,
-    description: "Completaste toda la temporada. Constancia nivel leyenda.",
+    description: "No eres el mejor del mundo, pero sí del rumbo.",
     rarity: "mitica-ultra",
     icon: "🐐",
-    notificationMessage: "🐐 ¡GOAT Local desbloqueado! 21 seguidas. Eres historia de la quiniela 🏆🔥",
+    notificationMessage: "🐐 21 seguidas. MVP del rumbo, el barrio canta tu nombre 🏆🔥",
     theme: {
       background: "linear-gradient(135deg, rgba(94,72,12,0.98), rgba(58,42,6,0.95))",
       border: "rgba(255,232,170,0.75)",

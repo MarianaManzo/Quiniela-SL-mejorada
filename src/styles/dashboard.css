@@ -785,6 +785,7 @@
   justify-content: center;
   width: 18px;
   height: 18px;
+  background: none;
 }
 
 .journey-card__status-icon img {
@@ -885,8 +886,7 @@
 
 .journey-card[data-tone="current"] .journey-card__status-icon,
 .journey-card--current .journey-card__status-icon {
-  background: rgba(246, 212, 51, 0.45);
-  color: rgba(33, 26, 10, 0.85);
+  color: #f59e0b;
 }
 
 .journey-card[data-tone="current"] .journey-card__code,
@@ -909,8 +909,7 @@
 
 .journey-card[data-tone="success"] .journey-card__status-icon,
 .journey-card--success .journey-card__status-icon {
-  background: rgba(255, 111, 169, 0.36);
-  color: rgba(162, 30, 97, 0.86);
+  color: #f6d433;
 }
 
 .journey-card[data-tone="warning"],
@@ -928,8 +927,7 @@
 
 .journey-card[data-tone="warning"] .journey-card__status-icon,
 .journey-card--warning .journey-card__status-icon {
-  background: rgba(20, 20, 28, 0.16);
-  color: rgba(20, 20, 28, 0.65);
+  color: #ef4444;
 }
 
 .journey-card[data-tone="upcoming"],
@@ -947,8 +945,7 @@
 
 .journey-card[data-tone="upcoming"] .journey-card__status-icon,
 .journey-card--upcoming .journey-card__status-icon {
-  background: rgba(20, 20, 28, 0.16);
-  color: rgba(20, 20, 28, 0.55);
+  color: #4b5563;
 }
 
 @media (max-width: 960px) {

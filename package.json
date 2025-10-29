@@ -64,6 +64,7 @@
             "seed:firestore": "tsx scripts/seedDatabase.ts",
             "migrate:quinielas": "tsx scripts/migrateQuinielasIds.ts",
             "open:journey": "tsx scripts/openJourney.ts",
-            "ensure:journeys": "tsx scripts/ensureJourneys.ts"
+            "ensure:journeys": "tsx scripts/ensureJourneys.ts",
+            "reset:user-quinielas": "tsx scripts/resetUserQuinielas.ts"
       }
 }

@@ -18,6 +18,7 @@
    - Copia sólo la estructura base (`jornada`, `pronosticos`, `estadoQuiniela: "abierta"`, `puntosObtenidos: 0`, `fechaCreacion: serverTimestamp`).
    - Conserva las quinielas anteriores en modo lectura (`estadoQuiniela: "cerrada"`). El script `scripts/migrateQuinielasIds.ts` puede ayudarte a automatizarlo.
    - Para garantizar que existan las 18 jornadas con arrays independientes usa `npm run ensure:journeys` (clona la jornada origen a todas las que falten y marca el estado en "abierta").
+   - Si necesitas reiniciar las quinielas de un usuario específico (por ejemplo, para pruebas) ejecuta `npm run reset:user-quinielas <uid> [total]`, lo cual borra las jornadas existentes de su subcolección y crea hasta `total` jornadas abiertas con pronósticos vacíos.
 
 2. **Actualizar la plantilla de UI**
    - Reutiliza la plantilla de la jornada previa y reemplaza equipos, horarios y textos con los nuevos datos.

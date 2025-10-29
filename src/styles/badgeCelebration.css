@@ -123,14 +123,12 @@
   font-size: 1.6rem;
   color: #f8fafc;
   margin: 0;
-  font-family: "Albert Sans", var(--default-font-family, ui-sans-serif, system-ui, sans-serif);
 }
 
 .badge-celebration__name {
   font-size: 1rem;
   color: rgba(248, 250, 252, 0.78);
   margin: 0;
-  font-family: "Albert Sans", var(--default-font-family, ui-sans-serif, system-ui, sans-serif);
 }
 
 .badge-celebration__message {

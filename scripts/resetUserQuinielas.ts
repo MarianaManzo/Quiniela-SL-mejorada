@@ -61,6 +61,20 @@ const resetUserJourneys = async (): Promise<void> => {
   }
 
   await batch.commit();
+
+  await userRef.set(
+    {
+      puntos: 0,
+      puntosjornada: 0,
+      ultimaJornada: 0,
+      constancyStreak: 0,
+      constancyLastJourney: 0,
+      constancyBadges: {},
+      fechaActualizacion: serverTimestamp(),
+    },
+    { merge: true },
+  );
+
   console.log(`Se reiniciaron ${totalJourneys} jornadas para el usuario ${userIdArg}.`);
 };
 

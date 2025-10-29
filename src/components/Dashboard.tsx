@@ -2,14 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
-  CalendarClock,
-  Check,
   ChevronDown,
   ChevronUp,
   Clock,
   Flag,
   Trophy,
 } from "lucide-react";
+import iconEnCurso from "../Icon/en-curso.svg";
+import iconEnviado from "../Icon/enviado.svg";
+import iconExpirado from "../Icon/expirado.svg";
+import iconProximamente from "../Icon/proximamente.svg";
 import { ROLE_LABELS, type UserProfile } from "./LoginScreen";
 import { TOP_RANKING } from "../data/podium";
 import { obtenerUsuariosParaPodio } from "../services/firestoreService";
@@ -174,6 +176,12 @@ export function Dashboard({
 
   const heroCountdownVisible = heroActionType === "participate" && Boolean(journeyCloseLabel);
   const heroClosedMessage = journeyClosed && heroActionType !== "view" ? journeyClosedLabel ?? "La jornada está cerrada." : null;
+  const statusIcons: Record<JourneyTone, string | null> = {
+    success: iconEnviado,
+    warning: iconExpirado,
+    upcoming: iconProximamente,
+    current: iconEnCurso,
+  };
 
   const computedSections: TournamentSection[] = useMemo(() => {
     const cards: JourneyCard[] = orderedJourneyCards.map((card) => ({
@@ -374,15 +382,9 @@ export function Dashboard({
                           <span className="journey-card__code">{card.code}</span>
                           <span className="journey-card__status-tag" data-tone={card.tone}>
                             <span className="journey-card__status-icon" aria-hidden="true">
-                              {card.tone === "success" ? (
-                                <Check size={14} />
-                              ) : card.tone === "warning" ? (
-                                <AlertTriangle size={14} />
-                              ) : card.tone === "upcoming" ? (
-                                <Clock size={14} />
-                              ) : (
-                                <CalendarClock size={14} />
-                              )}
+                              {statusIcons[card.tone] ? (
+                                <img src={statusIcons[card.tone] ?? iconEnCurso} alt="" />
+                              ) : null}
                             </span>
                             <span>{card.statusLabel}</span>
                           </span>

@@ -788,6 +788,12 @@
   border-radius: 999px;
 }
 
+.journey-card__status-icon img {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
 .journey-card__actions {
   display: inline-flex;
   align-items: center;

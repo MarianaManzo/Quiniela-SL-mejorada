@@ -248,6 +248,7 @@
 
 .profile-circle-progress {
   --size: clamp(120px, 22vw, 160px);
+  --angle: calc(max(var(--progress), 0.004) * 1turn);
   width: var(--size);
   height: var(--size);
   margin: 0 auto;
@@ -257,21 +258,35 @@
   align-items: center;
   justify-content: center;
   background:
-    radial-gradient(closest-side, rgba(8, 10, 21, 0.95) 68%, transparent 70%),
-    conic-gradient(#f6d433 calc(var(--progress) * 1turn), rgba(255, 255, 255, 0.15) 0);
+    conic-gradient(#f6d433 var(--angle), rgba(64, 68, 80, 0.35) 0),
+    radial-gradient(closest-side, rgba(8, 10, 21, 0.95) 66%, transparent 66%);
   position: relative;
   color: #f6d433;
   font-weight: 700;
   text-align: center;
+  overflow: hidden;
+}
+
+.profile-circle-progress::after {
+  content: "";
+  position: absolute;
+  inset: calc(var(--size) * 0.17);
+  border-radius: 50%;
+  background: rgba(8, 10, 21, 0.98);
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.45);
 }
 
 .profile-circle-progress__value {
   font-size: 2.4rem;
+  position: relative;
+  z-index: 1;
 }
 
 .profile-circle-progress__hint {
   font-size: 0.9rem;
   color: rgba(248, 250, 252, 0.75);
+  position: relative;
+  z-index: 1;
 }
 
 

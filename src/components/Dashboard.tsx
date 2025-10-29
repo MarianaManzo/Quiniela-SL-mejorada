@@ -182,12 +182,6 @@ export function Dashboard({
     upcoming: iconProximamente,
     current: iconEnCurso,
   };
-  const statusColors: Record<JourneyTone, string> = {
-    success: "#f6d433",
-    warning: "#ef4444",
-    upcoming: "#4b5563",
-    current: "#f59e0b",
-  };
 
   const computedSections: TournamentSection[] = useMemo(() => {
     const cards: JourneyCard[] = orderedJourneyCards.map((card) => ({
@@ -387,11 +381,7 @@ export function Dashboard({
                         <div className="journey-card__main">
                           <span className="journey-card__code">{card.code}</span>
                           <span className="journey-card__status-tag" data-tone={card.tone}>
-                            <span
-                              className="journey-card__status-icon"
-                              aria-hidden="true"
-                              style={{ color: statusColors[card.tone] }}
-                            >
+                            <span className="journey-card__status-icon" aria-hidden="true">
                               {statusIcons[card.tone] ? (
                                 <img src={statusIcons[card.tone] ?? iconEnCurso} alt="" />
                               ) : null}

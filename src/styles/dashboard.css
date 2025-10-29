@@ -909,7 +909,7 @@
 
 .journey-card[data-tone="success"] .journey-card__status-icon,
 .journey-card--success .journey-card__status-icon {
-  color: #f6d433;
+  color: #ff6fa9;
 }
 
 .journey-card[data-tone="warning"],

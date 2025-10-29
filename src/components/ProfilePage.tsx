@@ -176,28 +176,51 @@ export function ProfilePage({ user, journeyStats, totalJourneys, onBack }: Profi
       </section>
 
       <section className="profile-stats">
-        <div className="profile-card profile-card--glass profile-stat">
-          <div className="profile-stat__label">Jornadas completadas</div>
-          <div
-            className="profile-circle-progress"
-            style={
-              {
-                "--progress": completionProgress,
-              } as CSSProperties
-            }
-          >
-            <span className="profile-circle-progress__value">{completedJourneys}</span>
-            <span className="profile-circle-progress__hint">de {totalJourneys}</span>
-          </div>
-          <p className="profile-stat__caption">{Math.round(completionProgress * 100)}% del torneo jugado</p>
+        <div className="profile-card profile-card--glass profile-stat profile-stat--grid">
+          <div className="profile-stat__label">Datos</div>
+          <ul className="profile-stat__data-list">
+            <li>
+              <span className="profile-stat__data-label">Posición</span>
+              <span className="profile-stat__data-value">{positionLabel}</span>
+            </li>
+            <li>
+              <span className="profile-stat__data-label">Correo</span>
+              <span className="profile-stat__data-value profile-email" title={user.email}>
+                {user.email}
+              </span>
+            </li>
+            <li>
+              <span className="profile-stat__data-label">Racha actual</span>
+              <span className="profile-stat__data-value">{constancyStreak} jornadas</span>
+            </li>
+          </ul>
         </div>
 
-        <div className="profile-card profile-card--glass profile-stat">
-          <div className="profile-stat__label">Predicciones acertadas por jornada</div>
-          <div className="profile-stat__value">{averageHits.toFixed(1)}</div>
-          <p className="profile-stat__caption">
-            Promedio obtenido en {completedJourneys > 0 ? `${completedJourneys} jornadas` : "aún sin envíos"}
-          </p>
+        <div className="profile-card profile-card--glass profile-stat profile-stat--inline">
+          <div className="profile-stat__inline">
+            <div className="profile-stat__inline-item">
+              <span className="profile-stat__label">Jornadas completadas</span>
+              <div
+                className="profile-circle-progress"
+                style={
+                  {
+                    "--progress": completionProgress,
+                  } as CSSProperties
+                }
+              >
+                <span className="profile-circle-progress__value">{completedJourneys}</span>
+                <span className="profile-circle-progress__hint">de {totalJourneys}</span>
+              </div>
+              <p className="profile-stat__caption">{Math.round(completionProgress * 100)}% del torneo jugado</p>
+            </div>
+            <div className="profile-stat__inline-item">
+              <span className="profile-stat__label">Predicciones acertadas por jornada</span>
+              <div className="profile-stat__value profile-stat__value--inline">{averageHits.toFixed(1)}</div>
+              <p className="profile-stat__caption">
+                Promedio obtenido en {completedJourneys > 0 ? `${completedJourneys} jornadas` : "aún sin envíos"}
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="profile-card profile-card--glass profile-stat profile-stat--badges">
@@ -278,7 +301,6 @@ export function ProfilePage({ user, journeyStats, totalJourneys, onBack }: Profi
                         )}
                       </div>
                       <div className="profile-badge-card__text">
-                        <h3>{badge.title}</h3>
                         <span className={`profile-badge-card__rarity profile-badge-card__rarity--${badge.rarity}`}>
                           {RARITY_LABELS[badge.rarity]}
                         </span>

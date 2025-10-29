@@ -171,16 +171,7 @@
   color: rgba(248, 250, 252, 0.75);
 }
 
-.profile-stat--badges {
-  min-height: 220px;
-}
 
-.profile-stat__label--with-icon {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  position: relative;
-}
 
 .profile-badges__info {
   position: relative;
@@ -275,6 +266,66 @@
   pointer-events: auto;
 }
 
+.profile-stat--grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-stat__data-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.profile-stat__data-label {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(248, 250, 252, 0.55);
+}
+
+.profile-stat__data-value {
+  display: block;
+  font-size: 1.05rem;
+  color: rgba(248, 250, 252, 0.95);
+  word-break: break-word;
+}
+
+.profile-stat--inline {
+  padding: 0;
+}
+
+.profile-stat__inline {
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.profile-stat__inline-item {
+  flex: 1;
+  padding: 18px;
+  background: rgba(26, 28, 33, 0.72);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.profile-stat__value--inline {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #f6d433;
+  margin-top: 12px;
+}
+
+.profile-stat__label--with-icon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .profile-badge-summary {
   display: flex;
   flex-direction: column;
@@ -345,7 +396,13 @@
   width: 100%;
   gap: 18px;
   margin-top: 24px;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+}
+
+@media (max-width: 900px) {
+  .profile-badge-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .profile-badge-card {
@@ -635,14 +692,30 @@
   color: rgba(248, 250, 252, 0.92);
 }
 
-.profile-badge-card__text h3 {
-  font-size: 1.1rem;
-  margin: 0;
-}
 
 .profile-badge-card__threshold {
   font-size: 0.85rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgba(248, 250, 252, 0.6);
+}
+
+
+.profile-stat__data-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  background: rgba(26, 28, 33, 0.72);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 900px) {
+  .profile-stat__inline {
+    flex-direction: column;
+  }
+  .profile-stat__inline-item {
+    width: 100%;
+  }
 }

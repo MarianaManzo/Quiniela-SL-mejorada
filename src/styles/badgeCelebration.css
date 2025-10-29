@@ -38,45 +38,15 @@
   z-index: 1;
 }
 
-.badge-celebration__launcher {
-  position: absolute;
-  bottom: -60px;
-  left: -42px;
-  width: 200px;
-  height: 260px;
-  background: linear-gradient(135deg, #f6d433, #f59e0b);
-  border-radius: 60% 60% 32px 32px;
-  transform: rotate(-18deg);
-  box-shadow: 0 36px 60px -28px rgba(245, 158, 11, 0.78);
-  opacity: 0.95;
-}
-
-.badge-celebration__launcher::before,
-.badge-celebration__launcher::after {
-  content: "";
-  position: absolute;
-  inset: 20% 18%;
-  border-radius: inherit;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0));
-  transform: rotate(8deg);
-}
-
-.badge-celebration__launcher::after {
-  inset: 30% 26%;
-  transform: rotate(-6deg);
-  opacity: 0.6;
-}
-
 .badge-celebration__confetti-piece {
   position: absolute;
-  bottom: -20px;
-  left: var(--confetti-left, 6px);
+  top: var(--confetti-start, -80px);
+  left: var(--confetti-left, 50%);
   width: 10px;
   height: 16px;
   border-radius: 4px;
   opacity: 0;
-  transform-origin: bottom left;
-  animation: badge-confetti-burst var(--confetti-duration, 1800ms) ease-out infinite;
+  animation: badge-confetti-fall var(--confetti-duration, 4200ms) linear infinite;
   animation-delay: var(--confetti-delay, 0ms);
 }
 
@@ -240,30 +210,16 @@
   }
 }
 
-@keyframes badge-confetti-burst {
+@keyframes badge-confetti-fall {
   0% {
-    transform: translate3d(0, 0, 0) scale(0.45) rotate(-30deg);
+    transform: translate3d(0, 0, 0) rotate(0deg);
     opacity: 0;
   }
-  10% {
+  12% {
     opacity: 1;
   }
-  60% {
-    transform: translate3d(
-        var(--confetti-rise-x, 260px),
-        var(--confetti-rise-y, -260px),
-        0
-      )
-      rotate(240deg);
-  }
   100% {
-    transform: translate3d(
-        var(--confetti-fall-x, 200px),
-        var(--confetti-fall-y, 140px),
-        0
-      )
-      scale(0.9)
-      rotate(360deg);
+    transform: translate3d(var(--confetti-drift, 40px), 110vh, 0) rotate(360deg);
     opacity: 0;
   }
 }

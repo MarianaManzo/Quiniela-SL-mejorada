@@ -11,23 +11,19 @@ export function BadgeCelebrationModal({ badge, onClose }: BadgeCelebrationModalP
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const pieces = useMemo(
     () =>
-      Array.from({ length: 90 }).map((_, index) => {
-        const left = Math.random() * 70 + (index % 6) * 4;
-        const riseX = 200 + Math.random() * 260;
-        const riseY = -(160 + Math.random() * 200);
-        const fallX = riseX * (0.55 + Math.random() * 0.2);
-        const fallY = riseY * 0.35 + 170 + Math.random() * 40;
-        const delay = (index % 14) * 90;
-        const duration = 1500 + Math.random() * 600;
+      Array.from({ length: 120 }).map((_, index) => {
+        const left = Math.random() * 100;
+        const start = -60 - Math.random() * 160;
+        const drift = (Math.random() - 0.5) * 60;
+        const delay = Math.random() * 1200;
+        const duration = 3600 + Math.random() * 1800;
 
         return {
           key: index,
           style: {
-            "--confetti-left": `${left}px`,
-            "--confetti-rise-x": `${riseX}px`,
-            "--confetti-rise-y": `${riseY}px`,
-            "--confetti-fall-x": `${fallX}px`,
-            "--confetti-fall-y": `${fallY}px`,
+            "--confetti-left": `${left}%`,
+            "--confetti-start": `${start}px`,
+            "--confetti-drift": `${drift}px`,
             "--confetti-delay": `${delay}ms`,
             "--confetti-duration": `${duration}ms`,
           } as CSSProperties,
@@ -60,7 +56,6 @@ export function BadgeCelebrationModal({ badge, onClose }: BadgeCelebrationModalP
       <div className="badge-celebration__backdrop" />
       <div className="badge-celebration__dialog" role="dialog" aria-modal="true" aria-labelledby="badge-title">
         <div className="badge-celebration__confetti" aria-hidden="true">
-          <div className="badge-celebration__launcher" />
           {pieces.map(({ key, style }) => (
             <span
               key={key}

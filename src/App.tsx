@@ -9,9 +9,10 @@ import { PodiumPage } from './components/PodiumPage';
 import { ProfilePage } from './components/ProfilePage';
 import AperturaJornada15 from './imports/AperturaJornada15';
 import {
-  MATCHES,
   QUINIELA_STORAGE_KEY,
   createEmptySelections,
+  getJourneyHeader,
+  getMatchesForJourney,
   type QuinielaSelections,
   type QuinielaSubmission,
   type Selection,
@@ -28,7 +29,7 @@ import { BadgeCelebrationModal } from './components/BadgeCelebrationModal';
 
 // Definición centralizada de la jornada mostrada
 const CURRENT_JOURNEY = 17;
-const BUILD_VERSION = 'V 32';
+const BUILD_VERSION = 'V 33';
 const QUICK_ACCESS_STORAGE_KEY = 'quiniela-quick-access-profile';
 const DEFAULT_COUNTRY = 'México';
 const DEFAULT_COUNTRY_CODE = 'MX';
@@ -344,14 +345,15 @@ const normalizeSelection = (value: unknown): Selection | null => {
   return null;
 };
 
-const buildSelectionsFromPronosticos = (values: unknown): QuinielaSelections | null => {
+const buildSelectionsFromPronosticos = (values: unknown, journeyNumber: number): QuinielaSelections | null => {
   if (!Array.isArray(values) || values.length === 0) {
     return null;
   }
 
-  const result = createEmptySelections();
+  const matches = getMatchesForJourney(journeyNumber);
+  const result = createEmptySelections(journeyNumber);
 
-  MATCHES.forEach((match, index) => {
+  matches.forEach((match, index) => {
     const selection = normalizeSelection(values[index]);
     if (selection) {
       result[match.id] = selection;
@@ -404,12 +406,20 @@ type JourneyCardViewModel = {
   submittedAt: string | null;
 };
 
-const FORCED_PARTICIPATION_JOURNEYS = 18;
+const VISIBLE_JOURNEY_NUMBERS = [17, 18] as const;
+const VISIBLE_JOURNEY_SET = new Set<number>(VISIBLE_JOURNEY_NUMBERS);
+const ORDERED_VISIBLE_JOURNEYS = [...VISIBLE_JOURNEY_NUMBERS].sort((a, b) => a - b);
+const FORCED_PARTICIPATION_JOURNEYS = VISIBLE_JOURNEY_NUMBERS.length;
 const DEFAULT_FORCED_JOURNEY_META = "Cierra el 31 OCT - 14:59 hrs";
-const PARTICIPATION_OVERRIDE_JOURNEYS = new Set([15, 16, 18]);
+const PARTICIPATION_OVERRIDE_JOURNEYS = new Set<number>([CURRENT_JOURNEY]);
 const PARTICIPATION_OVERRIDE_META = "EN CURSO PARA PARTICIPAR";
 
-const resolveSubmissionMetadata = (data: QuinielaDocData | undefined) => {
+const findPreviousVisibleJourney = (journeyNumber: number): number | null => {
+  const index = ORDERED_VISIBLE_JOURNEYS.indexOf(journeyNumber);
+  return index > 0 ? ORDERED_VISIBLE_JOURNEYS[index - 1] : null;
+};
+
+const resolveSubmissionMetadata = (journeyNumber: number, data: QuinielaDocData | undefined) => {
   if (!data) {
     return {
       submitted: false,
@@ -420,7 +430,7 @@ const resolveSubmissionMetadata = (data: QuinielaDocData | undefined) => {
   }
 
   const rawEstado = typeof data.estadoQuiniela === 'string' ? data.estadoQuiniela.toLowerCase() : '';
-  const selections = buildSelectionsFromPronosticos(data.pronosticos);
+  const selections = buildSelectionsFromPronosticos(data.pronosticos, journeyNumber);
   const submittedStates = new Set(['enviada', 'cerrada', 'cerrado']);
   const submitted = submittedStates.has(rawEstado) || Boolean(data.quinielaEnviada);
   const submittedAt = submitted
@@ -453,14 +463,16 @@ export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
-  const [quinielaSelections, setQuinielaSelections] = useState<QuinielaSelections>(() => createEmptySelections());
+  const [quinielaSelections, setQuinielaSelections] = useState<QuinielaSelections>(() => createEmptySelections(CURRENT_JOURNEY));
   const [draftSelectionsByJourney, setDraftSelectionsByJourney] = useState<Record<number, QuinielaSelections>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [activeJourneyNumber, setActiveJourneyNumber] = useState<number>(CURRENT_JOURNEY);
   const [journeyCloseDate, setJourneyCloseDate] = useState<Date | null>(null);
   const [now, setNow] = useState<Date>(() => new Date());
   const [lastSubmittedAt, setLastSubmittedAt] = useState<string | null>(null);
-  const previousJourneyNumber = activeJourneyNumber > 1 ? activeJourneyNumber - 1 : null;
+  const previousJourneyNumber = findPreviousVisibleJourney(activeJourneyNumber);
+  const activeJourneyMatches = useMemo(() => getMatchesForJourney(activeJourneyNumber), [activeJourneyNumber]);
+  const activeJourneyHeader = useMemo(() => getJourneyHeader(activeJourneyNumber), [activeJourneyNumber]);
   const [previousJourneyCloseDate, setPreviousJourneyCloseDate] = useState<Date | null>(null);
   const [currentSubmissionAt, setCurrentSubmissionAt] = useState<string | null>(null);
   const [previousSubmissionAt, setPreviousSubmissionAt] = useState<string | null>(null);
@@ -543,9 +555,13 @@ export default function App() {
     };
 
     let cards = journeys
+      .filter((journey) => VISIBLE_JOURNEY_SET.has(journey.number))
       .map((journey) => {
         const code = `J${journey.number.toString().padStart(2, '0')}`;
-        const submissionMeta = resolveSubmissionMetadata(userQuinielasMap[journey.number]);
+        const submissionMeta = resolveSubmissionMetadata(
+          journey.number,
+          userQuinielasMap[journey.number]
+        );
         const localSubmissionRaw = storedSubmissions[journey.number];
         const localSubmission =
           localSubmissionRaw && hasCompletedSelections(localSubmissionRaw.selections) ? localSubmissionRaw : null;
@@ -595,7 +611,7 @@ export default function App() {
     const upcomingJourneyNumber = CURRENT_JOURNEY + 1;
     const hasUpcoming = cards.some((card) => card.number === upcomingJourneyNumber);
 
-    if (!hasUpcoming) {
+    if (!hasUpcoming && VISIBLE_JOURNEY_SET.has(upcomingJourneyNumber)) {
       cards = cards.concat({
         id: `journey-${upcomingJourneyNumber}`,
         code: `J${upcomingJourneyNumber.toString().padStart(2, '0')}`,
@@ -608,34 +624,13 @@ export default function App() {
       });
     }
 
-    if (cards.length < FORCED_PARTICIPATION_JOURNEYS) {
-      const existingNumbers = new Set(cards.map((card) => card.number));
-      for (let journeyNumber = 1; journeyNumber <= FORCED_PARTICIPATION_JOURNEYS; journeyNumber += 1) {
-        if (existingNumbers.has(journeyNumber)) {
-          continue;
-        }
-
-        cards = cards.concat({
-          id: `mock-journey-${journeyNumber}`,
-          code: `J${journeyNumber.toString().padStart(2, '0')}`,
-          number: journeyNumber,
-          statusLabel: 'En curso',
-          meta: PARTICIPATION_OVERRIDE_JOURNEYS.has(journeyNumber) ? PARTICIPATION_OVERRIDE_META : DEFAULT_FORCED_JOURNEY_META,
-          tone: 'current',
-          action: 'participate',
-          submittedAt: null,
-        });
-      }
-    }
-
-    cards = cards.map(applyParticipationOverride);
-
-    return cards.sort((a, b) => b.number - a.number);
+    return cards.map(applyParticipationOverride).sort((a, b) => b.number - a.number);
   }, [journeys, now, storedSubmissions, userQuinielasMap]);
   const getExportData = useCallback(() => ({
     selections: quinielaSelections,
     participantName: participantDisplayName,
-  }), [quinielaSelections, participantDisplayName]);
+    journey: activeJourneyNumber,
+  }), [quinielaSelections, participantDisplayName, activeJourneyNumber]);
 
   const {
     isPreparingDownload,
@@ -845,7 +840,7 @@ useEffect(() => {
     return;
   }
 
-  const currentMeta = resolveSubmissionMetadata(userQuinielasMap[activeJourneyNumber]);
+  const currentMeta = resolveSubmissionMetadata(activeJourneyNumber, userQuinielasMap[activeJourneyNumber]);
   setIsReadOnlyView(currentMeta.submitted);
   setCurrentSubmissionAt(currentMeta.submittedAt ?? null);
   if (currentMeta.submittedAt) {
@@ -855,7 +850,7 @@ useEffect(() => {
   }
 
   if (previousJourneyNumber && previousJourneyNumber > 0) {
-    const previousMeta = resolveSubmissionMetadata(userQuinielasMap[previousJourneyNumber]);
+    const previousMeta = resolveSubmissionMetadata(previousJourneyNumber, userQuinielasMap[previousJourneyNumber]);
     setPreviousSubmissionAt(previousMeta.submittedAt ?? null);
   } else {
     setPreviousSubmissionAt(null);
@@ -900,7 +895,7 @@ useEffect(() => {
     return;
   }
 
-  const currentMeta = resolveSubmissionMetadata(userQuinielasMap[activeJourneyNumber]);
+  const currentMeta = resolveSubmissionMetadata(activeJourneyNumber, userQuinielasMap[activeJourneyNumber]);
   if (currentMeta.submitted && currentMeta.selections && hasCompletedSelections(currentMeta.selections)) {
     const submission: QuinielaSubmission = {
       user,
@@ -1080,7 +1075,7 @@ useEffect(() => {
 
   useEffect(() => {
     if (!user) {
-      setQuinielaSelections(createEmptySelections());
+      setQuinielaSelections(createEmptySelections(CURRENT_JOURNEY));
       setLastSubmittedAt(null);
       setToast(null);
       setIsReadOnlyView(false);
@@ -1116,7 +1111,7 @@ useEffect(() => {
       setIsReadOnlyView(true);
       setCurrentSubmissionAt(storedForActive.submittedAt ?? null);
     } else {
-      setQuinielaSelections(createEmptySelections());
+      setQuinielaSelections(createEmptySelections(activeJourneyNumber));
       setLastSubmittedAt(null);
       setIsReadOnlyView(false);
       setCurrentSubmissionAt(null);
@@ -1141,7 +1136,7 @@ useEffect(() => {
   const handleSignOut = useCallback(async () => {
     resetDownloadState();
     setManualSaveDataUrl(null);
-    setQuinielaSelections(createEmptySelections());
+    setQuinielaSelections(createEmptySelections(CURRENT_JOURNEY));
     setDraftSelectionsByJourney({});
     setLastSubmittedAt(null);
     setIsSaving(false);
@@ -1200,7 +1195,7 @@ useEffect(() => {
 
       let nextSelections = draftSelectionsByJourney[journeyNumber]
         ? { ...draftSelectionsByJourney[journeyNumber] }
-        : createEmptySelections();
+        : createEmptySelections(journeyNumber);
       let nextReadOnly = targetClosed;
       let submissionDetected = false;
       let submissionTimestamp: string | null = null;
@@ -1217,7 +1212,7 @@ useEffect(() => {
           const snapshot = await getDoc(quinielaRef);
 
           if (snapshot.exists()) {
-            const meta = resolveSubmissionMetadata(snapshot.data() as QuinielaDocData);
+            const meta = resolveSubmissionMetadata(journeyNumber, snapshot.data() as QuinielaDocData);
             if (meta.selections) {
               nextSelections = { ...meta.selections };
             }
@@ -1349,7 +1344,8 @@ useEffect(() => {
     try {
       let badgeResult: Awaited<ReturnType<typeof guardarQuiniela>> | null = null;
       if (firebaseUser) {
-        const pronosticos = MATCHES.map((match) => submission.selections[match.id]) as Selection[];
+        const matches = getMatchesForJourney(activeJourneyNumber);
+        const pronosticos = matches.map((match) => submission.selections[match.id]) as Selection[];
         badgeResult = await guardarQuiniela({
           uid: firebaseUser.uid,
           jornada: activeJourneyNumber,
@@ -1450,7 +1446,7 @@ useEffect(() => {
           const snapshot = await getDoc(quinielaRef);
 
           if (snapshot.exists()) {
-            const meta = resolveSubmissionMetadata(snapshot.data() as QuinielaDocData);
+            const meta = resolveSubmissionMetadata(journeyNumber, snapshot.data() as QuinielaDocData);
             remoteSelections = meta.selections;
             submittedAt = meta.submittedAt ?? null;
           }
@@ -1542,7 +1538,7 @@ useEffect(() => {
   const journeyStats = useMemo<JourneyStat[]>(() =>
     Object.entries(userQuinielasMap)
       .map(([journeyNumber, data]) => {
-        const meta = resolveSubmissionMetadata(data);
+        const meta = resolveSubmissionMetadata(Number(journeyNumber), data);
         return {
           journeyNumber: Number(journeyNumber),
           submitted: meta.submitted,
@@ -1550,6 +1546,7 @@ useEffect(() => {
           points: meta.puntosObtenidos,
         } as JourneyStat;
       })
+      .filter((stat) => VISIBLE_JOURNEY_SET.has(stat.journeyNumber))
       .sort((a, b) => a.journeyNumber - b.journeyNumber),
   [userQuinielasMap]);
 
@@ -1668,6 +1665,9 @@ useEffect(() => {
               showSelectionErrors={showSelectionErrors}
               participantName={participantDisplayName}
               showGrid={showDebugGrid}
+              matches={activeJourneyMatches}
+              seasonLabel={activeJourneyHeader.seasonLabel}
+              journeyTitle={activeJourneyHeader.journeyTitle}
             />
           </div>
         </div>

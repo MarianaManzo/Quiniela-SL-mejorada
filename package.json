@@ -65,6 +65,7 @@
             "migrate:quinielas": "tsx scripts/migrateQuinielasIds.ts",
             "open:journey": "tsx scripts/openJourney.ts",
             "ensure:journeys": "tsx scripts/ensureJourneys.ts",
-            "reset:user-quinielas": "tsx scripts/resetUserQuinielas.ts"
+            "reset:user-quinielas": "tsx scripts/resetUserQuinielas.ts",
+            "prepare:participation": "tsx scripts/prepareForParticipation.ts"
       }
 }

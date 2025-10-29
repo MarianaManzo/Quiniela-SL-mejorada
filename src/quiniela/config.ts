@@ -33,7 +33,7 @@ export type MatchInfo = {
   broadcast: string;
 };
 
-export const MATCHES: MatchInfo[] = [
+const JOURNEY17_MATCHES: MatchInfo[] = [
   {
     id: "chi-nec",
     day: "VIERNES",
@@ -126,10 +126,47 @@ export const MATCHES: MatchInfo[] = [
   },
 ];
 
+const JOURNEY18_MATCHES: MatchInfo[] = JOURNEY17_MATCHES.map((match, index) => ({
+  ...match,
+  id: `j18-match-${index + 1}`,
+}));
+
+export const JOURNEY_MATCHES: Record<number, MatchInfo[]> = {
+  17: JOURNEY17_MATCHES,
+  18: JOURNEY18_MATCHES,
+};
+
+export const DEFAULT_JOURNEY_NUMBER = 17;
+
+export const MATCHES: MatchInfo[] = JOURNEY_MATCHES[DEFAULT_JOURNEY_NUMBER];
+
+export const getMatchesForJourney = (journeyNumber: number): MatchInfo[] =>
+  JOURNEY_MATCHES[journeyNumber] ?? JOURNEY_MATCHES[DEFAULT_JOURNEY_NUMBER];
+
+export const JOURNEY_HEADERS: Record<
+  number,
+  {
+    seasonLabel: string;
+    journeyTitle: string;
+  }
+> = {
+  17: {
+    seasonLabel: "APERTURA 2025",
+    journeyTitle: "JORNADA 17",
+  },
+  18: {
+    seasonLabel: "APERTURA 2025",
+    journeyTitle: "JORNADA 18",
+  },
+};
+
+export const getJourneyHeader = (journeyNumber: number): { seasonLabel: string; journeyTitle: string } =>
+  JOURNEY_HEADERS[journeyNumber] ?? JOURNEY_HEADERS[DEFAULT_JOURNEY_NUMBER];
+
 export type QuinielaSelections = Record<string, Selection | null>;
 
-export const createEmptySelections = (): QuinielaSelections =>
-  MATCHES.reduce<QuinielaSelections>((acc, match) => {
+export const createEmptySelections = (journeyNumber: number = DEFAULT_JOURNEY_NUMBER): QuinielaSelections =>
+  getMatchesForJourney(journeyNumber).reduce<QuinielaSelections>((acc, match) => {
     acc[match.id] = null;
     return acc;
   }, {});

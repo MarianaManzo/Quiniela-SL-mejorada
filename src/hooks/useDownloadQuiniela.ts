@@ -7,6 +7,7 @@ import { isAndroidDevice, isIOSDevice } from '../utils/platform';
 type ExportPayload = {
   selections: QuinielaSelections;
   participantName?: string | null;
+  journey?: number | null;
 };
 
 type UseDownloadQuinielaOptions = {
@@ -144,7 +145,7 @@ const captureSnapshot = async (target: HTMLElement, mimeType: string): Promise<S
   return exportSnapshot(target, { type: mimeType });
 };
 
-const mountExportLayout = async (payload: ExportPayload): Promise<{ node: HTMLElement; cleanup: () => void }> => {
+const mountExportLayout = async (payload: ExportPayload, journey: number): Promise<{ node: HTMLElement; cleanup: () => void }> => {
   if (typeof document === 'undefined') {
     throw new Error('La exportación solo está disponible dentro del navegador.');
   }
@@ -182,6 +183,7 @@ const mountExportLayout = async (payload: ExportPayload): Promise<{ node: HTMLEl
         selections: payload.selections,
         participantName: payload.participantName,
         platform,
+        journey,
       })
     );
 
@@ -207,8 +209,8 @@ const mountExportLayout = async (payload: ExportPayload): Promise<{ node: HTMLEl
   }
 };
 
-const captureDedicatedSnapshot = async (payload: ExportPayload, mimeType: string): Promise<SnapshotResult> => {
-  const { node, cleanup } = await mountExportLayout(payload);
+const captureDedicatedSnapshot = async (payload: ExportPayload, mimeType: string, journey: number): Promise<SnapshotResult> => {
+  const { node, cleanup } = await mountExportLayout(payload, journey);
 
   try {
     return await captureSnapshot(node, mimeType);
@@ -240,18 +242,20 @@ export const useDownloadQuiniela = ({ journey, getExportData }: UseDownloadQuini
     if (!payload || !payload.selections) {
       throw new Error('Todavía no podemos generar la captura de la quiniela.');
     }
+    const resolvedJourney = Number.isFinite(payload.journey ?? null) ? Number(payload.journey) : journey;
     return {
       selections: { ...payload.selections },
       participantName: payload.participantName?.trim() ?? null,
+      journey: resolvedJourney,
     };
-  }, [getExportData]);
+  }, [getExportData, journey]);
 
   const downloadAsJpg = useCallback(async () => {
     try {
       resetError();
       setIsPreparingDownload(true);
       const payload = preparePayload();
-      const { blob } = await captureDedicatedSnapshot(payload, JPEG_MIME_TYPE);
+      const { blob } = await captureDedicatedSnapshot(payload, JPEG_MIME_TYPE, payload.journey ?? journey);
 
       if (typeof window === 'undefined' || typeof document === 'undefined' || !window.URL) {
         throw new Error('La descarga solo está disponible dentro del navegador.');
@@ -293,7 +297,7 @@ export const useDownloadQuiniela = ({ journey, getExportData }: UseDownloadQuini
     } finally {
       setIsPreparingDownload(false);
     }
-  }, [filename, preparePayload, resetError]);
+  }, [filename, preparePayload, resetError, journey]);
 
   const getDataUrl = useCallback(async () => {
     try {
@@ -306,7 +310,7 @@ export const useDownloadQuiniela = ({ journey, getExportData }: UseDownloadQuini
       setIsPreparingShare(true);
 
       const payload = preparePayload();
-      const { blob } = await captureDedicatedSnapshot(payload, JPEG_MIME_TYPE);
+      const { blob } = await captureDedicatedSnapshot(payload, JPEG_MIME_TYPE, payload.journey ?? journey);
       const dataUrl = await blobToDataUrl(blob);
 
       dataUrlRef.current = dataUrl;
@@ -321,7 +325,7 @@ export const useDownloadQuiniela = ({ journey, getExportData }: UseDownloadQuini
     } finally {
       setIsPreparingShare(false);
     }
-  }, [preparePayload, resetError]);
+  }, [preparePayload, resetError, journey]);
 
   return {
     isDownloading: isPreparingDownload || isPreparingShare,

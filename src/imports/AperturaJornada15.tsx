@@ -213,18 +213,30 @@ function Frame33({ assets }: { assets: QuinielaAssetBundle }) {
   );
 }
 
-function JornadaCenter() {
+function JornadaCenter({ seasonLabel, journeyTitle }: { seasonLabel: string; journeyTitle: string }) {
   return (
     <div className="flex items-center justify-center h-full">
       <div className="flex flex-col items-center justify-center leading-[0] text-center">
-        <p className="leading-[normal] text-[24px] font-['Antonio'] font-bold text-white uppercase mb-[4px] tracking-[2px]">APERTURA 2025</p>
-        <p className="leading-[normal] text-[40px] font-['Antonio'] font-bold text-[rgba(63,63,63,1)] uppercase tracking-[1px]">JORNADA 17</p>
+        <p className="leading-[normal] text-[24px] font-['Antonio'] font-bold text-white uppercase mb-[4px] tracking-[2px]">
+          {seasonLabel}
+        </p>
+        <p className="leading-[normal] text-[40px] font-['Antonio'] font-bold text-[rgba(63,63,63,1)] uppercase tracking-[1px]">
+          {journeyTitle}
+        </p>
       </div>
     </div>
   );
 }
 
-function Frame34({ assets }: { assets: QuinielaAssetBundle }) {
+function Frame34({
+  assets,
+  seasonLabel,
+  journeyTitle,
+}: {
+  assets: QuinielaAssetBundle;
+  seasonLabel: string;
+  journeyTitle: string;
+}) {
   return (
     <div className="content-stretch flex h-[130px] items-end relative shrink-0 w-full" data-name="Header">
       <div className="flex flex-row items-center size-full">
@@ -235,7 +247,7 @@ function Frame34({ assets }: { assets: QuinielaAssetBundle }) {
           className="flex-1 flex items-center justify-center pb-[15px]"
           style={{ paddingLeft: '90px' }}
         >
-          <JornadaCenter />
+          <JornadaCenter seasonLabel={seasonLabel} journeyTitle={journeyTitle} />
         </div>
         <div className="box-border content-stretch flex items-center justify-end pb-[15px] pl-0 pr-[32px] pt-0 relative shrink-0 w-[280px]">
           <div className="h-[88px] relative shrink-0 w-[132px] flex items-center justify-center" data-name="somos locales logo">
@@ -253,18 +265,20 @@ function Frame26({
   readOnly,
   showValidation,
   assets,
+  matches,
 }: {
   selections: QuinielaSelections;
   onSelect: (matchId: string, value: Selection) => void;
   readOnly: boolean;
   showValidation: boolean;
   assets: QuinielaAssetBundle;
+  matches: MatchInfo[];
 }) {
   return (
     <div className="relative shrink-0 w-full">
       <div className="size-full">
         <div className="box-border content-stretch flex flex-col gap-[12px] items-start px-[32px] py-[10px] relative w-full">
-          {MATCHES.map((match) => (
+          {matches.map((match) => (
             <MatchRow
               key={match.id}
               match={match}
@@ -342,6 +356,9 @@ function Frame35({
   contentOffsetY = 0,
   variant,
   showGrid = false,
+  matches,
+  seasonLabel,
+  journeyTitle,
 }: {
   selections: QuinielaSelections;
   onSelect: (matchId: string, value: Selection) => void;
@@ -352,6 +369,9 @@ function Frame35({
   contentOffsetY?: number;
   variant: LayoutVariant;
   showGrid?: boolean;
+  matches: MatchInfo[];
+  seasonLabel: string;
+  journeyTitle: string;
 }) {
   return (
     <div
@@ -360,8 +380,15 @@ function Frame35({
       data-layout-variant={variant}
       data-debug-grid={showGrid ? 'true' : undefined}
     >
-      <Frame34 assets={assets} />
-      <Frame26 selections={selections} onSelect={onSelect} readOnly={readOnly} showValidation={showValidation} assets={assets} />
+      <Frame34 assets={assets} seasonLabel={seasonLabel} journeyTitle={journeyTitle} />
+      <Frame26
+        selections={selections}
+        onSelect={onSelect}
+        readOnly={readOnly}
+        showValidation={showValidation}
+        assets={assets}
+        matches={matches}
+      />
       <PieDePagina participantName={participantName} />
     </div>
   );
@@ -377,6 +404,9 @@ interface AperturaJornada15Props {
   contentOffsetY?: number;
   layoutVariant?: LayoutVariant;
   showGrid?: boolean;
+  matches?: MatchInfo[];
+  seasonLabel?: string;
+  journeyTitle?: string;
 }
 
 export default function AperturaJornada15({
@@ -389,6 +419,9 @@ export default function AperturaJornada15({
   contentOffsetY = 0,
   layoutVariant = 'default',
   showGrid = false,
+  matches = MATCHES,
+  seasonLabel = 'APERTURA 2025',
+  journeyTitle = 'JORNADA 17',
 }: AperturaJornada15Props) {
   const [shouldUseInlineAssets, setShouldUseInlineAssets] = useState(() => {
     if (typeof navigator === 'undefined') {
@@ -439,7 +472,7 @@ export default function AperturaJornada15({
   );
 
   return (
-    <div className="relative size-full" data-name="Apertura / JORNADA 17">
+    <div className="relative size-full" data-name={`Apertura / ${journeyTitle}`}>
       <img
         alt="Fondo Liga MX Femenil"
         className="absolute inset-0 max-w-none object-cover pointer-events-none size-full"
@@ -457,6 +490,9 @@ export default function AperturaJornada15({
         contentOffsetY={contentOffsetY}
         variant={layoutVariant}
         showGrid={showGrid}
+        matches={matches}
+        seasonLabel={seasonLabel}
+        journeyTitle={journeyTitle}
       />
     </div>
   );

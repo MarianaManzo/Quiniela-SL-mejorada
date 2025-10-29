@@ -40,7 +40,32 @@ const createEmptyPronosticos = (base: unknown): (Selection | null)[] => {
   return Array.from({ length: 9 }, () => null);
 };
 
-const ensureJourneyDocument = async (targetJourney: number): Promise<void> => {
+const resolveTimestampValue = (value: unknown): admin.firestore.Timestamp | admin.firestore.FieldValue => {
+  if (value instanceof admin.firestore.Timestamp) {
+    return value;
+  }
+
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "toDate" in (value as Record<string, unknown>) &&
+    typeof (value as admin.firestore.Timestamp).toDate === "function"
+  ) {
+    try {
+      const coerced = value as admin.firestore.Timestamp;
+      return coerced;
+    } catch {
+      // ignored, fallback to server timestamp below.
+    }
+  }
+
+  return serverTimestamp();
+};
+
+const ensureJourneyDocument = async (
+  targetJourney: number,
+  defaults: { fechaApertura?: admin.firestore.Timestamp; fechaCierre?: admin.firestore.Timestamp },
+): Promise<void> => {
   const targetDocId = targetJourney.toString();
   const journeyRef = db.collection("jornadas").doc(targetDocId);
   const snapshot = await journeyRef.get();
@@ -50,6 +75,14 @@ const ensureJourneyDocument = async (targetJourney: number): Promise<void> => {
 
   if (!snapshot.exists) {
     updates.resultadosOficiales = [];
+  }
+
+  if (!snapshot.exists || snapshot.get("fechaApertura") == null) {
+    updates.fechaApertura = defaults.fechaApertura ?? serverTimestamp();
+  }
+
+  if (!snapshot.exists || snapshot.get("fechaCierre") == null) {
+    updates.fechaCierre = defaults.fechaCierre ?? serverTimestamp();
   }
 
   await journeyRef.set(updates, { merge: true });
@@ -101,8 +134,19 @@ const cloneJourneyForUsers = async (targetJourney: number): Promise<void> => {
 const main = async (): Promise<void> => {
   console.log(`Usando jornada ${sourceJourney} como plantilla…`);
 
+  const sourceDocId = sourceJourney.toString();
+  const sourceJourneySnap = await db.collection("jornadas").doc(sourceDocId).get();
+  const sourceData = sourceJourneySnap.exists ? sourceJourneySnap.data() ?? {} : {};
+  const defaultFechaApertura = resolveTimestampValue(sourceData?.fechaApertura);
+  const defaultFechaCierre = resolveTimestampValue(sourceData?.fechaCierre);
+
   for (const targetJourney of uniqueTargets) {
-    await ensureJourneyDocument(targetJourney);
+    await ensureJourneyDocument(targetJourney, {
+      fechaApertura:
+        defaultFechaApertura instanceof admin.firestore.Timestamp ? defaultFechaApertura : undefined,
+      fechaCierre:
+        defaultFechaCierre instanceof admin.firestore.Timestamp ? defaultFechaCierre : undefined,
+    });
     await cloneJourneyForUsers(targetJourney);
   }
 

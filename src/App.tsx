@@ -334,6 +334,11 @@ type JourneyCardViewModel = {
   submittedAt: string | null;
 };
 
+const FORCED_PARTICIPATION_JOURNEYS = 18;
+const DEFAULT_FORCED_JOURNEY_META = "Cierra el 31 OCT - 14:59 hrs";
+const PARTICIPATION_OVERRIDE_JOURNEYS = new Set([15, 16, 18]);
+const PARTICIPATION_OVERRIDE_META = "HABILITADO PARA PARTICIPAR";
+
 const resolveSubmissionMetadata = (data: QuinielaDocData | undefined) => {
   if (!data) {
     return {
@@ -442,7 +447,21 @@ export default function App() {
       return [];
     }
 
-    const cards = journeys
+    const applyParticipationOverride = (card: JourneyCardViewModel): JourneyCardViewModel => {
+      if (!PARTICIPATION_OVERRIDE_JOURNEYS.has(card.number)) {
+        return card;
+      }
+
+      return {
+        ...card,
+        statusLabel: 'Habilitado',
+        meta: PARTICIPATION_OVERRIDE_META,
+        tone: 'current',
+        action: 'participate',
+      };
+    };
+
+    let cards = journeys
       .map((journey) => {
         const code = `J${journey.number.toString().padStart(2, '0')}`;
         const submissionMeta = resolveSubmissionMetadata(userQuinielasMap[journey.number]);
@@ -493,11 +512,13 @@ export default function App() {
       })
       .sort((a, b) => b.number - a.number);
 
+    cards = cards.map(applyParticipationOverride);
+
     const upcomingJourneyNumber = CURRENT_JOURNEY + 1;
     const hasUpcoming = cards.some((card) => card.number === upcomingJourneyNumber);
 
     if (!hasUpcoming) {
-      cards.push({
+      cards = cards.concat({
         id: `journey-${upcomingJourneyNumber}`,
         code: `J${upcomingJourneyNumber.toString().padStart(2, '0')}`,
         number: upcomingJourneyNumber,
@@ -508,6 +529,28 @@ export default function App() {
         submittedAt: null,
       });
     }
+
+    if (cards.length < FORCED_PARTICIPATION_JOURNEYS) {
+      const existingNumbers = new Set(cards.map((card) => card.number));
+      for (let journeyNumber = 1; journeyNumber <= FORCED_PARTICIPATION_JOURNEYS; journeyNumber += 1) {
+        if (existingNumbers.has(journeyNumber)) {
+          continue;
+        }
+
+        cards = cards.concat({
+          id: `mock-journey-${journeyNumber}`,
+          code: `J${journeyNumber.toString().padStart(2, '0')}`,
+          number: journeyNumber,
+          statusLabel: PARTICIPATION_OVERRIDE_JOURNEYS.has(journeyNumber) ? 'Habilitado' : 'En curso',
+          meta: PARTICIPATION_OVERRIDE_JOURNEYS.has(journeyNumber) ? PARTICIPATION_OVERRIDE_META : DEFAULT_FORCED_JOURNEY_META,
+          tone: 'current',
+          action: 'participate',
+          submittedAt: null,
+        });
+      }
+    }
+
+    cards = cards.map(applyParticipationOverride);
 
     return cards.sort((a, b) => b.number - a.number);
   }, [journeys, now, userQuinielasMap, storedSubmission]);

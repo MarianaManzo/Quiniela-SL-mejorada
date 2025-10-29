@@ -10,7 +10,7 @@
 .badge-celebration__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(5, 7, 11, 0.82);
+  background: rgba(5, 7, 11, 0.62);
   backdrop-filter: blur(14px);
 }
 

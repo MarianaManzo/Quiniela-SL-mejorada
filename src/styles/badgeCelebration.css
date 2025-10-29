@@ -1,0 +1,175 @@
+.badge-celebration {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
+}
+
+.badge-celebration__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 7, 11, 0.82);
+  backdrop-filter: blur(14px);
+}
+
+.badge-celebration__dialog {
+  position: relative;
+  z-index: 1;
+  width: min(420px, calc(100vw - 32px));
+  border-radius: 28px;
+  padding: 36px 28px 32px;
+  background: radial-gradient(circle at top, rgba(42, 44, 55, 0.95), rgba(17, 18, 24, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 40px 70px -32px rgba(0, 0, 0, 0.82);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  animation: badge-dialog-pop 320ms ease-out;
+}
+
+.badge-celebration__halo {
+  position: absolute;
+  inset: -60% -20%;
+  opacity: 0.35;
+  background: radial-gradient(circle, rgba(246, 212, 51, 0.5), transparent 65%);
+  filter: blur(32px);
+  pointer-events: none;
+}
+
+.badge-celebration__media {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  border-radius: 28px;
+  background: rgba(10, 12, 18, 0.65);
+  display: grid;
+  place-items: center;
+  margin: 0;
+  animation: badge-media-bounce 620ms ease-out;
+  box-shadow: 0 24px 48px -28px rgba(0, 0, 0, 0.9);
+}
+
+.badge-celebration__image {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 24px;
+}
+
+.badge-celebration__icon {
+  font-size: 3.4rem;
+}
+
+.badge-celebration__header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.badge-celebration__rarity {
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(246, 212, 51, 0.12);
+  color: rgba(246, 212, 51, 0.9);
+}
+
+.badge-celebration__title {
+  font-size: 1.6rem;
+  color: #f8fafc;
+  margin: 0;
+}
+
+.badge-celebration__name {
+  font-size: 1rem;
+  color: rgba(248, 250, 252, 0.78);
+  margin: 0;
+}
+
+.badge-celebration__message {
+  text-align: center;
+  font-size: 0.98rem;
+  color: rgba(248, 250, 252, 0.85);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.badge-celebration__button {
+  margin-top: 8px;
+  padding: 12px 26px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f6d433, #f59e0b);
+  color: #111111;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border: none;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+  box-shadow: 0 18px 32px -18px rgba(245, 158, 11, 0.8);
+}
+
+.badge-celebration__button:hover,
+.badge-celebration__button:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 22px 38px -16px rgba(245, 158, 11, 0.9);
+  outline: none;
+}
+
+.badge-celebration__button:active {
+  transform: translateY(0);
+}
+
+.badge-celebration__rarity--legendaria,
+.badge-celebration__rarity--mitica,
+.badge-celebration__rarity--mitica-ultra {
+  background: rgba(246, 212, 51, 0.2);
+  color: #f6d433;
+}
+
+.badge-celebration__rarity--epica {
+  background: rgba(126, 198, 255, 0.18);
+  color: #7ec6ff;
+}
+
+.badge-celebration__rarity--rara {
+  background: rgba(190, 145, 255, 0.18);
+  color: #bf9eff;
+}
+
+.badge-celebration__rarity--comun {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(248, 250, 252, 0.85);
+}
+
+@keyframes badge-dialog-pop {
+  0% {
+    transform: translateY(16px) scale(0.92);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes badge-media-bounce {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}

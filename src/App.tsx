@@ -23,7 +23,8 @@ import { ensureNotificationToken, registerEnvMissingKeyListener, type Notificati
 import { formatParticipantName, sanitizeDisplayName } from './utils/formatParticipantName';
 import type { JourneyStat } from './types/profile';
 import { notifyConstancyBadgeUnlock } from './services/notifications';
-import { CONSTANCY_BADGES_BY_ID } from './data/constancyBadges';
+import { CONSTANCY_BADGES_BY_ID, type ConstancyBadgeDefinition } from './data/constancyBadges';
+import { BadgeCelebrationModal } from './components/BadgeCelebrationModal';
 
 // Definición centralizada de la jornada mostrada
 const CURRENT_JOURNEY = 17;
@@ -471,6 +472,7 @@ export default function App() {
   const [manualSaveDataUrl, setManualSaveDataUrl] = useState<string | null>(null);
   const [journeys, setJourneys] = useState<JourneyRecord[]>([]);
   const [userQuinielasMap, setUserQuinielasMap] = useState<Record<number, QuinielaDocData>>({});
+  const [badgeCelebrations, setBadgeCelebrations] = useState<ConstancyBadgeDefinition[]>([]);
   const initialNotificationPermission =
     (typeof Notification !== 'undefined' ? Notification.permission : 'default') as NotificationStatus;
   const [notificationStatus, setNotificationStatus] = useState<NotificationStatus>(initialNotificationPermission);
@@ -1358,15 +1360,18 @@ useEffect(() => {
       showToast('Pronóstico enviado correctamente.', 'success');
 
       if (badgeResult) {
+        const unlockedDefinitions = badgeResult.unlockedBadges
+          .map((badgeId) => CONSTANCY_BADGES_BY_ID[badgeId])
+          .filter((definition): definition is ConstancyBadgeDefinition => Boolean(definition));
+
         setUser((prev) => {
           if (!prev) {
             return prev;
           }
 
           const nextBadges = { ...prev.constancyBadges };
-          badgeResult.unlockedBadges.forEach((badgeId) => {
-            const definition = CONSTANCY_BADGES_BY_ID[badgeId];
-            nextBadges[badgeId] = {
+          unlockedDefinitions.forEach((definition) => {
+            nextBadges[definition.id] = {
               unlockedAt: new Date().toISOString(),
               streak: badgeResult.streak,
               threshold: definition.threshold,
@@ -1382,10 +1387,10 @@ useEffect(() => {
         });
 
         if (badgeResult.unlockedBadges.length > 0) {
-          badgeResult.unlockedBadges.forEach((badgeId) => {
-            const definition = CONSTANCY_BADGES_BY_ID[badgeId];
+          setBadgeCelebrations((prev) => [...prev, ...unlockedDefinitions]);
+          unlockedDefinitions.forEach((definition) => {
             showToast(definition.notificationMessage, 'success');
-            void notifyConstancyBadgeUnlock(badgeId);
+            void notifyConstancyBadgeUnlock(definition.id);
           });
         }
       }
@@ -1719,6 +1724,9 @@ useEffect(() => {
 
   return (
     <>
+      {badgeCelebrations.length > 0 ? (
+        <BadgeCelebrationModal badge={badgeCelebrations[0]} onClose={dismissBadgeCelebration} />
+      ) : null}
       {toastBanner}
       {manualSaveModal}
       <div className="build-badge" aria-hidden="true">
@@ -1741,3 +1749,6 @@ useEffect(() => {
     </>
   );
 }
+  const dismissBadgeCelebration = useCallback(() => {
+    setBadgeCelebrations((prev) => prev.slice(1));
+  }, []);

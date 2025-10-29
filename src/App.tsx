@@ -473,6 +473,9 @@ export default function App() {
   const [journeys, setJourneys] = useState<JourneyRecord[]>([]);
   const [userQuinielasMap, setUserQuinielasMap] = useState<Record<number, QuinielaDocData>>({});
   const [badgeCelebrations, setBadgeCelebrations] = useState<ConstancyBadgeDefinition[]>([]);
+  const dismissBadgeCelebration = useCallback(() => {
+    setBadgeCelebrations((prev) => prev.slice(1));
+  }, []);
   const initialNotificationPermission =
     (typeof Notification !== 'undefined' ? Notification.permission : 'default') as NotificationStatus;
   const [notificationStatus, setNotificationStatus] = useState<NotificationStatus>(initialNotificationPermission);
@@ -1749,6 +1752,3 @@ useEffect(() => {
     </>
   );
 }
-  const dismissBadgeCelebration = useCallback(() => {
-    setBadgeCelebrations((prev) => prev.slice(1));
-  }, []);

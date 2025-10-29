@@ -53,17 +53,17 @@ export function BadgeCelebrationModal({ badge, onClose }: BadgeCelebrationModalP
 
   return (
     <div className="badge-celebration">
-      <div className="badge-celebration__confetti" aria-hidden="true">
-        {pieces.map(({ key, style }) => (
-          <span
-            key={key}
-            className={`badge-celebration__confetti-piece badge-celebration__confetti-piece--${(key % 5) + 1}`}
-            style={style}
-          />
-        ))}
-      </div>
       <div className="badge-celebration__backdrop" />
       <div className="badge-celebration__dialog" role="dialog" aria-modal="true" aria-labelledby="badge-title">
+        <div className="badge-celebration__confetti" aria-hidden="true">
+          {pieces.map(({ key, style }) => (
+            <span
+              key={key}
+              className={`badge-celebration__confetti-piece badge-celebration__confetti-piece--${(key % 5) + 1}`}
+              style={style}
+            />
+          ))}
+        </div>
         <div className="badge-celebration__halo" aria-hidden="true" />
 
         <figure className="badge-celebration__media">

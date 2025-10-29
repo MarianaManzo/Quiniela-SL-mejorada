@@ -1,5 +1,5 @@
 import { ArrowLeft, Info, Medal, Sparkles } from "lucide-react";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { UserProfile } from "./LoginScreen";
 import type { JourneyStat } from "../types/profile";
 import { obtenerUsuariosParaPodio } from "../services/firestoreService";
@@ -20,6 +20,8 @@ type RankingSnapshot = {
 export function ProfilePage({ user, journeyStats, totalJourneys, onBack }: ProfilePageProps) {
   const [ranking, setRanking] = useState<RankingSnapshot | null>(null);
   const [isRankingLoading, setIsRankingLoading] = useState(true);
+  const [isBadgesTooltipVisible, setIsBadgesTooltipVisible] = useState(false);
+  const badgeInfoButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -84,6 +86,34 @@ export function ProfilePage({ user, journeyStats, totalJourneys, onBack }: Profi
       progressPercent: (streak / 3) * 100,
     };
   }, [journeyStats]);
+
+  useEffect(() => {
+    if (!isBadgesTooltipVisible) {
+      return;
+    }
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!badgeInfoButtonRef.current?.contains(event.target as Node)) {
+        setIsBadgesTooltipVisible(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsBadgesTooltipVisible(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isBadgesTooltipVisible]);
 
   const positionLabel = isRankingLoading
     ? "Calculando…"
@@ -152,9 +182,28 @@ export function ProfilePage({ user, journeyStats, totalJourneys, onBack }: Profi
         <div className="profile-card profile-card--glass profile-stat profile-stat--badges">
           <div className="profile-stat__label profile-stat__label--with-icon">
             <span>Insignias conseguidas</span>
-            <span className="profile-badges__info" title="Cada vez que envías tu quiniela en 3 jornadas consecutivas recibes una nueva insignia.">
+            <button
+              type="button"
+              className="profile-badges__info-button"
+              aria-label="Cómo ganar insignias"
+              aria-expanded={isBadgesTooltipVisible}
+              onClick={() => {
+                setIsBadgesTooltipVisible((prev) => !prev);
+              }}
+              ref={badgeInfoButtonRef}
+            >
               <Info size={16} aria-hidden="true" />
-            </span>
+              <span
+                className="profile-tooltip"
+                role="tooltip"
+                data-visible={isBadgesTooltipVisible ? "true" : undefined}
+              >
+                <strong>¡Colecciona insignias!</strong>
+                <span>
+                  Envía tu quiniela en <em>tres jornadas consecutivas</em> para desbloquear una insignia especial.
+                </span>
+              </span>
+            </button>
           </div>
           {badgeIcons.length > 0 ? (
             <div className="profile-badges">

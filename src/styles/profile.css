@@ -181,15 +181,90 @@
   gap: 8px;
 }
 
-.profile-badges__info {
-  width: 20px;
-  height: 20px;
+.profile-badges__info-button {
+  position: relative;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(13, 15, 21, 0.65);
+  color: rgba(248, 250, 252, 0.78);
   display: grid;
   place-items: center;
-  color: rgba(248, 250, 252, 0.75);
-  cursor: default;
+  cursor: pointer;
+  transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
+}
+
+.profile-badges__info-button:hover,
+.profile-badges__info-button:focus-visible {
+  border-color: rgba(246, 212, 51, 0.5);
+  color: #f6d433;
+  background: rgba(13, 15, 21, 0.9);
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(246, 212, 51, 0.18);
+}
+
+.profile-badges__info-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.profile-tooltip {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: -4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  max-width: min(260px, 68vw);
+  border-radius: 14px;
+  background: rgba(16, 18, 25, 0.95);
+  border: 1px solid rgba(246, 212, 51, 0.28);
+  color: rgba(248, 250, 252, 0.92);
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  box-shadow: 0 24px 40px -28px rgba(0, 0, 0, 0.68);
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 160ms ease;
+  z-index: 30;
+}
+
+.profile-tooltip::after {
+  content: "";
+  position: absolute;
+  top: -10px;
+  right: 16px;
+  width: 18px;
+  height: 18px;
+  transform: rotate(45deg);
+  background: inherit;
+  border-top: inherit;
+  border-left: inherit;
+  border-right: none;
+  border-bottom: none;
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.35));
+}
+
+.profile-tooltip strong {
+  font-size: 14px;
+  color: #f6d433;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.profile-tooltip em {
+  font-style: normal;
+  color: #f0f6ff;
+  font-weight: 600;
+}
+
+.profile-tooltip[data-visible="true"] {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
 }
 
 .profile-badges {

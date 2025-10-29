@@ -23,7 +23,7 @@ import { ensureNotificationToken, registerEnvMissingKeyListener, type Notificati
 import { formatParticipantName, sanitizeDisplayName } from './utils/formatParticipantName';
 import type { JourneyStat } from './types/profile';
 import { notifyConstancyBadgeUnlock } from './services/notifications';
-import { CONSTANCY_BADGES_BY_ID, type ConstancyBadgeDefinition } from './data/constancyBadges';
+import { CONSTANCY_BADGES_BY_ID, CONSTANCY_BADGES, type ConstancyBadgeDefinition } from './data/constancyBadges';
 import { BadgeCelebrationModal } from './components/BadgeCelebrationModal';
 
 // Definición centralizada de la jornada mostrada

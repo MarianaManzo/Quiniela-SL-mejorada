@@ -196,16 +196,15 @@ export function Dashboard({
         id: DEFAULT_SECTION_ID,
         appearance: "regular",
         title: "Torneo Regular",
-      statusTags: [
-        { id: "progress", label: totalLabel, tone: totalTone },
-      ],
-      cards,
+        statusTags: [
+          { id: "progress", label: totalLabel, tone: totalTone },
+        ],
+        cards,
       },
       {
         id: "liguilla",
         appearance: "elimination",
         title: "Liguilla",
-        subtitle: "Disponible pronto",
         statusTags: [{ id: "available", label: "Disponible pronto", tone: "neutral" }],
         cards: [
           {

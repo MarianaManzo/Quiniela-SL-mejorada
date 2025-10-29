@@ -32,7 +32,7 @@
 
 .badge-celebration__confetti {
   position: absolute;
-  inset: 0;
+  inset: -30% -10%;
   overflow: hidden;
   pointer-events: none;
   z-index: 0;
@@ -44,8 +44,8 @@
   height: 16px;
   border-radius: 4px;
   opacity: 0;
-  animation: badge-confetti-ascend 1800ms linear infinite;
-  animation-delay: calc(var(--confetti-index) * 70ms);
+  animation: badge-confetti-fall 1800ms ease-in forwards;
+  animation-delay: calc(var(--confetti-index) * 80ms);
 }
 
 .badge-celebration__confetti-piece--1 { background: linear-gradient(135deg, #f6d433, #f59e0b); }
@@ -78,16 +78,16 @@
 .badge-celebration__confetti-piece:nth-child(8)  { left: 75%; --confetti-index: 7; }
 .badge-celebration__confetti-piece:nth-child(9)  { left: 85%; --confetti-index: 8; }
 .badge-celebration__confetti-piece:nth-child(10) { left: 95%; --confetti-index: 9; }
-.badge-celebration__confetti-piece:nth-child(11) { left: 8%;  --confetti-index: 10; }
-.badge-celebration__confetti-piece:nth-child(12) { left: 18%; --confetti-index: 11; }
-.badge-celebration__confetti-piece:nth-child(13) { left: 28%; --confetti-index: 12; }
-.badge-celebration__confetti-piece:nth-child(14) { left: 38%; --confetti-index: 13; }
-.badge-celebration__confetti-piece:nth-child(15) { left: 48%; --confetti-index: 14; }
-.badge-celebration__confetti-piece:nth-child(16) { left: 58%; --confetti-index: 15; }
-.badge-celebration__confetti-piece:nth-child(17) { left: 68%; --confetti-index: 16; }
-.badge-celebration__confetti-piece:nth-child(18) { left: 78%; --confetti-index: 17; }
-.badge-celebration__confetti-piece:nth-child(19) { left: 88%; --confetti-index: 18; }
-.badge-celebration__confetti-piece:nth-child(20) { left: 2%;  --confetti-index: 19; }
+.badge-celebration__confetti-piece:nth-child(11) { left: 10%; --confetti-index: 10; }
+.badge-celebration__confetti-piece:nth-child(12) { left: 20%; --confetti-index: 11; }
+.badge-celebration__confetti-piece:nth-child(13) { left: 30%; --confetti-index: 12; }
+.badge-celebration__confetti-piece:nth-child(14) { left: 40%; --confetti-index: 13; }
+.badge-celebration__confetti-piece:nth-child(15) { left: 50%; --confetti-index: 14; }
+.badge-celebration__confetti-piece:nth-child(16) { left: 60%; --confetti-index: 15; }
+.badge-celebration__confetti-piece:nth-child(17) { left: 70%; --confetti-index: 16; }
+.badge-celebration__confetti-piece:nth-child(18) { left: 80%; --confetti-index: 17; }
+.badge-celebration__confetti-piece:nth-child(19) { left: 90%; --confetti-index: 18; }
+.badge-celebration__confetti-piece:nth-child(20) { left: 0%;  --confetti-index: 19; }
 .badge-celebration__confetti-piece:nth-child(21) { left: 12%; --confetti-index: 20; }
 .badge-celebration__confetti-piece:nth-child(22) { left: 22%; --confetti-index: 21; }
 .badge-celebration__confetti-piece:nth-child(23) { left: 32%; --confetti-index: 22; }
@@ -241,13 +241,16 @@
   }
 }
 
-@keyframes badge-confetti-ascend {
+@keyframes badge-confetti-fall {
   0% {
-    transform: translate3d(0, 120px, 0) rotate(0deg);
+    transform: translate3d(0, -80px, 0) rotate(0deg);
+    opacity: 0;
+  }
+  20% {
     opacity: 1;
   }
   100% {
-    transform: translate3d(calc((var(--confetti-index) * 2px) - 30px), -220px, 0) rotate(480deg);
+    transform: translate3d(calc(var(--confetti-index) * 1px - 20px), 280px, 0) rotate(360deg);
     opacity: 0;
   }
 }

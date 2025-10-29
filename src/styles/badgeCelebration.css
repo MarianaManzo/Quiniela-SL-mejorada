@@ -139,7 +139,6 @@
   color: rgba(248, 250, 252, 0.85);
   margin: 0;
   line-height: 1.5;
-  font-family: "Albert Sans", var(--default-font-family, ui-sans-serif, system-ui, sans-serif);
 }
 
 .badge-celebration__button {

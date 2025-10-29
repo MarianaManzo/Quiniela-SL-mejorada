@@ -45,7 +45,7 @@ export const CONSTANCY_BADGES: ConstancyBadgeDefinition[] = [
     description: "Primera mini-racha seria. Ya eres parte del vestidor.",
     rarity: "rara",
     icon: "",
-    notificationMessage: "¡Debut soñado! Vas directo a la titularidad.",
+    notificationMessage: "¡5 seguidas. Debut soñado! Vas directo a la titularidad.",
     theme: {
       background: "linear-gradient(135deg, rgba(53,38,78,0.92), rgba(30,20,54,0.9))",
       border: "rgba(190,145,255,0.6)",
@@ -56,13 +56,13 @@ export const CONSTANCY_BADGES: ConstancyBadgeDefinition[] = [
     image: "/Insignias/2-Debutsoñado.png",
   },
   {
-    id: "Nada me detiene",
-    title: "¡Nada me detiene!",
+    id: "ni-la-lluvia-me-frena",
+    title: "Ni la Lluvia Me Frena",
     threshold: 8,
     description: "Participas llueva, truene o haya final del Tri.",
     rarity: "epica",
     icon: "",
-    notificationMessage: "Ni la lluvia ni el VAR te detienen.",
+    notificationMessage: "8 seguidas. Ni la lluvia ni el VAR te detienen.",
     theme: {
       background: "linear-gradient(135deg, rgba(20,39,62,0.95), rgba(12,24,40,0.92))",
       border: "rgba(126,198,255,0.55)",
@@ -79,7 +79,7 @@ export const CONSTANCY_BADGES: ConstancyBadgeDefinition[] = [
     description: "Ya eres una máquina de constancia: puro flow quinielero.",
     rarity: "epica",
     icon: "",
-    notificationMessage: "Sigues el ritmo perfecto, ¡ni fuera de lugar te frena!",
+    notificationMessage: "11 seguidas. Sigues el ritmo perfecto, ¡ni fuera de lugar te frena!",
     theme: {
       background: "linear-gradient(135deg, rgba(70,30,84,0.95), rgba(36,11,44,0.92))",
       border: "rgba(216,173,255,0.55)",
@@ -96,7 +96,7 @@ export const CONSTANCY_BADGES: ConstancyBadgeDefinition[] = [
     description: "Dijiste “ya no falto ni una”, y lo cumpliste (por ahora).",
     rarity: "legendaria",
     icon: "",
-    notificationMessage: "Ya te lo tomaste personal, nadie te saca del once.",
+    notificationMessage: "14 seguidas. Ya te lo tomaste personal, nadie te saca del once.",
     theme: {
       background: "linear-gradient(135deg, rgba(72,42,8,0.95), rgba(47,24,4,0.9))",
       border: "rgba(255,216,137,0.65)",
@@ -113,7 +113,7 @@ export const CONSTANCY_BADGES: ConstancyBadgeDefinition[] = [
     description: "Ni puente, ni vacaciones, ni excusas: sigues firme.",
     rarity: "mitica",
     icon: "",
-    notificationMessage: "Imposible moverte, eres puro compromiso.",
+    notificationMessage: "18 seguidas. Imposible moverte, eres puro compromiso.",
     theme: {
       background: "linear-gradient(135deg, rgba(24,36,78,0.96), rgba(13,24,56,0.92))",
       border: "rgba(160,188,255,0.55)",
@@ -124,13 +124,13 @@ export const CONSTANCY_BADGES: ConstancyBadgeDefinition[] = [
     image: "/Insignias/6-Dequinomemueven.png",
   },
   {
-    id: "MVP",
+    id: "goat-local",
     title: "MVP",
     threshold: 21,
     description: "No eres el mejor del mundo, pero sí del rumbo.",
     rarity: "mitica-ultra",
     icon: "",
-    notificationMessage: "MVP del rumbo, el barrio canta tu nombre.",
+    notificationMessage: "21 seguidas. MVP del rumbo, el barrio canta tu nombre.",
     theme: {
       background: "linear-gradient(135deg, rgba(94,72,12,0.98), rgba(58,42,6,0.95))",
       border: "rgba(255,232,170,0.75)",

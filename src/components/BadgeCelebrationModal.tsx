@@ -33,6 +33,11 @@ export function BadgeCelebrationModal({ badge, onClose }: BadgeCelebrationModalP
     <div className="badge-celebration">
       <div className="badge-celebration__backdrop" />
       <div className="badge-celebration__dialog" role="dialog" aria-modal="true" aria-labelledby="badge-title">
+        <div className="badge-celebration__confetti" aria-hidden="true">
+          {Array.from({ length: 28 }).map((_, index) => (
+            <span key={index} className={`badge-celebration__confetti-piece badge-celebration__confetti-piece--${(index % 5) + 1}`} />
+          ))}
+        </div>
         <div className="badge-celebration__halo" aria-hidden="true" />
 
         <figure className="badge-celebration__media">

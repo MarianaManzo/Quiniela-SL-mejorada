@@ -206,7 +206,7 @@ export function Dashboard({
         appearance: "elimination",
         title: "Liguilla",
         subtitle: "Disponible pronto",
-        statusTags: [{ id: "available", label: "Llaves por anunciar", tone: "neutral" }],
+        statusTags: [{ id: "available", label: "Disponible pronto", tone: "neutral" }],
         cards: [
           {
             id: "liguilla-cuartos",

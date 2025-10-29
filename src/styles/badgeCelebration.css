@@ -47,7 +47,7 @@
   border-radius: 4px;
   opacity: 0;
   animation: badge-confetti-fall var(--confetti-duration, 4200ms) linear infinite;
-  animation-delay: var(--confetti-delay, 0ms);
+  animation-delay: calc(var(--confetti-delay, 0ms) * -1);
 }
 
 .badge-celebration__confetti-piece--1 { background: linear-gradient(135deg, #f6d433, #f59e0b); }

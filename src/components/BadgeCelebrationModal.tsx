@@ -11,12 +11,12 @@ export function BadgeCelebrationModal({ badge, onClose }: BadgeCelebrationModalP
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const pieces = useMemo(
     () =>
-      Array.from({ length: 120 }).map((_, index) => {
+      Array.from({ length: 160 }).map((_, index) => {
         const left = Math.random() * 100;
-        const start = -60 - Math.random() * 160;
-        const drift = (Math.random() - 0.5) * 60;
-        const delay = Math.random() * 1200;
-        const duration = 3600 + Math.random() * 1800;
+        const start = -80 - Math.random() * 240;
+        const drift = (Math.random() - 0.5) * 80;
+        const duration = 3600 + Math.random() * 2400;
+        const delay = Math.random() * duration;
 
         return {
           key: index,

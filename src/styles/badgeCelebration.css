@@ -10,8 +10,9 @@
 .badge-celebration__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(5, 7, 11, 0.82);
+  background: rgba(5, 7, 11, 0.62);
   backdrop-filter: blur(14px);
+  z-index: 1;
 }
 
 .badge-celebration__dialog {
@@ -35,7 +36,7 @@
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  z-index: 1;
+  z-index: 0;
 }
 
 .badge-celebration__confetti-piece {

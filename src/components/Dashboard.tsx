@@ -17,7 +17,7 @@ import "../styles/dashboard.css";
 
 interface DashboardProps {
   user: UserProfile;
-  onEnterQuiniela: () => void;
+  onEnterQuiniela: (journeyNumber: number) => void;
   onViewQuiniela?: (journeyCode: string) => void;
   onViewPodium?: () => void;
   journeyCards: DashboardJourneyCard[];
@@ -55,6 +55,7 @@ interface JourneyCard {
   statusLabel: string;
   meta: string;
   tone: JourneyTone;
+  journeyNumber?: number;
   ctaLabel?: string;
   ctaMobileLabel?: string;
   action?: JourneyCardAction;
@@ -179,6 +180,7 @@ export function Dashboard({
       statusLabel: card.statusLabel,
       meta: card.meta,
       tone: card.tone,
+      journeyNumber: card.number,
       ctaLabel: card.action === "participate" ? "Participar" : undefined,
       ctaMobileLabel: card.action === "participate" ? "Participa" : undefined,
       action: card.action,
@@ -243,7 +245,12 @@ export function Dashboard({
       return;
     }
 
-    onEnterQuiniela();
+    const targetJourneyNumber = activeJourneyCard?.number ?? orderedJourneyCards[0]?.number ?? null;
+    if (targetJourneyNumber === null) {
+      return;
+    }
+
+    onEnterQuiniela(targetJourneyNumber);
   };
 
   return (
@@ -380,7 +387,11 @@ export function Dashboard({
                               type="button"
                               className="journey-card__cta"
                               data-tone={card.tone}
-                              onClick={onEnterQuiniela}
+                              onClick={() => {
+                                if (card.journeyNumber !== undefined) {
+                                  onEnterQuiniela(card.journeyNumber);
+                                }
+                              }}
                               style={{ borderRadius: "18px" }}
                             >
                               <span className="journey-card__cta-label journey-card__cta-label--desktop">

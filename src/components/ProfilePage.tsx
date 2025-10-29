@@ -270,7 +270,7 @@ export function ProfilePage({ user, journeyStats, totalJourneys, onBack }: Profi
               <span className="profile-badge-progress__label">{nextBadgeLabel}</span>
             </div>
           </div>
-          <div className="profile-badge-grid">
+          <div className="profile-badge-grid" role="list">
             {badgeStates.map(({ badge, unlocked, unlockedAt, progress, remaining }) => {
               const styles: CSSProperties = {
                 "--badge-card-bg": badge.theme.background,
@@ -283,7 +283,7 @@ export function ProfilePage({ user, journeyStats, totalJourneys, onBack }: Profi
               const imageSrc = unlocked && badge.image ? badge.image : null;
 
               return (
-                <article
+                <article role="listitem"
                   key={badge.id}
                   className={`profile-badge-card${unlocked ? " profile-badge-card--unlocked" : " profile-badge-card--locked"}`}
                   style={styles}

@@ -396,10 +396,16 @@
   width: 100%;
   gap: 18px;
   margin-top: 24px;
-  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  grid-template-columns: repeat(3, minmax(260px, 1fr));
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
+  .profile-badge-grid {
+    grid-template-columns: repeat(2, minmax(240px, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
   .profile-badge-grid {
     grid-template-columns: 1fr;
   }

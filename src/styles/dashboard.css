@@ -400,6 +400,13 @@
   flex-shrink: 0;
 }
 
+.hero-action__buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
 .hero-actions .btn[disabled],
 .hero-actions .btn[aria-disabled="true"] {
   cursor: not-allowed;
@@ -408,7 +415,22 @@
 }
 
 .hero-action__button {
-  margin-left: auto;
+  margin-left: 0;
+}
+
+.hero-action__preview {
+  background: rgba(29, 31, 41, 0.82);
+  color: rgba(248, 250, 252, 0.9);
+  border: 1px solid rgba(248, 250, 252, 0.18);
+  padding: 14px 22px;
+}
+
+.hero-action__preview:hover,
+.hero-action__preview:focus-visible {
+  background: rgba(43, 45, 56, 0.92);
+  color: #f6d433;
+  border-color: rgba(246, 212, 51, 0.42);
+  outline: none;
 }
 
 .btn {

@@ -28,6 +28,7 @@ interface DashboardProps {
   journeySubmittedAt?: string | null;
   previousJourneyClosedLabel?: string | null;
   previousJourneySubmittedAt?: string | null;
+  onPreviewBadge?: () => void;
 }
 
 interface TournamentSectionState {
@@ -91,6 +92,7 @@ export function Dashboard({
   journeySubmittedAt,
   previousJourneyClosedLabel: _previousJourneyClosedLabel,
   previousJourneySubmittedAt: _previousJourneySubmittedAt,
+  onPreviewBadge,
 }: DashboardProps) {
   const [sectionState, setSectionState] = useState<TournamentSectionState[]>(SECTION_DEFAULT_STATE);
   const [topRanking, setTopRanking] = useState(
@@ -279,17 +281,24 @@ export function Dashboard({
                 <span>{heroClosedMessage}</span>
               </div>
             ) : null}
-            <button
-              type="button"
-              className="btn btn-primary hero-action__button"
-              onClick={handleHeroAction}
-              disabled={heroActionDisabled}
-              aria-disabled={heroActionDisabled}
-            >
-              <span className="btn__label btn__label--desktop">{heroButtonLabel}</span>
-              <span className="btn__label btn__label--mobile">{heroButtonLabel}</span>
-              {!heroActionDisabled ? <ArrowRight size={18} /> : null}
-            </button>
+            <div className="hero-action__buttons">
+              <button
+                type="button"
+                className="btn btn-primary hero-action__button"
+                onClick={handleHeroAction}
+                disabled={heroActionDisabled}
+                aria-disabled={heroActionDisabled}
+              >
+                <span className="btn__label btn__label--desktop">{heroButtonLabel}</span>
+                <span className="btn__label btn__label--mobile">{heroButtonLabel}</span>
+                {!heroActionDisabled ? <ArrowRight size={18} /> : null}
+              </button>
+              {onPreviewBadge ? (
+                <button type="button" className="btn btn-secondary hero-action__preview" onClick={onPreviewBadge}>
+                  Vista previa insignia
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
 

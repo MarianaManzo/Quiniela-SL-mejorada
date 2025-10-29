@@ -476,6 +476,13 @@ export default function App() {
   const dismissBadgeCelebration = useCallback(() => {
     setBadgeCelebrations((prev) => prev.slice(1));
   }, []);
+  const handlePreviewBadge = useCallback(() => {
+    const sampleBadge = CONSTANCY_BADGES[CONSTANCY_BADGES.length - 1] ?? CONSTANCY_BADGES[0];
+    if (!sampleBadge) {
+      return;
+    }
+    setBadgeCelebrations((prev) => [...prev, sampleBadge]);
+  }, []);
   const initialNotificationPermission =
     (typeof Notification !== 'undefined' ? Notification.permission : 'default') as NotificationStatus;
   const [notificationStatus, setNotificationStatus] = useState<NotificationStatus>(initialNotificationPermission);
@@ -1709,6 +1716,7 @@ useEffect(() => {
       journeySubmittedAt={currentJourneySubmittedAt}
       previousJourneyClosedLabel={previousJourneyClosedLabel}
       previousJourneySubmittedAt={previousJourneySubmittedAt}
+      onPreviewBadge={handlePreviewBadge}
     />
   );
 

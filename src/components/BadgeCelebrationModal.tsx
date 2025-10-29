@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, type CSSProperties } from "react";
 import type { ConstancyBadgeDefinition } from "../data/constancyBadges";
 import "../styles/badgeCelebration.css";
 
@@ -9,6 +9,28 @@ interface BadgeCelebrationModalProps {
 
 export function BadgeCelebrationModal({ badge, onClose }: BadgeCelebrationModalProps) {
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const pieces = useMemo(
+    () =>
+      Array.from({ length: 80 }).map((_, index) => {
+        const left = Math.random() * 22 + (index % 5);
+        const height = 560 + Math.random() * 420;
+        const drift = 160 + Math.random() * 480;
+        const delay = (index % 12) * 90;
+        const duration = 1400 + (index % 8) * 120;
+
+        return {
+          key: index,
+          style: {
+            "--confetti-left": `${left}%`,
+            "--confetti-height": `${height}px`,
+            "--confetti-drift": `${drift}px`,
+            "--confetti-delay": `${delay}ms`,
+            "--confetti-duration": `${duration}ms`,
+          } as CSSProperties,
+        };
+      }),
+    [],
+  );
 
   useEffect(() => {
     const previousActive = document.activeElement as HTMLElement | null;
@@ -34,8 +56,13 @@ export function BadgeCelebrationModal({ badge, onClose }: BadgeCelebrationModalP
       <div className="badge-celebration__backdrop" />
       <div className="badge-celebration__dialog" role="dialog" aria-modal="true" aria-labelledby="badge-title">
         <div className="badge-celebration__confetti" aria-hidden="true">
-          {Array.from({ length: 28 }).map((_, index) => (
-            <span key={index} className={`badge-celebration__confetti-piece badge-celebration__confetti-piece--${(index % 5) + 1}`} />
+          <div className="badge-celebration__launcher" />
+          {pieces.map(({ key, style }) => (
+            <span
+              key={key}
+              className={`badge-celebration__confetti-piece badge-celebration__confetti-piece--${(key % 5) + 1}`}
+              style={style}
+            />
           ))}
         </div>
         <div className="badge-celebration__halo" aria-hidden="true" />

@@ -1,7 +1,54 @@
-import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc, updateDoc, type Timestamp } from "firebase/firestore";
 import type { User } from "firebase/auth";
 import { firebaseFirestore } from "../firebase";
 import type { Selection } from "../quiniela/config";
+import { CONSTANCY_BADGES } from "../data/constancyBadges";
+import type { ConstancyBadgeId, ConstancyBadgeStateMap } from "../types/badges";
+
+const BADGE_IDS = CONSTANCY_BADGES.map((badge) => badge.id);
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const timestampToIso = (value: unknown): string | null => {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (isRecord(value) && typeof (value as Timestamp).toDate === "function") {
+    try {
+      return (value as Timestamp).toDate().toISOString();
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
+
+const parseConstancyBadges = (raw: unknown): ConstancyBadgeStateMap => {
+  if (!isRecord(raw)) {
+    return {};
+  }
+
+  const result: ConstancyBadgeStateMap = {};
+
+  Object.entries(raw).forEach(([key, value]) => {
+    if (!BADGE_IDS.includes(key as ConstancyBadgeId) || !isRecord(value)) {
+      return;
+    }
+
+    const streakRaw = value.streak;
+    const thresholdRaw = value.threshold;
+    const unlockedAtRaw = value.unlockedAt;
+
+    result[key as ConstancyBadgeId] = {
+      streak: typeof streakRaw === "number" ? streakRaw : 0,
+      threshold: typeof thresholdRaw === "number" ? thresholdRaw : 0,
+      unlockedAt: timestampToIso(unlockedAtRaw),
+    };
+  });
+
+  return result;
+};
 
 export type FirestoreUserProfile = {
   nombreApellido: string;
@@ -12,6 +59,9 @@ export type FirestoreUserProfile = {
   pais?: string;
   codigoPais?: string;
   fechaNacimiento?: string;
+  constancyStreak?: number;
+  constancyLastJourney?: number;
+  constancyBadges?: ConstancyBadgeStateMap;
 };
 
 export type PodiumUser = {
@@ -29,6 +79,12 @@ type GuardarQuinielaPayload = {
   puntosObtenidos?: number;
   estadoQuiniela?: "abierta" | "cerrada";
   quinielaEnviada?: boolean;
+};
+
+export type GuardarQuinielaResult = {
+  streak: number;
+  lastJourney: number;
+  unlockedBadges: ConstancyBadgeId[];
 };
 
 type RegistrarTokenDispositivoPayload = {
@@ -53,34 +109,43 @@ export const crearOActualizarUsuario = async (user: User): Promise<FirestoreUser
     (typeof existingData?.nombreApellido === "string" ? existingData.nombreApellido : "") ||
     (user.email ? user.email.split("@")[0] : "");
 
-  const basePayload: FirestoreUserProfile = {
+  const constancyStreak = typeof existingData?.constancyStreak === "number" ? existingData.constancyStreak : 0;
+  const constancyLastJourney =
+    typeof existingData?.constancyLastJourney === "number" ? existingData.constancyLastJourney : 0;
+  const constancyBadgesRaw = isRecord(existingData?.constancyBadges) ? existingData.constancyBadges : {};
+
+  const profilePayload: FirestoreUserProfile = {
     nombreApellido,
     email: user.email ?? existingData?.email ?? "",
     rol: existingData?.rol ?? "usuario",
     puntos: typeof existingData?.puntos === "number" ? existingData.puntos : 0,
     ultimaJornada: typeof existingData?.ultimaJornada === "number" ? existingData.ultimaJornada : 0,
+    constancyStreak,
+    constancyLastJourney,
+    constancyBadges: parseConstancyBadges(constancyBadgesRaw),
   };
 
   if (typeof existingData?.pais === "string") {
-    basePayload.pais = existingData.pais;
+    profilePayload.pais = existingData.pais;
   }
   if (typeof existingData?.codigoPais === "string") {
-    basePayload.codigoPais = existingData.codigoPais;
+    profilePayload.codigoPais = existingData.codigoPais;
   }
   if (typeof existingData?.fechaNacimiento === "string") {
-    basePayload.fechaNacimiento = existingData.fechaNacimiento;
+    profilePayload.fechaNacimiento = existingData.fechaNacimiento;
   }
 
   await setDoc(
     userRef,
     {
-      ...basePayload,
+      ...profilePayload,
+      constancyBadges: constancyBadgesRaw,
       fechaCreacion: existingData?.fechaCreacion ?? serverTimestamp(),
       fechaActualizacion: serverTimestamp(),
     },
     { merge: true },
   );
-  return basePayload;
+  return profilePayload;
 };
 
 export const actualizarPerfilUsuario = async (
@@ -117,7 +182,7 @@ export const guardarQuiniela = async ({
   puntosObtenidos = 0,
   estadoQuiniela = "abierta",
   quinielaEnviada,
-}: GuardarQuinielaPayload): Promise<void> => {
+}: GuardarQuinielaPayload): Promise<GuardarQuinielaResult> => {
   if (pronosticos.length !== 9) {
     throw new Error("La quiniela debe incluir 9 pronósticos.");
   }
@@ -135,7 +200,69 @@ export const guardarQuiniela = async ({
   });
 
   const userRef = doc(firebaseFirestore, "Usuarios", uid);
-  await updateDoc(userRef, { ultimaJornada: jornada });
+  const userDataSnapshot = await getDoc(userRef);
+  const userData = userDataSnapshot.exists() ? userDataSnapshot.data() : null;
+
+  const previousUltimaJornada =
+    typeof userData?.ultimaJornada === "number" ? userData.ultimaJornada : 0;
+  const previousStreak = typeof userData?.constancyStreak === "number" ? userData.constancyStreak : 0;
+  const previousLastJourney =
+    typeof userData?.constancyLastJourney === "number" ? userData.constancyLastJourney : 0;
+  const constancyBadgesRaw = isRecord(userData?.constancyBadges) ? userData.constancyBadges : {};
+  const alreadyUnlockedIds = new Set(
+    Object.keys(constancyBadgesRaw).filter((key): key is ConstancyBadgeId =>
+      BADGE_IDS.includes(key as ConstancyBadgeId),
+    ),
+  );
+
+  let updatedStreak = previousStreak;
+  let updatedLastJourney = previousLastJourney;
+  let shouldUpdateStreak = false;
+
+  if (previousLastJourney <= 0) {
+    shouldUpdateStreak = true;
+    updatedStreak = 1;
+    updatedLastJourney = jornada;
+  } else if (jornada > previousLastJourney) {
+    shouldUpdateStreak = true;
+    updatedStreak = jornada === previousLastJourney + 1 ? previousStreak + 1 : 1;
+    updatedLastJourney = jornada;
+  } else if (jornada === previousLastJourney) {
+    updatedStreak = previousStreak;
+    updatedLastJourney = previousLastJourney;
+  }
+
+  const unlockedBadges: ConstancyBadgeId[] = [];
+  const updates: Record<string, unknown> = {
+    ultimaJornada: Math.max(previousUltimaJornada, jornada),
+    fechaActualizacion: serverTimestamp(),
+  };
+
+  if (shouldUpdateStreak) {
+    updates.constancyStreak = updatedStreak;
+    updates.constancyLastJourney = updatedLastJourney;
+  }
+
+  if (shouldUpdateStreak || !alreadyUnlockedIds.size) {
+    CONSTANCY_BADGES.forEach((badge) => {
+      if (updatedStreak >= badge.threshold && !alreadyUnlockedIds.has(badge.id)) {
+        unlockedBadges.push(badge.id);
+        updates[`constancyBadges.${badge.id}`] = {
+          unlockedAt: serverTimestamp(),
+          streak: updatedStreak,
+          threshold: badge.threshold,
+        };
+      }
+    });
+  }
+
+  await updateDoc(userRef, updates);
+
+  return {
+    streak: shouldUpdateStreak ? updatedStreak : previousStreak,
+    lastJourney: shouldUpdateStreak ? updatedLastJourney : previousLastJourney,
+    unlockedBadges,
+  };
 };
 
 export const registrarTokenDispositivo = async ({

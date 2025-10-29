@@ -22,6 +22,8 @@ import { crearOActualizarUsuario, guardarQuiniela, registrarTokenDispositivo } f
 import { ensureNotificationToken, registerEnvMissingKeyListener, type NotificationStatus } from './services/messaging';
 import { formatParticipantName, sanitizeDisplayName } from './utils/formatParticipantName';
 import type { JourneyStat } from './types/profile';
+import { notifyConstancyBadgeUnlock } from './services/notifications';
+import { CONSTANCY_BADGES_BY_ID } from './data/constancyBadges';
 
 // Definición centralizada de la jornada mostrada
 const CURRENT_JOURNEY = 17;
@@ -76,6 +78,9 @@ const createQuickAccessProfile = (): UserProfile => {
     countryCode: DEFAULT_COUNTRY_CODE,
     age: null,
     birthdate: null,
+    constancyStreak: 0,
+    constancyLastJourney: 0,
+    constancyBadges: {},
   };
 };
 
@@ -809,6 +814,9 @@ useEffect(() => {
           countryCode: DEFAULT_COUNTRY_CODE,
           age: null,
           birthdate: null,
+          constancyStreak: 0,
+          constancyLastJourney: 0,
+          constancyBadges: {},
         });
 
         void crearOActualizarUsuario(authUser)
@@ -828,6 +836,11 @@ useEffect(() => {
             const resolvedCountryCode = normalizeCountryCode(profileData.codigoPais);
             const resolvedBirthdate = profileData.fechaNacimiento ?? null;
             const resolvedAge = calculateAgeFromBirthdate(resolvedBirthdate);
+            const resolvedConstancyStreak =
+              typeof profileData.constancyStreak === 'number' ? profileData.constancyStreak : 0;
+            const resolvedConstancyLastJourney =
+              typeof profileData.constancyLastJourney === 'number' ? profileData.constancyLastJourney : 0;
+            const resolvedConstancyBadges = profileData.constancyBadges ?? {};
 
             setUser({
               name: resolvedName,
@@ -837,6 +850,9 @@ useEffect(() => {
               countryCode: resolvedCountryCode,
               age: resolvedAge,
               birthdate: resolvedBirthdate,
+              constancyStreak: resolvedConstancyStreak,
+              constancyLastJourney: resolvedConstancyLastJourney,
+              constancyBadges: resolvedConstancyBadges,
             });
           })
           .catch((error) => {
@@ -1143,9 +1159,10 @@ useEffect(() => {
     };
 
     try {
+      let badgeResult: Awaited<ReturnType<typeof guardarQuiniela>> | null = null;
       if (firebaseUser) {
         const pronosticos = MATCHES.map((match) => submission.selections[match.id]) as Selection[];
-        await guardarQuiniela({
+        badgeResult = await guardarQuiniela({
           uid: firebaseUser.uid,
           jornada: CURRENT_JOURNEY,
           pronosticos,
@@ -1159,6 +1176,39 @@ useEffect(() => {
       hideSubmitTooltip();
       setIsReadOnlyView(true);
       showToast('Pronóstico enviado correctamente.', 'success');
+
+      if (badgeResult) {
+        setUser((prev) => {
+          if (!prev) {
+            return prev;
+          }
+
+          const nextBadges = { ...prev.constancyBadges };
+          badgeResult.unlockedBadges.forEach((badgeId) => {
+            const definition = CONSTANCY_BADGES_BY_ID[badgeId];
+            nextBadges[badgeId] = {
+              unlockedAt: new Date().toISOString(),
+              streak: badgeResult.streak,
+              threshold: definition.threshold,
+            };
+          });
+
+          return {
+            ...prev,
+            constancyStreak: badgeResult.streak,
+            constancyLastJourney: badgeResult.lastJourney,
+            constancyBadges: nextBadges,
+          };
+        });
+
+        if (badgeResult.unlockedBadges.length > 0) {
+          badgeResult.unlockedBadges.forEach((badgeId) => {
+            const definition = CONSTANCY_BADGES_BY_ID[badgeId];
+            showToast(definition.notificationMessage, 'success');
+            void notifyConstancyBadgeUnlock(badgeId);
+          });
+        }
+      }
     } catch (error) {
       console.error('Error al guardar la quiniela', error);
       showToast('No se pudo guardar tu quiniela. Intenta de nuevo.', 'error');

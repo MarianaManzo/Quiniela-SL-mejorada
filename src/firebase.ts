@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics, isSupported, type Analytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getFunctions } from "firebase/functions";
 import { getFirestore } from "firebase/firestore";
 
 export const firebaseConfig = {
@@ -18,6 +19,7 @@ export const firebaseAuth = getAuth(firebaseApp);
 firebaseAuth.useDeviceLanguage();
 export const googleAuthProvider = new GoogleAuthProvider();
 export const firebaseFirestore = getFirestore(firebaseApp);
+export const firebaseFunctions = getFunctions(firebaseApp);
 
 let analyticsInstance: Analytics | null = null;
 

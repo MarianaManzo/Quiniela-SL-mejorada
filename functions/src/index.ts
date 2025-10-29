@@ -1,9 +1,15 @@
 import {onRequest} from "firebase-functions/v1/https";
 import {logger} from "firebase-functions";
+import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {initializeApp} from "firebase-admin/app";
 import {FieldValue, getFirestore} from "firebase-admin/firestore";
+import {getMessaging} from "firebase-admin/messaging";
+import {CONSTANCY_BADGES_BY_ID} from "./badges";
+import type {ConstancyBadgeId} from "./badges";
 
 initializeApp();
+
+const WEB_APP_URL = process.env.WEB_APP_URL ?? "https://somoslocalesfmx.com";
 
 /**
  * HTTP endpoint para calcular puntos de una quiniela puntual.
@@ -196,4 +202,86 @@ export const cerrarQuinielasManualmente = onRequest(async (req, res) => {
     logger.error("Error al cerrar quinielas manualmente", error);
     res.status(500).send("Error interno");
   }
+});
+
+export const notificarInsigniaConstancia = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  const badgeIdRaw = request.data?.badgeId;
+
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Debes iniciar sesión para enviar notificaciones.");
+  }
+
+  if (typeof badgeIdRaw !== "string") {
+    throw new HttpsError("invalid-argument", "Se requiere un identificador de insignia válido.");
+  }
+
+  const badgeId = badgeIdRaw as ConstancyBadgeId;
+  const badge = CONSTANCY_BADGES_BY_ID[badgeId];
+  if (!badge) {
+    throw new HttpsError("invalid-argument", "Insignia desconocida.");
+  }
+
+  const db = getFirestore();
+  const devicesSnapshot = await db.collection(`Usuarios/${uid}/devices`).get();
+
+  if (devicesSnapshot.empty) {
+    logger.info("Sin dispositivos para notificar insignia", {uid, badgeId: badge.id});
+    return {delivered: 0};
+  }
+
+  const tokens = devicesSnapshot.docs.map((docSnap) => docSnap.id).filter(Boolean);
+
+  if (tokens.length === 0) {
+    return {delivered: 0};
+  }
+
+  const message = {
+    tokens,
+    notification: {
+      title: `${badge.title} desbloqueada`,
+      body: badge.notificationMessage,
+    },
+    data: {
+      url: `${WEB_APP_URL}/profile`,
+      badgeId,
+      badgeTitle: badge.title,
+    },
+    webpush: {
+      headers: {
+        Urgency: "high",
+      },
+      notification: {
+        icon: `${WEB_APP_URL}/icons/icon-192.png`,
+        badge: `${WEB_APP_URL}/icons/notification-small.png`,
+      },
+      fcmOptions: {
+        link: `${WEB_APP_URL}/profile`,
+      },
+    },
+  } as const;
+
+  const response = await getMessaging().sendEachForMulticast(message);
+
+  const invalidTokens: string[] = [];
+  response.responses.forEach((single, index) => {
+    if (!single.success && single.error?.code === "messaging/registration-token-not-registered") {
+      invalidTokens.push(tokens[index]);
+    }
+  });
+
+  if (invalidTokens.length > 0) {
+    await Promise.all(
+      invalidTokens.map((token) => db.doc(`Usuarios/${uid}/devices/${token}`).delete().catch(() => undefined)),
+    );
+  }
+
+  logger.info("Notificación de insignia enviada", {
+    uid,
+    badgeId,
+    delivered: response.successCount,
+    failed: response.failureCount,
+  });
+
+  return {delivered: response.successCount};
 });

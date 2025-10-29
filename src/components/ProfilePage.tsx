@@ -1,9 +1,11 @@
-import { ArrowLeft, Info, Medal, Sparkles } from "lucide-react";
+import { ArrowLeft, Info } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { UserProfile } from "./LoginScreen";
 import type { JourneyStat } from "../types/profile";
 import { obtenerUsuariosParaPodio } from "../services/firestoreService";
 import "../styles/profile.css";
+import { CONSTANCY_BADGES } from "../data/constancyBadges";
+import type { ConstancyBadgeDefinition } from "../data/constancyBadges";
 
 interface ProfilePageProps {
   user: UserProfile;
@@ -17,11 +19,20 @@ type RankingSnapshot = {
   points: number;
 };
 
+const RARITY_LABELS: Record<ConstancyBadgeDefinition["rarity"], string> = {
+  comun: "Común",
+  rara: "Rara",
+  epica: "Épica",
+  legendaria: "Legendaria",
+  mitica: "Mítica",
+  "mitica-ultra": "Mítica Ultra",
+};
+
 export function ProfilePage({ user, journeyStats, totalJourneys, onBack }: ProfilePageProps) {
   const [ranking, setRanking] = useState<RankingSnapshot | null>(null);
   const [isRankingLoading, setIsRankingLoading] = useState(true);
   const [isBadgesTooltipVisible, setIsBadgesTooltipVisible] = useState(false);
-  const badgeInfoButtonRef = useRef<HTMLButtonElement | null>(null);
+  const badgeInfoContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -63,29 +74,41 @@ export function ProfilePage({ user, journeyStats, totalJourneys, onBack }: Profi
   const averageHits = completedJourneys > 0 ? totalPoints / completedJourneys : 0;
   const completionProgress = totalJourneys > 0 ? Math.min(completedJourneys / totalJourneys, 1) : 0;
 
-  const badgeInfo = useMemo(() => {
-    let streak = 0;
-    let badges = 0;
-    const ordered = [...journeyStats].sort((a, b) => a.journeyNumber - b.journeyNumber);
+  const constancyBadges = user.constancyBadges ?? {};
+  const constancyStreak = user.constancyStreak ?? 0;
 
-    ordered.forEach((stat) => {
-      if (stat.submitted) {
-        streak += 1;
-        if (streak === 3) {
-          badges += 1;
-          streak = 0;
-        }
-      } else {
-        streak = 0;
-      }
-    });
+  const badgeStates = useMemo(
+    () =>
+      CONSTANCY_BADGES.map((badge) => {
+        const badgeState = constancyBadges[badge.id];
+        const unlocked = Boolean(badgeState);
+        const progress = unlocked ? 1 : Math.min(constancyStreak / badge.threshold, 1);
+        const remaining = Math.max(badge.threshold - constancyStreak, 0);
 
-    return {
-      badges,
-      streak,
-      progressPercent: (streak / 3) * 100,
-    };
-  }, [journeyStats]);
+        return {
+          badge,
+          unlocked,
+          unlockedAt: badgeState?.unlockedAt ?? null,
+          progress,
+          remaining,
+        };
+      }),
+    [constancyBadges, constancyStreak],
+  );
+
+  const nextBadge = badgeStates.find((state) => !state.unlocked) ?? null;
+  const unlockedBadgeCount = badgeStates.filter((state) => state.unlocked).length;
+  const nextBadgeProgress = nextBadge ? Math.min(nextBadge.progress, 1) : 1;
+  const nextBadgeLabel = nextBadge
+    ? nextBadge.remaining <= 0
+      ? `Listo para ${nextBadge.badge.title}`
+      : `A ${nextBadge.remaining} quiniela${nextBadge.remaining === 1 ? '' : 's'} de ${nextBadge.badge.title}`
+    : "¡GOAT Local desbloqueado! Eres leyenda de la quiniela.";
+
+  const dateFormatter = useMemo(
+    () => new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }),
+    [],
+  );
 
   useEffect(() => {
     if (!isBadgesTooltipVisible) {
@@ -93,7 +116,7 @@ export function ProfilePage({ user, journeyStats, totalJourneys, onBack }: Profi
     }
 
     const handleClickOutside = (event: MouseEvent) => {
-      if (!badgeInfoButtonRef.current?.contains(event.target as Node)) {
+      if (!badgeInfoContainerRef.current?.contains(event.target as Node)) {
         setIsBadgesTooltipVisible(false);
       }
     };
@@ -104,8 +127,8 @@ export function ProfilePage({ user, journeyStats, totalJourneys, onBack }: Profi
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("touchstart", handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchstart", handleClickOutside);
     document.addEventListener("keydown", handleEscape);
 
     return () => {
@@ -120,8 +143,6 @@ export function ProfilePage({ user, journeyStats, totalJourneys, onBack }: Profi
       : ranking
         ? `#${ranking.position}`
         : "#—";
-
-  const badgeIcons = badgeInfo.badges > 0 ? Array.from({ length: badgeInfo.badges }) : [];
 
   return (
     <div className="profile-page">
@@ -182,18 +203,19 @@ export function ProfilePage({ user, journeyStats, totalJourneys, onBack }: Profi
         <div className="profile-card profile-card--glass profile-stat profile-stat--badges">
           <div className="profile-stat__label profile-stat__label--with-icon">
             <span>Insignias conseguidas</span>
-            <button
-              type="button"
-              className="profile-badges__info-button"
-              aria-label="Cómo ganar insignias"
-              aria-expanded={isBadgesTooltipVisible}
-              onClick={() => {
-                setIsBadgesTooltipVisible((prev) => !prev);
-              }}
-              ref={badgeInfoButtonRef}
-            >
-              <Info size={16} aria-hidden="true" />
-              <span
+            <div className="profile-badges__info" ref={badgeInfoContainerRef}>
+              <button
+                type="button"
+                className="profile-badges__info-button"
+                aria-label="Cómo ganar insignias"
+                aria-expanded={isBadgesTooltipVisible}
+                onClick={() => {
+                  setIsBadgesTooltipVisible((prev) => !prev);
+                }}
+              >
+                <Info size={16} aria-hidden="true" />
+              </button>
+              <div
                 className="profile-tooltip"
                 role="tooltip"
                 data-visible={isBadgesTooltipVisible ? "true" : undefined}
@@ -202,45 +224,94 @@ export function ProfilePage({ user, journeyStats, totalJourneys, onBack }: Profi
                 <span>
                   Envía tu quiniela en <em>tres jornadas consecutivas</em> para desbloquear una insignia especial.
                 </span>
-              </span>
-            </button>
+              </div>
+            </div>
           </div>
-          {badgeIcons.length > 0 ? (
-            <div className="profile-badges">
-              {badgeIcons.map((_, index) => (
-                <div
-                  key={`badge-${index}`}
-                  className="profile-badge"
-                  data-animated={index === badgeIcons.length - 1 ? "true" : undefined}
+          <div className="profile-badge-summary">
+            <div className="profile-badge-summary__streak">
+              <span className="profile-badge-summary__streak-value">{constancyStreak}</span>
+              <span className="profile-badge-summary__streak-label">quinielas seguidas</span>
+              <span className="profile-badge-summary__unlocked">
+                {unlockedBadgeCount}/{CONSTANCY_BADGES.length} insignias
+              </span>
+            </div>
+            <div className="profile-badge-progress">
+              <div
+                className="profile-badge-progress__bar"
+                style={
+                  {
+                    "--badge-progress": nextBadgeProgress,
+                  } as CSSProperties
+                }
+              />
+              <span className="profile-badge-progress__label">{nextBadgeLabel}</span>
+            </div>
+          </div>
+          <div className="profile-badge-grid">
+            {badgeStates.map(({ badge, unlocked, unlockedAt, progress, remaining }) => {
+              const styles: CSSProperties = {
+                "--badge-card-bg": badge.theme.background,
+                "--badge-card-border": badge.theme.border,
+                "--badge-card-badge-bg": badge.theme.badgeBackground,
+                "--badge-card-badge-color": badge.theme.badgeColor,
+                "--badge-card-accent": badge.theme.accent,
+              } as CSSProperties;
+
+              const imageSrc = unlocked && badge.image ? badge.image : null;
+
+              return (
+                <article
+                  key={badge.id}
+                  className={`profile-badge-card${unlocked ? " profile-badge-card--unlocked" : " profile-badge-card--locked"}`}
+                  style={styles}
+                  aria-live="polite"
                 >
-                  <Medal size={20} aria-hidden="true" />
-                  {index === badgeIcons.length - 1 ? (
-                    <span className="profile-badge__spark" aria-hidden="true">
-                      <Sparkles size={14} />
-                    </span>
+                  {unlocked ? (
+                    <>
+                      <div className="profile-badge-card__media">
+                        {imageSrc ? (
+                          <img src={imageSrc} alt={badge.title} className="profile-badge-card__image" />
+                        ) : (
+                          <div className="profile-badge-card__icon" aria-hidden="true">
+                            {badge.icon}
+                          </div>
+                        )}
+                      </div>
+                      <div className="profile-badge-card__text">
+                        <h3>{badge.title}</h3>
+                        <span className={`profile-badge-card__rarity profile-badge-card__rarity--${badge.rarity}`}>
+                          {RARITY_LABELS[badge.rarity]}
+                        </span>
+                        <p>{badge.description}</p>
+                        <span className="profile-badge-card__threshold">{badge.threshold} quinielas seguidas</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="profile-badge-card__locked">
+                      <span className="profile-badge-card__locked-icon" aria-hidden="true">
+                        🔒
+                      </span>
+                      <span className="profile-badge-card__locked-progress">
+                        Faltan {Math.max(remaining, 0)} quiniela{remaining === 1 ? '' : 's'}
+                      </span>
+                    </div>
+                  )}
+                  {!unlocked ? (
+                    <div className="profile-badge-card__progress profile-badge-card__progress--locked">
+                      <span
+                        className="profile-badge-card__progress-fill"
+                        style={
+                          {
+                            "--badge-card-progress": progress,
+                          } as CSSProperties
+                        }
+                        aria-hidden="true"
+                      />
+                    </div>
                   ) : null}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="profile-badges profile-badges--empty">
-              <Medal size={24} aria-hidden="true" />
-              <span>Aún sin insignias</span>
-            </div>
-          )}
-          <div className="profile-badge-progress">
-            <div
-              className="profile-badge-progress__bar"
-              style={
-                {
-                  "--badge-progress": badgeInfo.progressPercent / 100,
-                } as CSSProperties
-              }
-            />
-            <span className="profile-badge-progress__label">
-              {badgeInfo.streak}/3 quinielas ·{" "}
-              {badgeInfo.streak === 0 ? "¡Nueva insignia desbloqueada!" : `A ${3 - badgeInfo.streak} de la siguiente`}
-            </span>
+                </article>
+              );
+            })}
           </div>
         </div>
       </section>

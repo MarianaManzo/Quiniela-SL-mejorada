@@ -407,7 +407,7 @@ type JourneyCardViewModel = {
 const FORCED_PARTICIPATION_JOURNEYS = 18;
 const DEFAULT_FORCED_JOURNEY_META = "Cierra el 31 OCT - 14:59 hrs";
 const PARTICIPATION_OVERRIDE_JOURNEYS = new Set([15, 16, 18]);
-const PARTICIPATION_OVERRIDE_META = "HABILITADO PARA PARTICIPAR";
+const PARTICIPATION_OVERRIDE_META = "EN CURSO PARA PARTICIPAR";
 
 const resolveSubmissionMetadata = (data: QuinielaDocData | undefined) => {
   if (!data) {
@@ -535,7 +535,7 @@ export default function App() {
 
       return {
         ...card,
-        statusLabel: 'Habilitado',
+        statusLabel: 'En curso',
         meta: PARTICIPATION_OVERRIDE_META,
         tone: 'current',
         action: 'participate',
@@ -619,7 +619,7 @@ export default function App() {
           id: `mock-journey-${journeyNumber}`,
           code: `J${journeyNumber.toString().padStart(2, '0')}`,
           number: journeyNumber,
-          statusLabel: PARTICIPATION_OVERRIDE_JOURNEYS.has(journeyNumber) ? 'Habilitado' : 'En curso',
+          statusLabel: 'En curso',
           meta: PARTICIPATION_OVERRIDE_JOURNEYS.has(journeyNumber) ? PARTICIPATION_OVERRIDE_META : DEFAULT_FORCED_JOURNEY_META,
           tone: 'current',
           action: 'participate',

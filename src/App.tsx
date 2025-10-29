@@ -6,6 +6,7 @@ import { Dashboard } from './components/Dashboard';
 import { LoginScreen, type UserProfile } from './components/LoginScreen';
 import { Navbar } from './components/Navbar';
 import { PodiumPage } from './components/PodiumPage';
+import { ProfilePage } from './components/ProfilePage';
 import AperturaJornada15 from './imports/AperturaJornada15';
 import {
   MATCHES,
@@ -20,11 +21,45 @@ import { useDownloadQuiniela } from './hooks/useDownloadQuiniela';
 import { crearOActualizarUsuario, guardarQuiniela, registrarTokenDispositivo } from './services/firestoreService';
 import { ensureNotificationToken, registerEnvMissingKeyListener, type NotificationStatus } from './services/messaging';
 import { formatParticipantName, sanitizeDisplayName } from './utils/formatParticipantName';
+import type { JourneyStat } from './types/profile';
+import { notifyConstancyBadgeUnlock } from './services/notifications';
+import { CONSTANCY_BADGES_BY_ID, CONSTANCY_BADGES, type ConstancyBadgeDefinition } from './data/constancyBadges';
+import { BadgeCelebrationModal } from './components/BadgeCelebrationModal';
 
 // Definición centralizada de la jornada mostrada
 const CURRENT_JOURNEY = 17;
 const BUILD_VERSION = 'V 32';
 const QUICK_ACCESS_STORAGE_KEY = 'quiniela-quick-access-profile';
+const DEFAULT_COUNTRY = 'México';
+const DEFAULT_COUNTRY_CODE = 'MX';
+
+const normalizeCountryCode = (value?: string | null): string => {
+  if (!value) {
+    return DEFAULT_COUNTRY_CODE;
+  }
+  const cleaned = value.trim();
+  if (!cleaned) {
+    return DEFAULT_COUNTRY_CODE;
+  }
+  return cleaned.slice(0, 2).toUpperCase();
+};
+
+const calculateAgeFromBirthdate = (value?: string | null): number | null => {
+  if (!value) {
+    return null;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  const now = new Date();
+  let age = now.getFullYear() - date.getFullYear();
+  const monthDiff = now.getMonth() - date.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < date.getDate())) {
+    age -= 1;
+  }
+  return age >= 0 ? age : null;
+};
 
 const shouldShowDebugGrid = (): boolean => {
   if (typeof window === 'undefined') {
@@ -40,6 +75,13 @@ const createQuickAccessProfile = (): UserProfile => {
     name: 'Invitado rápido',
     email: `invitado-${uniqueSegment}@quiniela.demo`,
     role: 'invitado',
+    country: DEFAULT_COUNTRY,
+    countryCode: DEFAULT_COUNTRY_CODE,
+    age: null,
+    birthdate: null,
+    constancyStreak: 0,
+    constancyLastJourney: 0,
+    constancyBadges: {},
   };
 };
 
@@ -125,7 +167,8 @@ const parseJourneyNumber = (id: string): number | null => {
   return null;
 };
 
-type StoredSubmissions = Record<string, QuinielaSubmission | (Omit<QuinielaSubmission, 'journey'> & { journey?: number })>;
+type UserStoredSubmissions = Record<number, QuinielaSubmission>;
+type StoredSubmissions = Record<string, UserStoredSubmissions>;
 
 const PUSH_TOKEN_STORAGE_PREFIX = 'somos-locales-fcm-token:';
 
@@ -201,24 +244,92 @@ const readStoredSubmissions = (): StoredSubmissions => {
   }
 };
 
-const loadSubmissionForUser = (email: string): QuinielaSubmission | null => {
-  const submissions = readStoredSubmissions();
-  const submission = submissions[email];
+const ensureUserSubmissionStore = (store: StoredSubmissions, email: string): UserStoredSubmissions => {
+  const entryRaw = store[email] as unknown;
+  if (typeof entryRaw === 'object' && entryRaw !== null) {
+    if ('journey' in (entryRaw as Record<string, unknown>)) {
+      const single = entryRaw as QuinielaSubmission;
+      const journeyNumber = typeof single.journey === 'number' ? single.journey : CURRENT_JOURNEY;
+      const migrated: UserStoredSubmissions = {
+        [journeyNumber]: {
+          ...single,
+          journey: journeyNumber,
+          selections: { ...single.selections },
+        },
+      };
+      store[email] = migrated;
+      return migrated;
+    }
 
-  if (!submission) {
+    return entryRaw as UserStoredSubmissions;
+  }
+  const next: UserStoredSubmissions = {};
+  store[email] = next;
+  return next;
+};
+
+const loadSubmissionForUser = (email: string, journey: number): QuinielaSubmission | null => {
+  const submissions = readStoredSubmissions();
+  const userStore = submissions[email];
+  if (!userStore) {
     return null;
   }
 
-  return submission;
+  return userStore[journey] ?? null;
 };
 
-const persistSubmissionForUser = (email: string, submission: QuinielaSubmission) => {
+const loadSubmissionsForUser = (email: string): UserStoredSubmissions => {
+  const submissions = readStoredSubmissions();
+  const entryRaw = submissions[email];
+  if (!entryRaw) {
+    return {};
+  }
+
+  const result: UserStoredSubmissions = {};
+
+  const maybeSingle = entryRaw as unknown;
+  if (typeof maybeSingle === 'object' && maybeSingle !== null && 'journey' in maybeSingle) {
+    const single = maybeSingle as QuinielaSubmission;
+    if (single.selections) {
+      const journeyNumber = typeof single.journey === 'number' ? single.journey : CURRENT_JOURNEY;
+      result[journeyNumber] = {
+        ...single,
+        journey: journeyNumber,
+        selections: { ...single.selections },
+      };
+    }
+    return result;
+  }
+
+  Object.entries(entryRaw as UserStoredSubmissions).forEach(([journeyKey, submission]) => {
+    if (!submission || !submission.selections) {
+      return;
+    }
+
+    const journeyNumber = Number(journeyKey);
+    const resolvedJourney = Number.isNaN(journeyNumber) ? submission.journey ?? CURRENT_JOURNEY : journeyNumber;
+
+    result[resolvedJourney] = {
+      ...submission,
+      journey: resolvedJourney,
+      selections: { ...submission.selections },
+    };
+  });
+
+  return result;
+};
+
+const persistSubmissionForUser = (email: string, journey: number, submission: QuinielaSubmission) => {
   if (typeof window === 'undefined') {
     return;
   }
 
   const submissions = readStoredSubmissions();
-  submissions[email] = submission;
+  const userStore = ensureUserSubmissionStore(submissions, email);
+  userStore[journey] = {
+    ...submission,
+    selections: { ...submission.selections },
+  };
   window.localStorage.setItem(QUINIELA_STORAGE_KEY, JSON.stringify(submissions));
 };
 
@@ -293,6 +404,11 @@ type JourneyCardViewModel = {
   submittedAt: string | null;
 };
 
+const FORCED_PARTICIPATION_JOURNEYS = 18;
+const DEFAULT_FORCED_JOURNEY_META = "Cierra el 31 OCT - 14:59 hrs";
+const PARTICIPATION_OVERRIDE_JOURNEYS = new Set([15, 16, 18]);
+const PARTICIPATION_OVERRIDE_META = "EN CURSO PARA PARTICIPAR";
+
 const resolveSubmissionMetadata = (data: QuinielaDocData | undefined) => {
   if (!data) {
     return {
@@ -305,10 +421,8 @@ const resolveSubmissionMetadata = (data: QuinielaDocData | undefined) => {
 
   const rawEstado = typeof data.estadoQuiniela === 'string' ? data.estadoQuiniela.toLowerCase() : '';
   const selections = buildSelectionsFromPronosticos(data.pronosticos);
-  const submitted =
-    (rawEstado.length > 0 && rawEstado !== 'abierta') ||
-    Boolean(data.quinielaEnviada) ||
-    hasCompletedSelections(selections);
+  const submittedStates = new Set(['enviada', 'cerrada', 'cerrado']);
+  const submitted = submittedStates.has(rawEstado) || Boolean(data.quinielaEnviada);
   const submittedAt = submitted
     ? toIsoString(data.fechaActualizacion ?? data.fechaCreacion) ?? new Date().toISOString()
     : null;
@@ -328,23 +442,25 @@ function LoadingSpinner() {
   return (
     <div className="w-[1080px] h-[1080px] flex items-center justify-center bg-gradient-to-br from-blue-600 via-green-500 to-yellow-400">
       <div className="text-white text-2xl font-bold animate-pulse">
-        {`Cargando Jornada ${CURRENT_JOURNEY}...`}
+        Cargando jornada…
       </div>
     </div>
   );
 }
 
 export default function App() {
-  const [view, setView] = useState<'dashboard' | 'quiniela' | 'podium'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'quiniela' | 'podium' | 'profile'>('dashboard');
   const [user, setUser] = useState<UserProfile | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [quinielaSelections, setQuinielaSelections] = useState<QuinielaSelections>(() => createEmptySelections());
+  const [draftSelectionsByJourney, setDraftSelectionsByJourney] = useState<Record<number, QuinielaSelections>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [activeJourneyNumber, setActiveJourneyNumber] = useState<number>(CURRENT_JOURNEY);
   const [journeyCloseDate, setJourneyCloseDate] = useState<Date | null>(null);
   const [now, setNow] = useState<Date>(() => new Date());
   const [lastSubmittedAt, setLastSubmittedAt] = useState<string | null>(null);
-  const previousJourneyNumber = CURRENT_JOURNEY - 1;
+  const previousJourneyNumber = activeJourneyNumber > 1 ? activeJourneyNumber - 1 : null;
   const [previousJourneyCloseDate, setPreviousJourneyCloseDate] = useState<Date | null>(null);
   const [currentSubmissionAt, setCurrentSubmissionAt] = useState<string | null>(null);
   const [previousSubmissionAt, setPreviousSubmissionAt] = useState<string | null>(null);
@@ -356,6 +472,17 @@ export default function App() {
   const [manualSaveDataUrl, setManualSaveDataUrl] = useState<string | null>(null);
   const [journeys, setJourneys] = useState<JourneyRecord[]>([]);
   const [userQuinielasMap, setUserQuinielasMap] = useState<Record<number, QuinielaDocData>>({});
+  const [badgeCelebrations, setBadgeCelebrations] = useState<ConstancyBadgeDefinition[]>([]);
+  const dismissBadgeCelebration = useCallback(() => {
+    setBadgeCelebrations((prev) => prev.slice(1));
+  }, []);
+  const handlePreviewBadge = useCallback(() => {
+    const sampleBadge = CONSTANCY_BADGES[CONSTANCY_BADGES.length - 1] ?? CONSTANCY_BADGES[0];
+    if (!sampleBadge) {
+      return;
+    }
+    setBadgeCelebrations((prev) => [...prev, sampleBadge]);
+  }, []);
   const initialNotificationPermission =
     (typeof Notification !== 'undefined' ? Notification.permission : 'default') as NotificationStatus;
   const [notificationStatus, setNotificationStatus] = useState<NotificationStatus>(initialNotificationPermission);
@@ -392,8 +519,8 @@ export default function App() {
     () => formatParticipantName(user?.name, user?.email),
     [user?.name, user?.email],
   );
-  const storedSubmission = useMemo(
-    () => (user ? loadSubmissionForUser(user.email) : null),
+  const storedSubmissions = useMemo(
+    () => (user ? loadSubmissionsForUser(user.email) : {}),
     [user, lastSubmittedAt],
   );
   const journeyCards = useMemo<JourneyCardViewModel[]>(() => {
@@ -401,16 +528,27 @@ export default function App() {
       return [];
     }
 
-    const cards = journeys
+    const applyParticipationOverride = (card: JourneyCardViewModel): JourneyCardViewModel => {
+      if (!PARTICIPATION_OVERRIDE_JOURNEYS.has(card.number)) {
+        return card;
+      }
+
+      return {
+        ...card,
+        statusLabel: 'En curso',
+        meta: PARTICIPATION_OVERRIDE_META,
+        tone: 'current',
+        action: 'participate',
+      };
+    };
+
+    let cards = journeys
       .map((journey) => {
         const code = `J${journey.number.toString().padStart(2, '0')}`;
         const submissionMeta = resolveSubmissionMetadata(userQuinielasMap[journey.number]);
+        const localSubmissionRaw = storedSubmissions[journey.number];
         const localSubmission =
-          storedSubmission &&
-          storedSubmission.journey === journey.number &&
-          hasCompletedSelections(storedSubmission.selections)
-            ? storedSubmission
-            : null;
+          localSubmissionRaw && hasCompletedSelections(localSubmissionRaw.selections) ? localSubmissionRaw : null;
         const submittedAt = submissionMeta.submittedAt ?? localSubmission?.submittedAt ?? null;
         const effectiveSubmitted = submissionMeta.submitted || Boolean(localSubmission);
 
@@ -452,11 +590,13 @@ export default function App() {
       })
       .sort((a, b) => b.number - a.number);
 
+    cards = cards.map(applyParticipationOverride);
+
     const upcomingJourneyNumber = CURRENT_JOURNEY + 1;
     const hasUpcoming = cards.some((card) => card.number === upcomingJourneyNumber);
 
     if (!hasUpcoming) {
-      cards.push({
+      cards = cards.concat({
         id: `journey-${upcomingJourneyNumber}`,
         code: `J${upcomingJourneyNumber.toString().padStart(2, '0')}`,
         number: upcomingJourneyNumber,
@@ -468,8 +608,30 @@ export default function App() {
       });
     }
 
+    if (cards.length < FORCED_PARTICIPATION_JOURNEYS) {
+      const existingNumbers = new Set(cards.map((card) => card.number));
+      for (let journeyNumber = 1; journeyNumber <= FORCED_PARTICIPATION_JOURNEYS; journeyNumber += 1) {
+        if (existingNumbers.has(journeyNumber)) {
+          continue;
+        }
+
+        cards = cards.concat({
+          id: `mock-journey-${journeyNumber}`,
+          code: `J${journeyNumber.toString().padStart(2, '0')}`,
+          number: journeyNumber,
+          statusLabel: 'En curso',
+          meta: PARTICIPATION_OVERRIDE_JOURNEYS.has(journeyNumber) ? PARTICIPATION_OVERRIDE_META : DEFAULT_FORCED_JOURNEY_META,
+          tone: 'current',
+          action: 'participate',
+          submittedAt: null,
+        });
+      }
+    }
+
+    cards = cards.map(applyParticipationOverride);
+
     return cards.sort((a, b) => b.number - a.number);
-  }, [journeys, now, userQuinielasMap, storedSubmission]);
+  }, [journeys, now, storedSubmissions, userQuinielasMap]);
   const getExportData = useCallback(() => ({
     selections: quinielaSelections,
     participantName: participantDisplayName,
@@ -483,7 +645,7 @@ export default function App() {
     getDataUrl,
     resetError: resetDownloadError,
     resetState: resetDownloadState,
-  } = useDownloadQuiniela({ journey: CURRENT_JOURNEY, getExportData });
+  } = useDownloadQuiniela({ journey: activeJourneyNumber, getExportData });
   const completedSelections = useMemo(
     () => Object.values(quinielaSelections).filter((value): value is Selection => value !== null).length,
     [quinielaSelections]
@@ -559,17 +721,17 @@ export default function App() {
 
     return () => unsubscribe();
   }, []);
-  useEffect(() => {
-    const currentJourney = journeys.find((journey) => journey.number === CURRENT_JOURNEY);
-    setJourneyCloseDate(currentJourney?.fechaCierre ?? null);
+useEffect(() => {
+  const currentJourney = journeys.find((journey) => journey.number === activeJourneyNumber);
+  setJourneyCloseDate(currentJourney?.fechaCierre ?? null);
 
-    if (previousJourneyNumber > 0) {
-      const previousJourney = journeys.find((journey) => journey.number === previousJourneyNumber);
-      setPreviousJourneyCloseDate(previousJourney?.fechaCierre ?? null);
-    } else {
-      setPreviousJourneyCloseDate(null);
-    }
-  }, [journeys, previousJourneyNumber]);
+  if (previousJourneyNumber && previousJourneyNumber > 0) {
+    const previousJourney = journeys.find((journey) => journey.number === previousJourneyNumber);
+    setPreviousJourneyCloseDate(previousJourney?.fechaCierre ?? null);
+  } else {
+    setPreviousJourneyCloseDate(null);
+  }
+}, [journeys, activeJourneyNumber, previousJourneyNumber]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -630,9 +792,17 @@ useEffect(() => {
     return;
   }
 
-  if (Notification.permission !== 'granted') {
-    setNotificationStatus(Notification.permission as NotificationStatus);
-    return;
+  const currentPermission = Notification.permission as NotificationStatus;
+  if (currentPermission !== 'granted') {
+    setNotificationStatus(currentPermission);
+
+    const handleMissingKey = () => {
+      setNotificationStatus('missing-key');
+    };
+    const unsubscribeMissingKey = registerEnvMissingKeyListener(handleMissingKey);
+    return () => {
+      unsubscribeMissingKey();
+    };
   }
 
   let cancelled = false;
@@ -642,7 +812,12 @@ useEffect(() => {
     if (cancelled) {
       return;
     }
-    setNotificationStatus(result.status);
+    setNotificationStatus((prev) => {
+      if (result.status === 'error' && Notification.permission === 'granted') {
+        return prev === 'granted' ? 'granted' : 'error';
+      }
+      return result.status;
+    });
     if (result.status === 'granted' && result.token) {
       await syncDeviceToken(result.token, result.status);
     }
@@ -670,22 +845,22 @@ useEffect(() => {
     return;
   }
 
-  const currentMeta = resolveSubmissionMetadata(userQuinielasMap[CURRENT_JOURNEY]);
+  const currentMeta = resolveSubmissionMetadata(userQuinielasMap[activeJourneyNumber]);
   setIsReadOnlyView(currentMeta.submitted);
-  setCurrentSubmissionAt(currentMeta.submittedAt);
+  setCurrentSubmissionAt(currentMeta.submittedAt ?? null);
   if (currentMeta.submittedAt) {
     setLastSubmittedAt(currentMeta.submittedAt);
   } else if (!currentMeta.submitted) {
     setLastSubmittedAt(null);
   }
 
-  if (previousJourneyNumber > 0) {
+  if (previousJourneyNumber && previousJourneyNumber > 0) {
     const previousMeta = resolveSubmissionMetadata(userQuinielasMap[previousJourneyNumber]);
-    setPreviousSubmissionAt(previousMeta.submittedAt);
+    setPreviousSubmissionAt(previousMeta.submittedAt ?? null);
   } else {
     setPreviousSubmissionAt(null);
   }
-}, [firebaseUser, previousJourneyNumber, userQuinielasMap]);
+}, [activeJourneyNumber, firebaseUser, previousJourneyNumber, userQuinielasMap]);
 
   const handleEnableNotifications = useCallback(async () => {
     if (!firebaseUser) {
@@ -725,17 +900,17 @@ useEffect(() => {
     return;
   }
 
-  const currentMeta = resolveSubmissionMetadata(userQuinielasMap[CURRENT_JOURNEY]);
+  const currentMeta = resolveSubmissionMetadata(userQuinielasMap[activeJourneyNumber]);
   if (currentMeta.submitted && currentMeta.selections && hasCompletedSelections(currentMeta.selections)) {
     const submission: QuinielaSubmission = {
       user,
       selections: currentMeta.selections,
       submittedAt: currentMeta.submittedAt ?? new Date().toISOString(),
-      journey: CURRENT_JOURNEY,
+      journey: activeJourneyNumber,
     };
-    persistSubmissionForUser(user.email, submission);
+    persistSubmissionForUser(user.email, activeJourneyNumber, submission);
   }
-}, [user, userQuinielasMap]);
+}, [activeJourneyNumber, user, userQuinielasMap]);
 
 // Ya no mostramos toasts para notificaciones en primer plano; el sistema gestiona los avisos push.
 useEffect(() => {
@@ -756,6 +931,13 @@ useEffect(() => {
           name: fallbackName,
           email,
           role: 'aficion',
+          country: DEFAULT_COUNTRY,
+          countryCode: DEFAULT_COUNTRY_CODE,
+          age: null,
+          birthdate: null,
+          constancyStreak: 0,
+          constancyLastJourney: 0,
+          constancyBadges: {},
         });
 
         void crearOActualizarUsuario(authUser)
@@ -771,18 +953,34 @@ useEffect(() => {
               profileData.rol === 'staff' || profileData.rol === 'invitado'
                 ? profileData.rol
                 : 'aficion';
+            const resolvedCountry = profileData.pais?.trim()?.length ? profileData.pais.trim() : DEFAULT_COUNTRY;
+            const resolvedCountryCode = normalizeCountryCode(profileData.codigoPais);
+            const resolvedBirthdate = profileData.fechaNacimiento ?? null;
+            const resolvedAge = calculateAgeFromBirthdate(resolvedBirthdate);
+            const resolvedConstancyStreak =
+              typeof profileData.constancyStreak === 'number' ? profileData.constancyStreak : 0;
+            const resolvedConstancyLastJourney =
+              typeof profileData.constancyLastJourney === 'number' ? profileData.constancyLastJourney : 0;
+            const resolvedConstancyBadges = profileData.constancyBadges ?? {};
 
             setUser({
               name: resolvedName,
               email: resolvedEmail,
               role: resolvedRole,
+              country: resolvedCountry,
+              countryCode: resolvedCountryCode,
+              age: resolvedAge,
+              birthdate: resolvedBirthdate,
+              constancyStreak: resolvedConstancyStreak,
+              constancyLastJourney: resolvedConstancyLastJourney,
+              constancyBadges: resolvedConstancyBadges,
             });
           })
           .catch((error) => {
             console.error('No se pudo sincronizar el usuario en Firestore', error);
           });
 
-        setView((current) => (current === 'quiniela' || current === 'podium' ? current : 'dashboard'));
+        setView((current) => (current === 'quiniela' || current === 'podium' || current === 'profile' ? current : 'dashboard'));
       } else {
         setFirebaseUser(null);
         setUser(null);
@@ -830,6 +1028,10 @@ useEffect(() => {
               name: ensureDisplayName(parsed.name),
               email: parsed.email,
               role,
+              country: parsed.country ?? DEFAULT_COUNTRY,
+              countryCode: normalizeCountryCode(parsed.countryCode),
+              age: typeof parsed.age === 'number' ? parsed.age : null,
+              birthdate: parsed.birthdate ?? null,
             };
           }
         }
@@ -890,23 +1092,57 @@ useEffect(() => {
       setCurrentSubmissionAt(null);
       setPreviousSubmissionAt(null);
       setPreviousJourneyCloseDate(null);
+      setDraftSelectionsByJourney({});
+      setActiveJourneyNumber(CURRENT_JOURNEY);
       return;
     }
 
-    const stored = loadSubmissionForUser(user.email);
-    setQuinielaSelections(createEmptySelections());
-    setLastSubmittedAt(stored?.submittedAt ?? null);
-    setIsReadOnlyView(Boolean(stored && stored.journey === CURRENT_JOURNEY));
-    setCurrentSubmissionAt(stored && stored.journey === CURRENT_JOURNEY ? stored.submittedAt : null);
-    setPreviousSubmissionAt(stored && stored.journey === previousJourneyNumber ? stored.submittedAt : null);
+    const storedMap = loadSubmissionsForUser(user.email);
+    const storedForActive = storedMap[activeJourneyNumber];
+    const storedForPrevious = previousJourneyNumber ? storedMap[previousJourneyNumber] : undefined;
+
+    setDraftSelectionsByJourney(
+      Object.fromEntries(
+        Object.entries(storedMap).map(([journey, submission]) => [
+          Number(journey),
+          { ...submission.selections },
+        ]),
+      ),
+    );
+
+    if (storedForActive && hasCompletedSelections(storedForActive.selections)) {
+      setQuinielaSelections({ ...storedForActive.selections });
+      setLastSubmittedAt(storedForActive.submittedAt ?? null);
+      setIsReadOnlyView(true);
+      setCurrentSubmissionAt(storedForActive.submittedAt ?? null);
+    } else {
+      setQuinielaSelections(createEmptySelections());
+      setLastSubmittedAt(null);
+      setIsReadOnlyView(false);
+      setCurrentSubmissionAt(null);
+    }
+
+    setPreviousSubmissionAt(
+      storedForPrevious && hasCompletedSelections(storedForPrevious.selections)
+        ? storedForPrevious.submittedAt ?? null
+        : null,
+    );
     setShowSelectionErrors(false);
     hideSubmitTooltip();
-  }, [user, createEmptySelections, hideSubmitTooltip, resetDownloadState, previousJourneyNumber]);
+  }, [
+    user,
+    activeJourneyNumber,
+    createEmptySelections,
+    hideSubmitTooltip,
+    resetDownloadState,
+    previousJourneyNumber,
+  ]);
 
   const handleSignOut = useCallback(async () => {
     resetDownloadState();
     setManualSaveDataUrl(null);
     setQuinielaSelections(createEmptySelections());
+    setDraftSelectionsByJourney({});
     setLastSubmittedAt(null);
     setIsSaving(false);
     setToast(null);
@@ -917,6 +1153,7 @@ useEffect(() => {
     setView('login');
     setUser(null);
     setFirebaseUser(null);
+    setActiveJourneyNumber(CURRENT_JOURNEY);
 
     try {
       await signOut(firebaseAuth);
@@ -936,75 +1173,110 @@ useEffect(() => {
     hideSubmitTooltip();
   }, [hideSubmitTooltip, resetDownloadState]);
 
-
-  const handleEnterQuiniela = useCallback(async () => {
+  const handleOpenProfileView = useCallback(() => {
     resetDownloadState();
     setManualSaveDataUrl(null);
     setIsShareOpen(false);
-    setShowSelectionErrors(false);
-    hideSubmitTooltip();
+    setView('profile');
+  }, [resetDownloadState]);
 
-    let nextSelections = createEmptySelections();
-    let nextReadOnly = journeyClosed;
-    let submissionDetected = false;
 
-    if (firebaseUser) {
-      try {
-        const quinielaRef = doc(
-          firebaseFirestore,
-          'Usuarios',
-          firebaseUser.uid,
-          'quinielas',
-          CURRENT_JOURNEY.toString(),
-        );
-        const snapshot = await getDoc(quinielaRef);
+  const handleEnterQuiniela = useCallback(
+    async (journeyNumber: number) => {
+      resetDownloadState();
+      setManualSaveDataUrl(null);
+      setIsShareOpen(false);
+      setShowSelectionErrors(false);
+      hideSubmitTooltip();
 
-        if (snapshot.exists()) {
-          const meta = resolveSubmissionMetadata(snapshot.data() as QuinielaDocData);
-          if (meta.selections && hasCompletedSelections(meta.selections)) {
-            nextSelections = { ...meta.selections };
-          }
-          if (meta.submitted) {
-            nextReadOnly = true;
-            submissionDetected = true;
-            if (meta.submittedAt) {
-              setCurrentSubmissionAt(meta.submittedAt);
-              setLastSubmittedAt(meta.submittedAt);
+      setDraftSelectionsByJourney((prev) => ({
+        ...prev,
+        [activeJourneyNumber]: { ...quinielaSelections },
+      }));
+
+      const journeyRecord = journeys.find((journey) => journey.number === journeyNumber);
+      const targetCloseDate = journeyRecord?.fechaCierre ?? null;
+      const targetClosed = targetCloseDate ? now.getTime() >= targetCloseDate.getTime() : false;
+
+      let nextSelections = draftSelectionsByJourney[journeyNumber]
+        ? { ...draftSelectionsByJourney[journeyNumber] }
+        : createEmptySelections();
+      let nextReadOnly = targetClosed;
+      let submissionDetected = false;
+      let submissionTimestamp: string | null = null;
+
+      if (firebaseUser) {
+        try {
+          const quinielaRef = doc(
+            firebaseFirestore,
+            'Usuarios',
+            firebaseUser.uid,
+            'quinielas',
+            journeyNumber.toString(),
+          );
+          const snapshot = await getDoc(quinielaRef);
+
+          if (snapshot.exists()) {
+            const meta = resolveSubmissionMetadata(snapshot.data() as QuinielaDocData);
+            if (meta.selections) {
+              nextSelections = { ...meta.selections };
+            }
+            if (meta.submitted) {
+              nextReadOnly = true;
+              submissionDetected = true;
+              submissionTimestamp = meta.submittedAt ?? new Date().toISOString();
             }
           }
+        } catch (error) {
+          console.error('No se pudo recuperar la quiniela almacenada antes de abrir el formulario', error);
         }
-      } catch (error) {
-        console.error('No se pudo recuperar la quiniela almacenada antes de abrir el formulario', error);
       }
-    }
 
-    if (!submissionDetected && user) {
-      const stored = loadSubmissionForUser(user.email);
-      if (stored && stored.journey === CURRENT_JOURNEY && hasCompletedSelections(stored.selections)) {
-        nextSelections = { ...stored.selections };
-        nextReadOnly = true;
-        submissionDetected = true;
-        setCurrentSubmissionAt(stored.submittedAt);
-        setLastSubmittedAt(stored.submittedAt);
+      if (!submissionDetected && user) {
+        const stored = loadSubmissionForUser(user.email, journeyNumber);
+        if (stored && hasCompletedSelections(stored.selections)) {
+          nextSelections = { ...stored.selections };
+          nextReadOnly = true;
+          submissionDetected = true;
+          submissionTimestamp = stored.submittedAt ?? null;
+        }
       }
-    }
 
-    setQuinielaSelections(nextSelections);
-    setIsReadOnlyView(nextReadOnly);
-    setView('quiniela');
+      setDraftSelectionsByJourney((prev) => ({
+        ...prev,
+        [journeyNumber]: nextSelections,
+      }));
+      setActiveJourneyNumber(journeyNumber);
+      setQuinielaSelections(nextSelections);
+      setIsReadOnlyView(nextReadOnly);
+      setView('quiniela');
 
-    if (submissionDetected && !journeyClosed) {
-      showToast('Esta jornada ya fue enviada. Mostramos la versión guardada.', 'success');
-    }
-  }, [
-    createEmptySelections,
-    firebaseUser,
-    hideSubmitTooltip,
-    journeyClosed,
-    resetDownloadState,
-    showToast,
-    user,
-  ]);
+      if (submissionTimestamp) {
+        setCurrentSubmissionAt(submissionTimestamp);
+        setLastSubmittedAt(submissionTimestamp);
+      } else if (!submissionDetected) {
+        setCurrentSubmissionAt(null);
+        setLastSubmittedAt(null);
+      }
+
+      if (submissionDetected && !targetClosed) {
+        showToast('Esta jornada ya fue enviada. Mostramos la versión guardada.', 'success');
+      }
+    },
+    [
+      activeJourneyNumber,
+      createEmptySelections,
+      draftSelectionsByJourney,
+      firebaseUser,
+      hideSubmitTooltip,
+      journeys,
+      now,
+      quinielaSelections,
+      resetDownloadState,
+      showToast,
+      user,
+    ],
+  );
 
   const handleEnterPodium = useCallback(() => {
     resetDownloadState();
@@ -1031,10 +1303,14 @@ useEffect(() => {
             hideSubmitTooltip();
           }
         }
+        setDraftSelectionsByJourney((draft) => ({
+          ...draft,
+          [activeJourneyNumber]: next,
+        }));
         return next;
       });
     },
-    [isReadOnlyView, showSelectionErrors, hideSubmitTooltip]
+    [activeJourneyNumber, isReadOnlyView, showSelectionErrors, hideSubmitTooltip]
   );
 
   const handleSubmitQuiniela = useCallback(async () => {
@@ -1067,26 +1343,67 @@ useEffect(() => {
       user,
       selections: { ...quinielaSelections },
       submittedAt: new Date().toISOString(),
-      journey: CURRENT_JOURNEY,
+      journey: activeJourneyNumber,
     };
 
     try {
+      let badgeResult: Awaited<ReturnType<typeof guardarQuiniela>> | null = null;
       if (firebaseUser) {
         const pronosticos = MATCHES.map((match) => submission.selections[match.id]) as Selection[];
-        await guardarQuiniela({
+        badgeResult = await guardarQuiniela({
           uid: firebaseUser.uid,
-          jornada: CURRENT_JOURNEY,
+          jornada: activeJourneyNumber,
           pronosticos,
-          estadoQuiniela: 'cerrada',
+          estadoQuiniela: 'enviada',
         });
       }
 
-      persistSubmissionForUser(user.email, submission);
+      persistSubmissionForUser(user.email, activeJourneyNumber, submission);
       setLastSubmittedAt(submission.submittedAt);
       setShowSelectionErrors(false);
       hideSubmitTooltip();
       setIsReadOnlyView(true);
+      setDraftSelectionsByJourney((prev) => ({
+        ...prev,
+        [activeJourneyNumber]: { ...submission.selections },
+      }));
       showToast('Pronóstico enviado correctamente.', 'success');
+
+      if (badgeResult) {
+        const unlockedDefinitions = badgeResult.unlockedBadges
+          .map((badgeId) => CONSTANCY_BADGES_BY_ID[badgeId])
+          .filter((definition): definition is ConstancyBadgeDefinition => Boolean(definition));
+
+        setUser((prev) => {
+          if (!prev) {
+            return prev;
+          }
+
+          const nextBadges = { ...prev.constancyBadges };
+          unlockedDefinitions.forEach((definition) => {
+            nextBadges[definition.id] = {
+              unlockedAt: new Date().toISOString(),
+              streak: badgeResult.streak,
+              threshold: definition.threshold,
+            };
+          });
+
+          return {
+            ...prev,
+            constancyStreak: badgeResult.streak,
+            constancyLastJourney: badgeResult.lastJourney,
+            constancyBadges: nextBadges,
+          };
+        });
+
+        if (badgeResult.unlockedBadges.length > 0) {
+          setBadgeCelebrations((prev) => [...prev, ...unlockedDefinitions]);
+          unlockedDefinitions.forEach((definition) => {
+            showToast(definition.notificationMessage, 'success');
+            void notifyConstancyBadgeUnlock(definition.id);
+          });
+        }
+      }
     } catch (error) {
       console.error('Error al guardar la quiniela', error);
       showToast('No se pudo guardar tu quiniela. Intenta de nuevo.', 'error');
@@ -1094,6 +1411,7 @@ useEffect(() => {
       setIsSaving(false);
     }
   }, [
+    activeJourneyNumber,
     firebaseUser,
     user,
     needsMoreSelections,
@@ -1112,47 +1430,64 @@ useEffect(() => {
       }
 
       const journeyNumber = parseInt(journeyCode.replace(/\D/g, ''), 10);
-      if (!firebaseUser || Number.isNaN(journeyNumber)) {
+      if (Number.isNaN(journeyNumber)) {
         showToast('No encontramos esa quiniela guardada.', 'error');
         return;
       }
 
       try {
-        const quinielaRef = doc(
-          firebaseFirestore,
-          'Usuarios',
-          firebaseUser.uid,
-          'quinielas',
-          journeyNumber.toString(),
-        );
-        const snapshot = await getDoc(quinielaRef);
+        let remoteSelections: QuinielaSelections | null = null;
+        let submittedAt: string | null = null;
 
-        if (!snapshot.exists()) {
-          showToast('No encontramos esa quiniela guardada.', 'error');
-          return;
+        if (firebaseUser) {
+          const quinielaRef = doc(
+            firebaseFirestore,
+            'Usuarios',
+            firebaseUser.uid,
+            'quinielas',
+            journeyNumber.toString(),
+          );
+          const snapshot = await getDoc(quinielaRef);
+
+          if (snapshot.exists()) {
+            const meta = resolveSubmissionMetadata(snapshot.data() as QuinielaDocData);
+            remoteSelections = meta.selections;
+            submittedAt = meta.submittedAt ?? null;
+          }
         }
 
-        const meta = resolveSubmissionMetadata(snapshot.data() as QuinielaDocData);
-        const remoteSelections = meta.selections;
+        if (!remoteSelections) {
+          const storedFallback = loadSubmissionForUser(user.email, journeyNumber);
+          if (storedFallback) {
+            remoteSelections = storedFallback.selections;
+            submittedAt = storedFallback.submittedAt;
+          }
+        }
 
         if (!remoteSelections || !hasCompletedSelections(remoteSelections)) {
           showToast('La quiniela guardada no tiene pronósticos válidos.', 'error');
           return;
         }
 
-        const submittedAt = meta.submittedAt ?? new Date().toISOString();
+        const finalSubmittedAt = submittedAt ?? new Date().toISOString();
 
         const submission: QuinielaSubmission = {
           user,
           selections: remoteSelections,
-          submittedAt,
+          submittedAt: finalSubmittedAt,
           journey: journeyNumber,
         };
 
-        persistSubmissionForUser(user.email, submission);
+        persistSubmissionForUser(user.email, journeyNumber, submission);
 
+        setActiveJourneyNumber(journeyNumber);
+        setDraftSelectionsByJourney((prev) => ({
+          ...prev,
+          [journeyNumber]: { ...remoteSelections },
+        }));
         setQuinielaSelections({ ...remoteSelections });
-        setLastSubmittedAt(submittedAt);
+        setLastSubmittedAt(finalSubmittedAt);
+        setCurrentSubmissionAt(finalSubmittedAt);
         setIsReadOnlyView(true);
         setView('quiniela');
         setShowSelectionErrors(false);
@@ -1203,6 +1538,20 @@ useEffect(() => {
     setIsShareOpen(false);
     setManualSaveDataUrl(null);
   }, []);
+
+  const journeyStats = useMemo<JourneyStat[]>(() =>
+    Object.entries(userQuinielasMap)
+      .map(([journeyNumber, data]) => {
+        const meta = resolveSubmissionMetadata(data);
+        return {
+          journeyNumber: Number(journeyNumber),
+          submitted: meta.submitted,
+          submittedAt: meta.submittedAt,
+          points: meta.puntosObtenidos,
+        } as JourneyStat;
+      })
+      .sort((a, b) => a.journeyNumber - b.journeyNumber),
+  [userQuinielasMap]);
 
   if (!authReady && !user) {
     return null;
@@ -1340,60 +1689,74 @@ useEffect(() => {
     </div>
   );
 
+  if (view === 'quiniela') {
+    return (
+      <>
+        {toastBanner}
+        {manualSaveModal}
+        <div className="build-badge" aria-hidden="true">
+          Versión {BUILD_VERSION}
+        </div>
+        {quinielaView}
+      </>
+    );
+  }
+
+  let mainContent: JSX.Element = (
+    <Dashboard
+      user={user}
+      onEnterQuiniela={handleEnterQuiniela}
+      onViewQuiniela={handleViewSubmission}
+      onViewPodium={handleEnterPodium}
+      journeyCards={journeyCards}
+      journeyCode={`J${activeJourneyNumber.toString().padStart(2, '0')}`}
+      journeyCloseLabel={journeyCloseLabel}
+      journeyClosedLabel={journeyClosedLabel}
+      journeyClosed={journeyClosed}
+      journeySubmittedAt={currentJourneySubmittedAt}
+      previousJourneyClosedLabel={previousJourneyClosedLabel}
+      previousJourneySubmittedAt={previousJourneySubmittedAt}
+      onPreviewBadge={handlePreviewBadge}
+    />
+  );
+
+  if (view === 'podium') {
+    mainContent = <PodiumPage />;
+  } else if (view === 'profile') {
+    mainContent = (
+      <ProfilePage
+        user={user}
+        totalJourneys={FORCED_PARTICIPATION_JOURNEYS}
+        journeyStats={journeyStats}
+        onBack={handleBackToDashboard}
+      />
+    );
+  }
+
   return (
     <>
+      {badgeCelebrations.length > 0 ? (
+        <BadgeCelebrationModal badge={badgeCelebrations[0]} onClose={dismissBadgeCelebration} />
+      ) : null}
       {toastBanner}
       {manualSaveModal}
       <div className="build-badge" aria-hidden="true">
         Versión {BUILD_VERSION}
       </div>
-      {view === 'dashboard' ? (
-        <div className="dashboard-shell">
-          <Navbar
-            user={user}
-            currentView={currentView}
-            onNavigateToDashboard={handleBackToDashboard}
-            onNavigateToQuiniela={handleEnterQuiniela}
-            onNavigateToPodium={handleEnterPodium}
-            onSignOut={handleSignOut}
-            notificationStatus={notificationStatus}
-            onEnableNotifications={handleEnableNotifications}
-            notificationLoading={isNotificationLoading}
-          />
-          <Dashboard
-            user={user}
-            onEnterQuiniela={handleEnterQuiniela}
-            onViewQuiniela={handleViewSubmission}
-            onViewPodium={handleEnterPodium}
-            journeyCards={journeyCards}
-            journeyCode={`J${CURRENT_JOURNEY.toString().padStart(2, '0')}`}
-            journeyCloseLabel={journeyCloseLabel}
-            journeyClosedLabel={journeyClosedLabel}
-          journeyClosed={journeyClosed}
-          journeySubmittedAt={currentJourneySubmittedAt}
-          previousJourneyClosedLabel={previousJourneyClosedLabel}
-          previousJourneySubmittedAt={previousJourneySubmittedAt}
+      <div className="dashboard-shell">
+        <Navbar
+          user={user}
+          currentView={currentView}
+          onNavigateToDashboard={handleBackToDashboard}
+          onNavigateToPodium={handleEnterPodium}
+          onSignOut={handleSignOut}
+          notificationStatus={notificationStatus}
+          onEnableNotifications={handleEnableNotifications}
+          notificationLoading={isNotificationLoading}
+          onNavigateToProfile={handleOpenProfileView}
         />
-        </div>
-      ) : (
-        view === 'podium' ? (
-          <div className="dashboard-shell">
-            <Navbar
-              user={user}
-              currentView={currentView}
-              onNavigateToDashboard={handleBackToDashboard}
-              onNavigateToPodium={handleEnterPodium}
-              onSignOut={handleSignOut}
-              notificationStatus={notificationStatus}
-              onEnableNotifications={handleEnableNotifications}
-              notificationLoading={isNotificationLoading}
-            />
-            <PodiumPage />
-          </div>
-        ) : (
-          quinielaView
-        )
-      )}
+        {mainContent}
+      </div>
     </>
   );
 }

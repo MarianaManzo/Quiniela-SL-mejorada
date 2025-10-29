@@ -340,7 +340,7 @@
   background: rgba(15, 16, 19, 0.65);
   color: #f8fafc;
   box-shadow: 0 24px 54px -40px rgba(15, 16, 19, 0.8);
-  font-size: 14px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-weight: 600;
@@ -400,6 +400,13 @@
   flex-shrink: 0;
 }
 
+.hero-action__buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
 .hero-actions .btn[disabled],
 .hero-actions .btn[aria-disabled="true"] {
   cursor: not-allowed;
@@ -408,7 +415,22 @@
 }
 
 .hero-action__button {
-  margin-left: auto;
+  margin-left: 0;
+}
+
+.hero-action__preview {
+  background: rgba(29, 31, 41, 0.82);
+  color: rgba(248, 250, 252, 0.9);
+  border: 1px solid rgba(248, 250, 252, 0.18);
+  padding: 14px 22px;
+}
+
+.hero-action__preview:hover,
+.hero-action__preview:focus-visible {
+  background: rgba(43, 45, 56, 0.92);
+  color: #f6d433;
+  border-color: rgba(246, 212, 51, 0.42);
+  outline: none;
 }
 
 .btn {
@@ -590,8 +612,8 @@
 
 .tournament-panel__title-group {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  gap: 16px;
 }
 
 .tournament-panel__title {
@@ -604,8 +626,6 @@
 .tournament-panel__subtitle {
   font-size: 14px;
   color: rgba(20, 20, 28, 0.55);
-  grid-column: 1 / -1;
-  display: none;
 }
 
 .tournament-panel__header-actions {
@@ -687,7 +707,7 @@
 
 .tournament-panel__grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(480px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 28px;
   transition: opacity 200ms ease;
 }
@@ -704,6 +724,8 @@
   flex-direction: column;
   gap: 16px;
   padding: 24px 28px;
+  width: 100%;
+  min-width: 0;
   border-radius: 32px;
   border: 2px solid var(--sl-gray-200);
   background: #fafaf9;
@@ -721,6 +743,7 @@
   align-items: center;
   gap: 16px;
   justify-content: space-between;
+  flex-wrap: wrap;
 }
 
 .journey-card__main {
@@ -763,9 +786,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 999px;
+  width: 18px;
+  height: 18px;
+  background: none;
+}
+
+.journey-card__status-icon img {
+  display: block;
+  width: 18px;
+  height: 18px;
 }
 
 .journey-card__actions {
@@ -860,8 +889,7 @@
 
 .journey-card[data-tone="current"] .journey-card__status-icon,
 .journey-card--current .journey-card__status-icon {
-  background: rgba(246, 212, 51, 0.45);
-  color: rgba(33, 26, 10, 0.85);
+  color: #f59e0b;
 }
 
 .journey-card[data-tone="current"] .journey-card__code,
@@ -884,8 +912,7 @@
 
 .journey-card[data-tone="success"] .journey-card__status-icon,
 .journey-card--success .journey-card__status-icon {
-  background: rgba(255, 111, 169, 0.36);
-  color: rgba(162, 30, 97, 0.86);
+  color: #ff6fa9;
 }
 
 .journey-card[data-tone="warning"],
@@ -903,8 +930,7 @@
 
 .journey-card[data-tone="warning"] .journey-card__status-icon,
 .journey-card--warning .journey-card__status-icon {
-  background: rgba(20, 20, 28, 0.16);
-  color: rgba(20, 20, 28, 0.65);
+  color: #4b5563;
 }
 
 .journey-card[data-tone="upcoming"],
@@ -922,8 +948,7 @@
 
 .journey-card[data-tone="upcoming"] .journey-card__status-icon,
 .journey-card--upcoming .journey-card__status-icon {
-  background: rgba(20, 20, 28, 0.16);
-  color: rgba(20, 20, 28, 0.55);
+  color: #4b5563;
 }
 
 @media (max-width: 960px) {
@@ -955,6 +980,12 @@
     grid-template-columns: 1fr auto;
     align-items: flex-start;
     row-gap: 12px;
+  }
+
+  .tournament-panel__title-group {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
   }
 
   .tournament-panel__header-actions {

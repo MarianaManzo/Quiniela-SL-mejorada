@@ -11,11 +11,19 @@ import logoSomosLocales from "../assets/logo-somos-locales.png?inline";
 import "../styles/login.css";
 import { firebaseAuth, googleAuthProvider } from "../firebase";
 import { sanitizeDisplayName, sanitizeDisplayNameInput } from "../utils/formatParticipantName";
+import type { ConstancyBadgeStateMap } from "../types/badges";
 
 export interface UserProfile {
   name: string;
   email: string;
   role: "aficion" | "staff" | "invitado";
+  country?: string;
+  countryCode?: string;
+  age?: number | null;
+  birthdate?: string | null;
+  constancyStreak: number;
+  constancyLastJourney: number;
+  constancyBadges: ConstancyBadgeStateMap;
 }
 
 export const ROLE_LABELS: Record<UserProfile["role"], string> = {
@@ -153,6 +161,9 @@ export function LoginScreen({ onLogin, onQuickAccess }: LoginScreenProps) {
         name: sanitizeFullNameForValidation(resolvedName),
         email: credential.user.email ?? emailTrimmed,
         role: 'aficion',
+        constancyStreak: 0,
+        constancyLastJourney: 0,
+        constancyBadges: {},
       });
 
       setFormMessage(null);
@@ -171,13 +182,16 @@ export function LoginScreen({ onLogin, onQuickAccess }: LoginScreenProps) {
     try {
       await signInWithPopup(firebaseAuth, googleAuthProvider);
       const currentUser = firebaseAuth.currentUser;
-      if (currentUser) {
-        onLogin?.({
-          name: currentUser.displayName ?? currentUser.email ?? 'Participante',
-          email: currentUser.email ?? '',
-          role: 'aficion',
-        });
-      }
+        if (currentUser) {
+          onLogin?.({
+            name: currentUser.displayName ?? currentUser.email ?? 'Participante',
+            email: currentUser.email ?? '',
+            role: 'aficion',
+            constancyStreak: 0,
+            constancyLastJourney: 0,
+            constancyBadges: {},
+          });
+        }
     } catch (error) {
       const firebaseError = error as FirebaseError;
 

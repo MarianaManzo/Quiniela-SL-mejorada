@@ -304,6 +304,12 @@
   border-color: rgba(246, 212, 51, 0.45);
 }
 
+.navbar__avatar[data-active="true"] {
+  background: rgba(246, 212, 51, 0.38);
+  border-color: rgba(246, 212, 51, 0.7);
+  box-shadow: 0 0 0 3px rgba(246, 212, 51, 0.15);
+}
+
 .navbar__avatar:focus-visible {
   outline: 2px solid rgba(246, 212, 51, 0.65);
   outline-offset: 3px;

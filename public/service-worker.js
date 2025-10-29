@@ -11,6 +11,57 @@ firebase.initializeApp({
 });
 
 const messaging = firebase.messaging();
+const DEFAULT_NOTIFICATION_TAG = "somos-locales-alert";
+
+if (messaging?.onBackgroundMessage) {
+  messaging.onBackgroundMessage((payload) => {
+    const notification = payload?.notification ?? {};
+    const data = payload?.data ?? {};
+
+    const notificationTitle = notification.title || data.title || "Somos Locales FEMx";
+
+    const defaultIcon = "/icons/icon-192.png";
+    const defaultBadge = "/icons/notification-small.png";
+    const defaultImage = "/icons/notification-placeholder.png";
+    const resolvedTag = notification.tag || data.tag || DEFAULT_NOTIFICATION_TAG;
+    const resolvedRenotify = data.renotify === "false" ? false : true;
+    const resolvedSilent = data.silent === "true";
+
+    const notificationData = {
+      ...data,
+      url: data.url || notification.click_action || "/",
+      origin: "somos-locales",
+      tag: resolvedTag,
+    };
+
+    const options = {
+      body: notification.body || data.body || "Tienes una actualización en la quiniela.",
+      icon: notification.icon || data.icon || defaultIcon,
+      badge: notification.badge || data.badge || defaultBadge,
+      image: notification.image || data.image || defaultImage,
+      tag: resolvedTag,
+      renotify: resolvedRenotify,
+      silent: resolvedSilent,
+      data: notificationData,
+      vibrate: [200, 100, 200],
+    };
+
+    const showNotification = async () => {
+      const existing = await self.registration.getNotifications();
+      existing.forEach((item) => {
+        if (item.data?.origin !== "somos-locales") {
+          item.close();
+        }
+      });
+
+      await self.registration.showNotification(notificationTitle, options);
+    };
+
+    showNotification().catch((error) => {
+      console.warn("No se pudo mostrar la notificación personalizada", error);
+    });
+  });
+}
 
 const handleNotificationClick = (event) => {
   event.notification.close();
@@ -38,7 +89,7 @@ const handleNotificationClick = (event) => {
 
 self.addEventListener('notificationclick', handleNotificationClick);
 
-const CACHE_VERSION = 'v26';
+const CACHE_VERSION = 'v30';
 const STATIC_CACHE = `somos-locales-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `somos-locales-runtime-${CACHE_VERSION}`;
 

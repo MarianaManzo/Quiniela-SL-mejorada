@@ -783,15 +783,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 999px;
+  width: 18px;
+  height: 18px;
 }
 
 .journey-card__status-icon img {
   display: block;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
 }
 
 .journey-card__actions {

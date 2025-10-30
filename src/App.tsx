@@ -1768,7 +1768,7 @@ useEffect(() => {
         </div>
       </div>
 
-      <div className="canvas-frame__footer">
+      <div className="canvas-frame__footer" data-readonly={isReadOnlyView ? 'true' : undefined}>
         <div className="submit-button-wrapper">
           {!isReadOnlyView ? (
             <>

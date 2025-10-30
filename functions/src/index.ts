@@ -72,7 +72,10 @@ const cleanupInvalidTokens = async (invalid: DeviceTokenRef[]) => {
   const db = getFirestore();
   await Promise.all(
     invalid.map(({uid, token}) =>
-      db.doc(`Usuarios/${uid}/devices/${token}`).delete().catch(() => undefined),
+      db
+        .doc(`Usuarios/${uid}/devices/${token}`)
+        .delete()
+        .catch(() => undefined),
     ),
   );
 };
@@ -111,11 +114,12 @@ export const calcularPuntosUsuario = onRequest(async (req, res) => {
     ]);
 
     const quinielaDoc = snapNumber.exists ? snapNumber : snapName;
-    const quinielaRef = snapNumber.exists
-      ? quinielaByNumber
-      : snapName.exists
-        ? quinielaByName
-        : null;
+    let quinielaRef: FirebaseFirestore.DocumentReference | null = null;
+    if (snapNumber.exists) {
+      quinielaRef = quinielaByNumber;
+    } else if (snapName.exists) {
+      quinielaRef = quinielaByName;
+    }
 
     if (!quinielaDoc || !quinielaRef) {
       res.status(404).send("Quiniela no encontrada");
@@ -144,10 +148,13 @@ export const calcularPuntosUsuario = onRequest(async (req, res) => {
     }
 
     const previousPointsRaw = quinielaDoc.get("puntosObtenidos");
-    const previousPoints =
-      typeof previousPointsRaw === "number" && Number.isFinite(previousPointsRaw)
-        ? previousPointsRaw
-        : 0;
+    let previousPoints = 0;
+    if (
+      typeof previousPointsRaw === "number" &&
+      Number.isFinite(previousPointsRaw)
+    ) {
+      previousPoints = previousPointsRaw;
+    }
     const delta = puntos - previousPoints;
 
     await quinielaRef.update({
@@ -170,7 +177,12 @@ export const calcularPuntosUsuario = onRequest(async (req, res) => {
     await userRef.set(userUpdates, {merge: true});
 
     if (delta !== 0) {
-      logger.info("Puntos del usuario actualizados", {uid, jornada, delta, total: puntos});
+      logger.info("Puntos del usuario actualizados", {
+        uid,
+        jornada,
+        delta,
+        total: puntos,
+      });
     }
 
     res.status(200).json({puntos});
@@ -246,7 +258,10 @@ const closeExpiredJourneys = async (): Promise<{
     }
 
     summaries.push({jornada: jornadaNumber, updated});
-    logger.info("Jornada cerrada automáticamente", {jornada: jornadaNumber, updated});
+    logger.info("Jornada cerrada automáticamente", {
+      jornada: jornadaNumber,
+      updated,
+    });
   }
 
   return {
@@ -275,11 +290,17 @@ export const notificarInsigniaConstancia = onCall(async (request) => {
   const badgeIdRaw = request.data?.badgeId;
 
   if (!uid) {
-    throw new HttpsError("unauthenticated", "Debes iniciar sesión para enviar notificaciones.");
+    throw new HttpsError(
+      "unauthenticated",
+      "Debes iniciar sesión para enviar notificaciones.",
+    );
   }
 
   if (typeof badgeIdRaw !== "string") {
-    throw new HttpsError("invalid-argument", "Se requiere un identificador de insignia válido.");
+    throw new HttpsError(
+      "invalid-argument",
+      "Se requiere un identificador de insignia válido.",
+    );
   }
 
   const badgeId = badgeIdRaw as ConstancyBadgeId;
@@ -292,11 +313,16 @@ export const notificarInsigniaConstancia = onCall(async (request) => {
   const devicesSnapshot = await db.collection(`Usuarios/${uid}/devices`).get();
 
   if (devicesSnapshot.empty) {
-    logger.info("Sin dispositivos para notificar insignia", {uid, badgeId: badge.id});
+    logger.info("Sin dispositivos para notificar insignia", {
+      uid,
+      badgeId: badge.id,
+    });
     return {delivered: 0};
   }
 
-  const tokens = devicesSnapshot.docs.map((docSnap) => docSnap.id).filter(Boolean);
+  const tokens = devicesSnapshot.docs
+    .map((docSnap) => docSnap.id)
+    .filter(Boolean);
 
   if (tokens.length === 0) {
     return {delivered: 0};
@@ -331,14 +357,21 @@ export const notificarInsigniaConstancia = onCall(async (request) => {
 
   const invalidTokens: string[] = [];
   response.responses.forEach((single, index) => {
-    if (!single.success && single.error?.code === "messaging/registration-token-not-registered") {
+    const notRegistered =
+      single.error?.code === "messaging/registration-token-not-registered";
+    if (!single.success && notRegistered) {
       invalidTokens.push(tokens[index]);
     }
   });
 
   if (invalidTokens.length > 0) {
     await Promise.all(
-      invalidTokens.map((token) => db.doc(`Usuarios/${uid}/devices/${token}`).delete().catch(() => undefined)),
+      invalidTokens.map((token) =>
+        db
+          .doc(`Usuarios/${uid}/devices/${token}`)
+          .delete()
+          .catch(() => undefined),
+      ),
     );
   }
 
@@ -353,10 +386,11 @@ export const notificarInsigniaConstancia = onCall(async (request) => {
 });
 
 /**
- * Procesa recordatorios almacenados en la colección `recordatorios` y envía una notificación
- * push a todos los dispositivos registrados cuando el campo `programadoPara` es alcanzado.
+ * Procesa recordatorios almacenados en la colección `recordatorios`
+ * y envía una notificación push a todos los dispositivos registrados
+ * cuando el campo `programadoPara` es alcanzado.
  *
- * Estructura sugerida para cada documento de la colección:
+ * Estructura sugerida para cada documento:
  * {
  *   titulo: "Recordatorio jornada",
  *   mensaje: "Ya puedes registrar tus pronósticos",
@@ -393,13 +427,15 @@ export const procesarRecordatorios = onSchedule("* * * * *", async () => {
           fallidos: 0,
           fechaEnvio: FieldValue.serverTimestamp(),
           ultimoIntento: FieldValue.serverTimestamp(),
-          errorMensaje: "Sin dispositivos registrados para enviar recordatorios.",
+          errorMensaje:
+            "Sin dispositivos registrados para enviar recordatorios.",
         }),
       ),
     );
-    logger.info("Recordatorios marcados como enviados pero sin dispositivos registrados", {
-      remindersChecked: snapshot.size,
-    });
+    logger.info(
+      "Recordatorios marcados como enviados pero sin dispositivos registrados",
+      {remindersChecked: snapshot.size},
+    );
     return;
   }
 
@@ -419,18 +455,30 @@ export const procesarRecordatorios = onSchedule("* * * * *", async () => {
       continue;
     }
 
-    const title =
-      typeof reminderData.titulo === "string" && reminderData.titulo.trim().length > 0
-        ? reminderData.titulo.trim()
-        : "Recordatorio Somos Locales";
-    const body =
-      typeof reminderData.mensaje === "string" && reminderData.mensaje.trim().length > 0
-        ? reminderData.mensaje.trim()
-        : "No olvides registrar tus pronósticos.";
-    const targetUrl =
-      typeof reminderData.url === "string" && reminderData.url.trim().length > 0
-        ? reminderData.url.trim()
-        : `${WEB_APP_URL}/dashboard`;
+    const rawTitle =
+      typeof reminderData.titulo === "string" ? reminderData.titulo.trim() : "";
+    let title = "Recordatorio Somos Locales";
+    if (rawTitle.length > 0) {
+      title = rawTitle;
+    }
+
+    let rawBody = "";
+    if (typeof reminderData.mensaje === "string") {
+      rawBody = reminderData.mensaje.trim();
+    }
+    let body = "No olvides registrar tus pronósticos.";
+    if (rawBody.length > 0) {
+      body = rawBody;
+    }
+
+    let rawUrl = "";
+    if (typeof reminderData.url === "string") {
+      rawUrl = reminderData.url.trim();
+    }
+    let targetUrl = `${WEB_APP_URL}/dashboard`;
+    if (rawUrl.length > 0) {
+      targetUrl = rawUrl;
+    }
 
     const movedToProcessing = await db.runTransaction(async (transaction) => {
       const freshSnap = await transaction.get(docSnap.ref);
@@ -517,10 +565,13 @@ export const procesarRecordatorios = onSchedule("* * * * *", async () => {
         reminderId: docSnap.id,
         error,
       });
+      let errorMessage = "Error desconocido al enviar el recordatorio.";
+      if (error instanceof Error && error.message) {
+        errorMessage = error.message;
+      }
       await docSnap.ref.update({
         estado: "error",
-        errorMensaje:
-          error instanceof Error ? error.message : "Error desconocido al enviar el recordatorio.",
+        errorMensaje: errorMessage,
         ultimoIntento: FieldValue.serverTimestamp(),
       });
     }

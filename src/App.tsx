@@ -1131,8 +1131,8 @@ useEffect(() => {
       ]),
     );
     const storedCompleted = storedForActive && hasCompletedSelections(storedForActive.selections);
-    const storedSubmissionSubmitted = storedCompleted && Boolean(storedForActive?.submittedAt);
-    if (firebaseUser && !hasRemoteSubmission && !storedSubmissionSubmitted) {
+    const storedSubmissionSubmitted = !firebaseUser && storedCompleted && Boolean(storedForActive?.submittedAt);
+    if (firebaseUser && !hasRemoteSubmission) {
       delete nextDrafts[activeJourneyNumber];
     }
     setDraftSelectionsByJourney(nextDrafts);
@@ -1143,13 +1143,12 @@ useEffect(() => {
       setIsReadOnlyView(true);
       setCurrentSubmissionAt(remoteMeta.submittedAt ?? null);
     } else if (storedSubmissionSubmitted && storedForActive) {
-      const submittedAt = storedForActive.submittedAt ?? null;
       setQuinielaSelections({ ...storedForActive.selections });
-      setLastSubmittedAt(submittedAt);
+      setLastSubmittedAt(storedForActive.submittedAt ?? null);
       setIsReadOnlyView(true);
-      setCurrentSubmissionAt(submittedAt);
+      setCurrentSubmissionAt(storedForActive.submittedAt ?? null);
     } else {
-      if (firebaseUser && storedForActive && !storedSubmissionSubmitted) {
+      if (firebaseUser && storedForActive) {
         clearSubmissionForUser(user.email, activeJourneyNumber);
       }
       setQuinielaSelections(createEmptySelections(activeJourneyNumber));
@@ -1272,13 +1271,10 @@ useEffect(() => {
 
       if (!hasRemoteSubmission && user) {
         const stored = loadSubmissionForUser(user.email, journeyNumber);
-        if (stored && stored.submittedAt && hasCompletedSelections(stored.selections)) {
+        if (!firebaseUser && stored && stored.submittedAt && hasCompletedSelections(stored.selections)) {
           nextSelections = { ...stored.selections };
           restoredLocalSubmission = true;
           submissionTimestamp = stored.submittedAt ?? submissionTimestamp;
-          if (firebaseUser) {
-            hasRemoteSubmission = true;
-          }
         } else if (firebaseUser && stored) {
           clearSubmissionForUser(user.email, journeyNumber);
           nextSelections = createEmptySelections(journeyNumber);
@@ -1291,11 +1287,11 @@ useEffect(() => {
       }));
       setActiveJourneyNumber(journeyNumber);
       setQuinielaSelections(nextSelections);
-      const shouldLockForm = hasRemoteSubmission || targetClosed || restoredLocalSubmission;
+      const shouldLockForm = hasRemoteSubmission || targetClosed || (restoredLocalSubmission && !firebaseUser);
       setIsReadOnlyView(shouldLockForm);
       setView('quiniela');
 
-      if ((hasRemoteSubmission || restoredLocalSubmission) && submissionTimestamp) {
+      if ((hasRemoteSubmission || (restoredLocalSubmission && !firebaseUser)) && submissionTimestamp) {
         setCurrentSubmissionAt(submissionTimestamp);
         setLastSubmittedAt(submissionTimestamp);
       } else if (!hasRemoteSubmission) {
@@ -1303,8 +1299,10 @@ useEffect(() => {
         setLastSubmittedAt(null);
       }
 
-      if ((hasRemoteSubmission || restoredLocalSubmission) && !targetClosed) {
+      if (hasRemoteSubmission && !targetClosed) {
         showToast('Esta jornada ya fue enviada. Mostramos la versión guardada.', 'success');
+      } else if (restoredLocalSubmission && !firebaseUser && !targetClosed) {
+        showToast('Recuperamos tu quiniela guardada. Revisa y envíala cuando estés lista.', 'success');
       }
     },
     [

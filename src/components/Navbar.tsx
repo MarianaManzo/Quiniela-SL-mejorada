@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { type UserProfile } from "./LoginScreen";
 import logoSomosLocales from "../assets/logo-somos-locales.png?inline";
 import { BellRing, LogOut } from "lucide-react";
 import type { NotificationStatus } from "../services/messaging";
-import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
 import "../styles/navbar.css";
 
 interface NavbarProps {
@@ -18,8 +17,6 @@ interface NavbarProps {
   notificationStatus?: NotificationStatus;
   onEnableNotifications?: () => void;
   notificationLoading?: boolean;
-  showNotificationPrompt?: boolean;
-  onDismissNotificationPrompt?: () => void;
 }
 
 function getInitials(name: string) {
@@ -53,28 +50,12 @@ export function Navbar({
   notificationStatus = "default",
   onEnableNotifications,
   notificationLoading,
-  showNotificationPrompt = false,
-  onDismissNotificationPrompt,
 }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isNotificationModalOpen, setNotificationModalOpen] = useState(false);
 
   useEffect(() => {
     setIsMenuOpen(false);
   }, [user, currentView]);
-
-  useEffect(() => {
-    if (showNotificationPrompt) {
-      setNotificationModalOpen(true);
-    } else {
-      setNotificationModalOpen(false);
-    }
-  }, [showNotificationPrompt]);
-
-  const handleCloseNotificationPopover = useCallback(() => {
-    setNotificationModalOpen(false);
-    onDismissNotificationPrompt?.();
-  }, [onDismissNotificationPrompt]);
 
   const handleBrandClick = user ? onNavigateToDashboard : onShowLogin ?? (() => {});
 
@@ -135,7 +116,6 @@ export function Navbar({
       return;
     }
     onEnableNotifications();
-    handleCloseNotificationPopover();
   };
 
   return (
@@ -186,39 +166,19 @@ export function Navbar({
 
         <div className="navbar__controls">
           {user ? (
-            <>
-              <button
-                type="button"
-                className="navbar__icon-button navbar__icon-button--notifications"
-                data-active={isNotificationEnabled ? "true" : undefined}
-                data-prompt={showNotificationPrompt ? "true" : undefined}
-                onClick={handleNotificationsClick}
-                title={notificationTitle}
-                aria-pressed={isNotificationEnabled}
-                aria-busy={notificationLoading || undefined}
-                disabled={notificationButtonDisabled}
-              >
-                <BellRing size={18} aria-hidden="true" />
-                {notificationBlocked ? <span className="sr-only">Notificaciones bloqueadas</span> : null}
-              </button>
-              <Dialog open={showNotificationPrompt && isNotificationModalOpen} onOpenChange={(open) => {
-                if (!open) {
-                  handleCloseNotificationPopover();
-                } else {
-                  setNotificationModalOpen(open);
-                }
-              }}>
-                <DialogContent className="notification-dialog__content" data-notification-dialog="true">
-                  <DialogTitle className="notification-dialog__title">Activa las notificaciones</DialogTitle>
-                  <p className="notification-dialog__description">
-                    Permite las notificaciones para recibir recordatorios de nuevas jornadas y resultados al instante.
-                  </p>
-                  <button type="button" className="notification-dialog__close" onClick={handleCloseNotificationPopover}>
-                    Entendido
-                  </button>
-                </DialogContent>
-              </Dialog>
-            </>
+            <button
+              type="button"
+              className="navbar__icon-button navbar__icon-button--notifications"
+              data-active={isNotificationEnabled ? "true" : undefined}
+              onClick={handleNotificationsClick}
+              title={notificationTitle}
+              aria-pressed={isNotificationEnabled}
+              aria-busy={notificationLoading || undefined}
+              disabled={notificationButtonDisabled}
+            >
+              <BellRing size={18} aria-hidden="true" />
+              {notificationBlocked ? <span className="sr-only">Notificaciones bloqueadas</span> : null}
+            </button>
           ) : null}
           {user ? (
             <div className="navbar__profile">

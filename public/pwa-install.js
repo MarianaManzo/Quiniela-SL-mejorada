@@ -149,6 +149,9 @@ const setupPwaInstallButton = () => {
 
   iosOverlay.querySelector('button')?.addEventListener('click', () => {
     iosOverlay.classList.remove('visible');
+    if (button.dataset.mode === 'ios') {
+      button.style.display = 'inline-flex';
+    }
   });
 
   document.body.appendChild(button);
@@ -194,6 +197,7 @@ const setupPwaInstallButton = () => {
 
   button.addEventListener('click', async () => {
     if (button.dataset.mode === 'ios') {
+      button.style.display = 'none';
       iosOverlay.classList.add('visible');
       return;
     }

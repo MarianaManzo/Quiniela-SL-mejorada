@@ -68,10 +68,40 @@ const injectPwaInstallerStyles = () => {
       font-family: 'Albert Sans', 'system-ui', sans-serif;
     }
 
+    .pwa-install-ios-steps {
+      margin: 12px 0 0;
+      padding: 0 0 0 20px;
+      text-align: left;
+      color: rgba(248, 250, 252, 0.78);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .pwa-install-ios-steps li {
+      margin-bottom: 8px;
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    .pwa-install-ios-step-index {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 12px;
+      background: rgba(246, 212, 51, 0.32);
+      color: rgba(248, 250, 252, 0.92);
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: 0.04em;
+    }
+
     .pwa-install-ios-card strong {
       display: block;
-      font-size: 17px;
-      margin-bottom: 8px;
+      font-size: 18px;
+      margin-bottom: 32px;
     }
 
     .pwa-install-ios-card button {
@@ -108,7 +138,11 @@ const setupPwaInstallButton = () => {
   iosOverlay.innerHTML = `
     <div class="pwa-install-ios-card" role="dialog" aria-modal="true">
       <strong>Instala esta app</strong>
-      Para agregarla a tu pantalla de inicio, toca el icono de compartir y elige “Agregar a pantalla de inicio”.
+      Para instalar en iOS, sigue los pasos:
+      <ol class="pwa-install-ios-steps">
+        <li><span class="pwa-install-ios-step-index">1</span>Toca “Compartir” en Safari.</li>
+        <li><span class="pwa-install-ios-step-index">2</span>Elige “Agregar a pantalla de inicio”.</li>
+      </ol>
       <button type="button" aria-label="Cerrar guía de instalación">Entendido</button>
     </div>
   `;
@@ -179,6 +213,7 @@ const setupPwaInstallButton = () => {
     deferredPrompt = null;
     hideButton();
   });
+
 };
 
 if (document.readyState === 'loading') {

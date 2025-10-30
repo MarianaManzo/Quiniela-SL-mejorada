@@ -1,6 +1,30 @@
 import admin from "firebase-admin";
 
-const ALLOWED_JOURNEYS = new Set([17, 18]);
+const ALLOWED_JOURNEY_IDS = new Set(["17", "CF", "SF", "F"]);
+const STAGE_DEFINITIONS: Record<
+  string,
+  {
+    etapa: string;
+    descripcion: string;
+    orden: number;
+  }
+> = {
+  CF: {
+    etapa: "Cuartos de final",
+    descripcion: "Llaves de cuartos publicadas al cierre de la jornada 17.",
+    orden: 18,
+  },
+  SF: {
+    etapa: "Semifinal",
+    descripcion: "Cruces definidos una vez concluidos los cuartos de final.",
+    orden: 19,
+  },
+  F: {
+    etapa: "Final",
+    descripcion: "La gran final se anunciará tras las semifinales.",
+    orden: 20,
+  },
+};
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -8,7 +32,7 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 const serverTimestamp = admin.firestore.FieldValue.serverTimestamp;
-const SOURCE_TEMPLATE_JOURNEY = 17;
+const SOURCE_TEMPLATE_JOURNEY = "17";
 
 const deleteCollectionDocs = async (collectionRef: FirebaseFirestore.CollectionReference, batchSize = 250): Promise<void> => {
   let lastSnapshot = await collectionRef.orderBy(admin.firestore.FieldPath.documentId()).limit(batchSize).get();
@@ -57,8 +81,8 @@ const pruneJourneys = async (): Promise<void> => {
   let pendingWrites = 0;
 
   journeysSnap.docs.forEach((journeyDoc) => {
-    const journeyNumber = Number.parseInt(journeyDoc.id, 10);
-    if (!ALLOWED_JOURNEYS.has(journeyNumber)) {
+    const journeyId = journeyDoc.id;
+    if (!ALLOWED_JOURNEY_IDS.has(journeyId)) {
       batch.delete(journeyDoc.ref);
       pendingWrites += 1;
     }
@@ -72,12 +96,27 @@ const pruneJourneys = async (): Promise<void> => {
   }
 };
 
-const sanitizeTemplateData = (data: FirebaseFirestore.DocumentData | undefined, journeyNumber: number) => {
+const sanitizeTemplateData = (data: FirebaseFirestore.DocumentData | undefined, journeyId: string) => {
   const base: Record<string, unknown> = {
-    jornada: journeyNumber,
+    jornada: journeyId,
     resultadosOficiales: [],
     fechaActualizacion: serverTimestamp(),
+    orden: 17,
   };
+
+  if (journeyId !== SOURCE_TEMPLATE_JOURNEY) {
+    base.resultadosOficiales = [];
+    base.tipo = "liguilla";
+    const stage = STAGE_DEFINITIONS[journeyId];
+    if (stage) {
+      base.etapa = stage.etapa;
+      base.descripcion = stage.descripcion;
+      base.orden = stage.orden;
+    }
+    base.fechaApertura = serverTimestamp();
+    base.fechaCierre = serverTimestamp();
+    return base;
+  }
 
   if (!data) {
     base.fechaApertura = serverTimestamp();
@@ -102,9 +141,7 @@ const sanitizeTemplateData = (data: FirebaseFirestore.DocumentData | undefined, 
     }
   }
 
-  if (journeyNumber !== SOURCE_TEMPLATE_JOURNEY) {
-    base.resultadosOficiales = [];
-  } else if (Array.isArray(data.resultadosOficiales)) {
+  if (Array.isArray(data.resultadosOficiales)) {
     base.resultadosOficiales = data.resultadosOficiales;
   }
 
@@ -112,34 +149,16 @@ const sanitizeTemplateData = (data: FirebaseFirestore.DocumentData | undefined, 
 };
 
 const ensureAllowedJourneysExist = async (): Promise<void> => {
-  const templateSnap = await db.collection("jornadas").doc(SOURCE_TEMPLATE_JOURNEY.toString()).get();
+  const templateSnap = await db.collection("jornadas").doc(SOURCE_TEMPLATE_JOURNEY).get();
   const templateData = templateSnap.exists ? templateSnap.data() : undefined;
 
-  for (const journeyNumber of ALLOWED_JOURNEYS) {
-    const docRef = db.collection("jornadas").doc(journeyNumber.toString());
+  for (const journeyId of ALLOWED_JOURNEY_IDS) {
+    const docRef = db.collection("jornadas").doc(journeyId);
     const snapshot = await docRef.get();
 
-    if (!snapshot.exists) {
-      const payload = sanitizeTemplateData(templateData, journeyNumber);
-      await docRef.set(payload, { merge: true });
-      console.log(`Se creó la jornada ${journeyNumber}.`);
-      continue;
-    }
-
-    if (journeyNumber === SOURCE_TEMPLATE_JOURNEY) {
-      const payload = sanitizeTemplateData(templateData, journeyNumber);
-      await docRef.set(payload, { merge: true });
-      console.log(`Se actualizó la jornada ${journeyNumber}.`);
-    } else {
-      await docRef.set(
-        {
-          jornada: journeyNumber,
-          fechaActualizacion: serverTimestamp(),
-        },
-        { merge: true },
-      );
-      console.log(`Se mantuvo la jornada ${journeyNumber} sin sobrescribir contenido existente.`);
-    }
+    const payload = sanitizeTemplateData(templateData, journeyId);
+    await docRef.set(payload, { merge: true });
+    console.log(`${snapshot.exists ? "Se actualizó" : "Se creó"} la jornada ${journeyId}.`);
   }
 };
 
@@ -147,7 +166,7 @@ const main = async (): Promise<void> => {
   await wipeUserData();
   await pruneJourneys();
   await ensureAllowedJourneysExist();
-  console.log("Base preparada para participación con jornadas 17 y 18 únicamente.");
+  console.log("Base preparada para participación con jornada 17 y etapas de liguilla (CF, SF, F).");
 };
 
 main().catch((error) => {

@@ -9,10 +9,17 @@ import { PodiumPage } from './components/PodiumPage';
 import { ProfilePage } from './components/ProfilePage';
 import AperturaJornada15 from './imports/AperturaJornada15';
 import {
+  LIGUILLA_STAGE_METADATA,
   QUINIELA_STORAGE_KEY,
+  VISIBLE_JOURNEY_ORDERS,
   createEmptySelections,
+  getJourneyCodeLabel,
+  getJourneyDocId,
   getJourneyHeader,
   getMatchesForJourney,
+  getStageMetaByDocId,
+  getStageMetaByOrder,
+  resolveJourneyOrder,
   type QuinielaSelections,
   type QuinielaSubmission,
   type Selection,
@@ -29,7 +36,7 @@ import { BadgeCelebrationModal } from './components/BadgeCelebrationModal';
 
 // Definición centralizada de la jornada mostrada
 const CURRENT_JOURNEY = 17;
-const BUILD_VERSION = 'V 33';
+const BUILD_VERSION = 'V 34';
 const QUICK_ACCESS_STORAGE_KEY = 'quiniela-quick-access-profile';
 const DEFAULT_COUNTRY = 'México';
 const DEFAULT_COUNTRY_CODE = 'MX';
@@ -149,24 +156,7 @@ const buildSubmittedLabel = (isoString: string | null): string => {
   return `Pronóstico enviado el ${dayMonth} - ${time} hrs`;
 };
 
-const parseJourneyNumber = (id: string): number | null => {
-  if (!id) {
-    return null;
-  }
-
-  const numericId = Number.parseInt(id, 10);
-  if (!Number.isNaN(numericId)) {
-    return numericId;
-  }
-
-  const match = id.match(/\d+/);
-  if (match) {
-    const parsed = Number.parseInt(match[0], 10);
-    return Number.isNaN(parsed) ? null : parsed;
-  }
-
-  return null;
-};
+const parseJourneyNumber = (id: string): number | null => resolveJourneyOrder(id);
 
 type UserStoredSubmissions = Record<number, QuinielaSubmission>;
 type StoredSubmissions = Record<string, UserStoredSubmissions>;
@@ -383,9 +373,14 @@ type JornadaDocData = {
   titulo?: unknown;
 };
 
+type JourneyGroup = 'regular' | 'liguilla';
+
 type JourneyRecord = {
   id: string;
   number: number;
+  code: string;
+  group: JourneyGroup;
+  stageId?: string;
   fechaInicio: Date | null;
   fechaCierre: Date | null;
   resultadosOficiales: Selection[];
@@ -404,13 +399,14 @@ type JourneyCardViewModel = {
   tone: JourneyTone;
   action: JourneyCardAction;
   submittedAt: string | null;
+  group: JourneyGroup;
+  stageId?: string;
 };
 
-const VISIBLE_JOURNEY_NUMBERS = [17, 18] as const;
+const VISIBLE_JOURNEY_NUMBERS = [...VISIBLE_JOURNEY_ORDERS];
 const VISIBLE_JOURNEY_SET = new Set<number>(VISIBLE_JOURNEY_NUMBERS);
 const ORDERED_VISIBLE_JOURNEYS = [...VISIBLE_JOURNEY_NUMBERS].sort((a, b) => a - b);
 const FORCED_PARTICIPATION_JOURNEYS = VISIBLE_JOURNEY_NUMBERS.length;
-const DEFAULT_FORCED_JOURNEY_META = "Cierra el 31 OCT - 14:59 hrs";
 const PARTICIPATION_OVERRIDE_JOURNEYS = new Set<number>([CURRENT_JOURNEY]);
 const PARTICIPATION_OVERRIDE_META = "EN CURSO PARA PARTICIPAR";
 
@@ -473,6 +469,7 @@ export default function App() {
   const previousJourneyNumber = findPreviousVisibleJourney(activeJourneyNumber);
   const activeJourneyMatches = useMemo(() => getMatchesForJourney(activeJourneyNumber), [activeJourneyNumber]);
   const activeJourneyHeader = useMemo(() => getJourneyHeader(activeJourneyNumber), [activeJourneyNumber]);
+  const activeJourneyCodeLabel = useMemo(() => getJourneyCodeLabel(activeJourneyNumber), [activeJourneyNumber]);
   const [previousJourneyCloseDate, setPreviousJourneyCloseDate] = useState<Date | null>(null);
   const [currentSubmissionAt, setCurrentSubmissionAt] = useState<string | null>(null);
   const [previousSubmissionAt, setPreviousSubmissionAt] = useState<string | null>(null);
@@ -541,6 +538,9 @@ export default function App() {
     }
 
     const applyParticipationOverride = (card: JourneyCardViewModel): JourneyCardViewModel => {
+      if (card.group !== 'regular') {
+        return card;
+      }
       if (!PARTICIPATION_OVERRIDE_JOURNEYS.has(card.number)) {
         return card;
       }
@@ -554,10 +554,9 @@ export default function App() {
       };
     };
 
-    let cards = journeys
+    const cards = journeys
       .filter((journey) => VISIBLE_JOURNEY_SET.has(journey.number))
       .map((journey) => {
-        const code = `J${journey.number.toString().padStart(2, '0')}`;
         const submissionMeta = resolveSubmissionMetadata(
           journey.number,
           userQuinielasMap[journey.number]
@@ -568,10 +567,14 @@ export default function App() {
         const submittedAt = submissionMeta.submittedAt ?? localSubmission?.submittedAt ?? null;
         const effectiveSubmitted = submissionMeta.submitted || Boolean(localSubmission);
 
+        const stageMeta = journey.group === 'liguilla'
+          ? getStageMetaByDocId(journey.stageId ?? journey.code) ?? getStageMetaByOrder(journey.number)
+          : null;
+
         let tone: JourneyTone = 'upcoming';
-        let statusLabel = 'Próximamente';
+        let statusLabel = stageMeta?.label ?? 'Próximamente';
         let action: JourneyCardAction = null;
-        let meta = journey.fechaInicio ? buildStartLabel(journey.fechaInicio) : 'Próximamente';
+        let meta = journey.fechaInicio ? buildStartLabel(journey.fechaInicio) : stageMeta?.description ?? 'Próximamente';
 
         if (effectiveSubmitted) {
           tone = 'success';
@@ -580,7 +583,7 @@ export default function App() {
           action = 'view';
         } else if (journey.fechaInicio && now.getTime() < journey.fechaInicio.getTime()) {
           tone = 'upcoming';
-          statusLabel = 'Próximamente';
+          statusLabel = stageMeta?.label ?? 'Próximamente';
           meta = buildStartLabel(journey.fechaInicio);
         } else if (journey.fechaCierre && now.getTime() >= journey.fechaCierre.getTime()) {
           tone = 'warning';
@@ -588,43 +591,30 @@ export default function App() {
           meta = buildCloseLabel('Cerró', journey.fechaCierre);
         } else {
           tone = 'current';
-          statusLabel = 'En curso';
-          meta = journey.fechaCierre ? buildCloseLabel('Cierra', journey.fechaCierre) : 'Jornada en curso';
+          statusLabel = stageMeta?.label ?? 'En curso';
+          meta = journey.fechaCierre
+            ? buildCloseLabel('Cierra', journey.fechaCierre)
+            : stageMeta?.description ?? 'Jornada en curso';
           action = 'participate';
         }
 
         return {
-          id: `journey-${journey.number}`,
-          code,
+          id: `journey-${journey.id}`,
+          code: journey.code,
           number: journey.number,
           statusLabel,
           meta,
           tone,
           action,
           submittedAt,
+          group: journey.group,
+          stageId: journey.stageId,
         } satisfies JourneyCardViewModel;
       })
-      .sort((a, b) => b.number - a.number);
+      .sort((a, b) => b.number - a.number)
+      .map(applyParticipationOverride);
 
-    cards = cards.map(applyParticipationOverride);
-
-    const upcomingJourneyNumber = CURRENT_JOURNEY + 1;
-    const hasUpcoming = cards.some((card) => card.number === upcomingJourneyNumber);
-
-    if (!hasUpcoming && VISIBLE_JOURNEY_SET.has(upcomingJourneyNumber)) {
-      cards = cards.concat({
-        id: `journey-${upcomingJourneyNumber}`,
-        code: `J${upcomingJourneyNumber.toString().padStart(2, '0')}`,
-        number: upcomingJourneyNumber,
-        statusLabel: 'Próximamente',
-        meta: 'Publicamos el rol de juegos muy pronto',
-        tone: 'upcoming',
-        action: null,
-        submittedAt: null,
-      });
-    }
-
-    return cards.map(applyParticipationOverride).sort((a, b) => b.number - a.number);
+    return cards;
   }, [journeys, now, storedSubmissions, userQuinielasMap]);
   const getExportData = useCallback(() => ({
     selections: quinielaSelections,
@@ -681,8 +671,8 @@ export default function App() {
       (snapshot) => {
         const records: JourneyRecord[] = snapshot.docs
           .map((docSnap) => {
-            const number = parseJourneyNumber(docSnap.id);
-            if (number === null) {
+            const order = parseJourneyNumber(docSnap.id);
+            if (order === null) {
               return null;
             }
 
@@ -694,9 +684,17 @@ export default function App() {
                 ? (data.resultadosOficiales.map((value) => normalizeSelection(value)) as Selection[])
                 : [];
 
+            const normalizedId = docSnap.id.trim().toUpperCase();
+            const stageMeta = getStageMetaByDocId(normalizedId);
+            const group: JourneyGroup = stageMeta ? 'liguilla' : 'regular';
+            const code = stageMeta?.code ?? getJourneyCodeLabel(order);
+
             return {
               id: docSnap.id,
-              number,
+              number: order,
+              code,
+              group,
+              stageId: stageMeta ? normalizedId : undefined,
               fechaInicio,
               fechaCierre,
               resultadosOficiales: resultados.filter((value): value is Selection => Boolean(value)),
@@ -1192,6 +1190,7 @@ useEffect(() => {
       const journeyRecord = journeys.find((journey) => journey.number === journeyNumber);
       const targetCloseDate = journeyRecord?.fechaCierre ?? null;
       const targetClosed = targetCloseDate ? now.getTime() >= targetCloseDate.getTime() : false;
+      const docId = journeyRecord?.id ?? getJourneyDocId(journeyNumber);
 
       let nextSelections = draftSelectionsByJourney[journeyNumber]
         ? { ...draftSelectionsByJourney[journeyNumber] }
@@ -1207,7 +1206,7 @@ useEffect(() => {
             'Usuarios',
             firebaseUser.uid,
             'quinielas',
-            journeyNumber.toString(),
+            docId,
           );
           const snapshot = await getDoc(quinielaRef);
 
@@ -1425,11 +1424,19 @@ useEffect(() => {
         return;
       }
 
-      const journeyNumber = parseInt(journeyCode.replace(/\D/g, ''), 10);
-      if (Number.isNaN(journeyNumber)) {
+      const normalizedCode = journeyCode.trim().toUpperCase();
+      const journeyRecord =
+        journeys.find((journey) => journey.code.toUpperCase() === normalizedCode)
+        ?? journeys.find((journey) => journey.id.trim().toUpperCase() === normalizedCode)
+        ?? null;
+
+      const journeyNumber = journeyRecord?.number ?? resolveJourneyOrder(journeyCode);
+      if (journeyNumber === null || Number.isNaN(journeyNumber)) {
         showToast('No encontramos esa quiniela guardada.', 'error');
         return;
       }
+
+      const docId = journeyRecord?.id ?? getJourneyDocId(journeyNumber);
 
       try {
         let remoteSelections: QuinielaSelections | null = null;
@@ -1441,7 +1448,7 @@ useEffect(() => {
             'Usuarios',
             firebaseUser.uid,
             'quinielas',
-            journeyNumber.toString(),
+            docId,
           );
           const snapshot = await getDoc(quinielaRef);
 
@@ -1652,12 +1659,12 @@ useEffect(() => {
           </div>
         </div>
 
-        <div
-          className="canvas-shell"
-        >
-          <div
-            className="canvas-wrapper"
-          >
+        <div className="canvas-frame__hint" role="note">
+          Selecciona tus pronósticos tocando L / E / V en cada partido.
+        </div>
+
+        <div className="canvas-shell">
+          <div className="canvas-wrapper">
             <AperturaJornada15
               selections={quinielaSelections}
               onSelect={handleSelectionChange}
@@ -1709,7 +1716,7 @@ useEffect(() => {
       onViewQuiniela={handleViewSubmission}
       onViewPodium={handleEnterPodium}
       journeyCards={journeyCards}
-      journeyCode={`J${activeJourneyNumber.toString().padStart(2, '0')}`}
+      journeyCode={activeJourneyCodeLabel}
       journeyCloseLabel={journeyCloseLabel}
       journeyClosedLabel={journeyClosedLabel}
       journeyClosed={journeyClosed}

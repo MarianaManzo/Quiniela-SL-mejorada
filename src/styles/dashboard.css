@@ -68,7 +68,7 @@
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 32px;
 }
 
 .quiniela-surface .canvas-frame__toolbar {
@@ -83,7 +83,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  width: 100%;
+  flex: 1;
 }
 
 .quiniela-surface .canvas-frame__group .back-button {
@@ -645,6 +645,7 @@
   align-items: center;
   gap: 6px;
   padding: 8px 20px;
+  margin: 0 8px;
   border-radius: 999px;
   font-size: 11px;
   letter-spacing: 0.16em;
@@ -710,6 +711,10 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 28px;
   transition: opacity 200ms ease;
+}
+
+.tournament-panel__grid[data-section="regular"] {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .tournament-panel__grid[data-hidden="true"] {

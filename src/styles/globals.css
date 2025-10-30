@@ -127,6 +127,21 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  .canvas-frame__hint {
+    font-family: 'Albert Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 16px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #f8fafcc7;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    text-align: center;
+    width: 100%;
+    margin: 32px 0;
+  }
 }
 
 /**

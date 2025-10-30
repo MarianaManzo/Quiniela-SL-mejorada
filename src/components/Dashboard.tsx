@@ -11,6 +11,7 @@ import {
 import { ROLE_LABELS, type UserProfile } from "./LoginScreen";
 import { TOP_RANKING } from "../data/podium";
 import { obtenerUsuariosParaPodio } from "../services/firestoreService";
+import { LIGUILLA_STAGE_METADATA } from "../quiniela/config";
 import "../styles/dashboard.css";
 
 interface DashboardProps {
@@ -40,6 +41,8 @@ type JourneyCardAction = "participate" | "view" | null;
 
 type StatusIconComponent = () => JSX.Element;
 
+type JourneyGroup = "regular" | "liguilla";
+
 interface DashboardJourneyCard {
   id: string;
   code: string;
@@ -48,6 +51,8 @@ interface DashboardJourneyCard {
   meta: string;
   tone: JourneyTone;
   action: JourneyCardAction;
+  group: JourneyGroup;
+  stageId?: string;
 }
 
 interface JourneyCard {
@@ -60,6 +65,8 @@ interface JourneyCard {
   ctaLabel?: string;
   ctaMobileLabel?: string;
   action?: JourneyCardAction;
+  group: JourneyGroup;
+  stageId?: string;
 }
 
 type StatusTagTone = "progress" | "neutral";
@@ -246,7 +253,10 @@ export function Dashboard({
   const heroCountdownVisible = heroActionType === "participate" && Boolean(journeyCloseLabel);
   const heroClosedMessage = journeyClosed && heroActionType !== "view" ? journeyClosedLabel ?? "La jornada está cerrada." : null;
   const computedSections: TournamentSection[] = useMemo(() => {
-    const cards: JourneyCard[] = orderedJourneyCards.map((card) => ({
+    const regularCardsSource = orderedJourneyCards.filter((card) => card.group === "regular");
+    const liguillaCardsSource = orderedJourneyCards.filter((card) => card.group === "liguilla");
+
+    const regularCards: JourneyCard[] = regularCardsSource.map((card) => ({
       id: card.id,
       code: card.code,
       statusLabel: card.statusLabel,
@@ -256,49 +266,63 @@ export function Dashboard({
       ctaLabel: card.action === "participate" ? "Participar" : undefined,
       ctaMobileLabel: card.action === "participate" ? "Participa" : undefined,
       action: card.action,
+      group: card.group,
+      stageId: card.stageId,
     }));
 
-    const totalLabel = cards.length > 0 ? `Jornadas (${cards.length})` : "Sin jornadas";
-    const totalTone: StatusTagTone = cards.length > 0 ? "progress" : "neutral";
+    const liguillaLookup = new Map<string, DashboardJourneyCard>(
+      liguillaCardsSource
+        .filter((card) => card.stageId)
+        .map((card) => [card.stageId as string, card])
+    );
+
+    const liguillaCards: JourneyCard[] = Object.entries(LIGUILLA_STAGE_METADATA)
+      .map(([stageId, stageMeta]) => {
+        const existing = liguillaLookup.get(stageId);
+        if (existing) {
+          return {
+            id: existing.id,
+            code: existing.code,
+            statusLabel: existing.statusLabel,
+            meta: existing.meta,
+            tone: existing.tone,
+            journeyNumber: existing.number,
+            ctaLabel: existing.action === "participate" ? "Participar" : undefined,
+            ctaMobileLabel: existing.action === "participate" ? "Participa" : undefined,
+            action: existing.action,
+            group: existing.group,
+            stageId,
+          } satisfies JourneyCard;
+        }
+
+        return {
+          id: `liguilla-${stageId.toLowerCase()}`,
+          code: stageMeta.code,
+          statusLabel: stageMeta.label,
+          meta: stageMeta.description,
+          tone: "upcoming",
+          journeyNumber: stageMeta.order,
+          action: null,
+          group: "liguilla",
+          stageId,
+        } satisfies JourneyCard;
+      })
+      .sort((a, b) => (a.journeyNumber ?? 0) - (b.journeyNumber ?? 0));
 
     return [
       {
         id: DEFAULT_SECTION_ID,
         appearance: "regular",
         title: "Torneo Regular",
-        statusTags: [
-          { id: "progress", label: totalLabel, tone: totalTone },
-        ],
-        cards,
+        statusTags: [],
+        cards: regularCards,
       },
       {
         id: "liguilla",
         appearance: "elimination",
         title: "Liguilla",
-        statusTags: [{ id: "available", label: "Disponible pronto", tone: "neutral" }],
-        cards: [
-          {
-            id: "liguilla-cuartos",
-            code: "C1",
-            statusLabel: "Próximamente",
-            meta: "Publicamos llaves el 5 de noviembre",
-            tone: "upcoming",
-          },
-          {
-            id: "liguilla-semis",
-            code: "S1",
-            statusLabel: "Próximamente",
-            meta: "Se define tras cuartos",
-            tone: "upcoming",
-          },
-          {
-            id: "liguilla-final",
-            code: "F1",
-            statusLabel: "Próximamente",
-            meta: "La gran final se confirma en diciembre",
-            tone: "upcoming",
-          },
-        ],
+        statusTags: [],
+        cards: liguillaCards,
       },
     ];
   }, [orderedJourneyCards]);
@@ -426,7 +450,7 @@ export function Dashboard({
                   </div>
                 </header>
 
-              <div className="tournament-panel__grid" data-hidden={collapsed}>
+              <div className="tournament-panel__grid" data-hidden={collapsed} data-section={section.id}>
                 {section.cards.map((card) => {
                   return (
                     <article

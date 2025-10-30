@@ -1,7 +1,7 @@
 import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc, updateDoc, type Timestamp } from "firebase/firestore";
 import type { User } from "firebase/auth";
 import { firebaseFirestore } from "../firebase";
-import type { Selection } from "../quiniela/config";
+import { getJourneyDocId, getMatchesForJourney, type Selection } from "../quiniela/config";
 import { CONSTANCY_BADGES } from "../data/constancyBadges";
 import type { ConstancyBadgeId, ConstancyBadgeStateMap } from "../types/badges";
 
@@ -183,11 +183,13 @@ export const guardarQuiniela = async ({
   estadoQuiniela = "abierta",
   quinielaEnviada,
 }: GuardarQuinielaPayload): Promise<GuardarQuinielaResult> => {
-  if (pronosticos.length !== 9) {
-    throw new Error("La quiniela debe incluir 9 pronósticos.");
+  const expectedMatches = getMatchesForJourney(jornada).length;
+  if (expectedMatches > 0 && pronosticos.length !== expectedMatches) {
+    throw new Error(`La quiniela debe incluir ${expectedMatches} pronósticos.`);
   }
 
-  const quinielaRef = doc(firebaseFirestore, "Usuarios", uid, "quinielas", jornada.toString());
+  const journeyDocId = getJourneyDocId(jornada);
+  const quinielaRef = doc(firebaseFirestore, "Usuarios", uid, "quinielas", journeyDocId);
 
   await setDoc(quinielaRef, {
     jornada,

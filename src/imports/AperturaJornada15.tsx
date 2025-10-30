@@ -298,6 +298,11 @@ function Frame26({
 function PieDePagina({ participantName }: { participantName?: string | null }) {
   const displayName =
     formatParticipantName(participantName ?? null, undefined) ?? 'JUEGA LA QUINIELA';
+  const MAX_PARTICIPANT_CHARS = 20;
+  const truncatedName =
+    displayName.length > MAX_PARTICIPANT_CHARS
+      ? `${displayName.slice(0, MAX_PARTICIPANT_CHARS).trimEnd()}…`
+      : displayName;
 
   return (
     <div className="basis-0 grow min-h-px min-w-px opacity-[0.64] relative shrink-0 w-full">
@@ -331,9 +336,13 @@ function PieDePagina({ participantName }: { participantName?: string | null }) {
                   lineHeight: 1,
                   color: '#fdfdfd',
                   whiteSpace: 'nowrap',
+                  maxWidth: '400px',
+                  textOverflow: 'ellipsis',
+                  overflow: 'hidden',
+                  display: 'inline-block',
                 }}
               >
-                {displayName.toUpperCase()}
+                {truncatedName.toUpperCase()}
               </span>
             </div>
           </div>

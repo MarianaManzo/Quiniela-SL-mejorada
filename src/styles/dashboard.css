@@ -946,6 +946,13 @@
   color: #ff6fa9;
 }
 
+@media (max-width: 480px) {
+  .journey-card[data-tone="success"] .journey-card__status-tag,
+  .journey-card--success .journey-card__status-tag {
+    display: none;
+  }
+}
+
 .journey-card[data-tone="warning"],
 .journey-card--warning {
   background: rgba(20, 20, 28, 0.04);

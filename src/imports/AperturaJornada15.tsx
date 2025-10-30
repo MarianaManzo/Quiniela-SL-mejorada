@@ -12,7 +12,7 @@ import {
   INLINE_QUINIELA_ASSETS,
   type QuinielaAssetBundle,
 } from '../quiniela/assets';
-import { formatParticipantName } from '../utils/formatParticipantName';
+import { formatParticipantName, MAX_PARTICIPANT_NAME_LENGTH } from '../utils/formatParticipantName';
 
 type LayoutVariant = 'default' | 'export';
 
@@ -298,10 +298,9 @@ function Frame26({
 function PieDePagina({ participantName }: { participantName?: string | null }) {
   const displayName =
     formatParticipantName(participantName ?? null, undefined) ?? 'JUEGA LA QUINIELA';
-  const MAX_PARTICIPANT_CHARS = 20;
   const truncatedName =
-    displayName.length > MAX_PARTICIPANT_CHARS
-      ? `${displayName.slice(0, MAX_PARTICIPANT_CHARS).trimEnd()}…`
+    displayName.length > MAX_PARTICIPANT_NAME_LENGTH
+      ? `${displayName.slice(0, MAX_PARTICIPANT_NAME_LENGTH).trimEnd()}…`
       : displayName;
 
   return (
@@ -323,7 +322,8 @@ function PieDePagina({ participantName }: { participantName?: string | null }) {
                 border: '2px solid rgba(255, 255, 255, 0.4)',
                 background: '#0a0a0a',
                 boxShadow: '0 20px 40px -24px rgba(0, 0, 0, 0.6)',
-                maxWidth: '90%',
+                width: 'min(90%, 400px)',
+                maxWidth: '400px',
               }}
             >
               <span

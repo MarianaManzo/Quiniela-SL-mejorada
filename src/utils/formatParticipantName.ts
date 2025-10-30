@@ -1,4 +1,4 @@
-export const MAX_PARTICIPANT_NAME_LENGTH = 10;
+export const MAX_PARTICIPANT_NAME_LENGTH = 20;
 
 export const sanitizeDisplayName = (raw: string): string =>
   raw

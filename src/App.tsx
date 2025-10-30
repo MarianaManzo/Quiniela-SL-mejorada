@@ -36,7 +36,7 @@ import { BadgeCelebrationModal } from './components/BadgeCelebrationModal';
 
 // Definición centralizada de la jornada mostrada
 const CURRENT_JOURNEY = 17;
-const BUILD_VERSION = 'V 34';
+const BUILD_VERSION = 'V 35';
 const QUICK_ACCESS_STORAGE_KEY = 'quiniela-quick-access-profile';
 const DEFAULT_COUNTRY = 'México';
 const DEFAULT_COUNTRY_CODE = 'MX';
@@ -257,6 +257,29 @@ const ensureUserSubmissionStore = (store: StoredSubmissions, email: string): Use
   const next: UserStoredSubmissions = {};
   store[email] = next;
   return next;
+};
+
+const clearSubmissionForUser = (email: string, journey: number) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const submissions = readStoredSubmissions();
+  const userStore = ensureUserSubmissionStore(submissions, email);
+  if (!(journey in userStore)) {
+    return;
+  }
+
+  delete userStore[journey];
+  if (Object.keys(userStore).length === 0) {
+    delete submissions[email];
+  }
+
+  try {
+    window.localStorage.setItem(QUINIELA_STORAGE_KEY, JSON.stringify(submissions));
+  } catch (error) {
+    console.error('No se pudo limpiar la quiniela almacenada localmente', error);
+  }
 };
 
 const loadSubmissionForUser = (email: string, journey: number): QuinielaSubmission | null => {
@@ -1093,22 +1116,38 @@ useEffect(() => {
     const storedMap = loadSubmissionsForUser(user.email);
     const storedForActive = storedMap[activeJourneyNumber];
     const storedForPrevious = previousJourneyNumber ? storedMap[previousJourneyNumber] : undefined;
+    const remoteMeta =
+      firebaseUser && userQuinielasMap
+        ? resolveSubmissionMetadata(activeJourneyNumber, userQuinielasMap[activeJourneyNumber])
+        : null;
+    const hasRemoteSubmission =
+      Boolean(remoteMeta?.submitted) && remoteMeta?.selections && hasCompletedSelections(remoteMeta.selections);
 
-    setDraftSelectionsByJourney(
-      Object.fromEntries(
-        Object.entries(storedMap).map(([journey, submission]) => [
-          Number(journey),
-          { ...submission.selections },
-        ]),
-      ),
+    const nextDrafts: Record<number, QuinielaSelections> = Object.fromEntries(
+      Object.entries(storedMap).map(([journey, submission]) => [
+        Number(journey),
+        { ...submission.selections },
+      ]),
     );
+    if (firebaseUser && !hasRemoteSubmission) {
+      delete nextDrafts[activeJourneyNumber];
+    }
+    setDraftSelectionsByJourney(nextDrafts);
 
-    if (storedForActive && hasCompletedSelections(storedForActive.selections)) {
+    if (hasRemoteSubmission && remoteMeta?.selections) {
+      setQuinielaSelections({ ...remoteMeta.selections });
+      setLastSubmittedAt(remoteMeta.submittedAt ?? null);
+      setIsReadOnlyView(true);
+      setCurrentSubmissionAt(remoteMeta.submittedAt ?? null);
+    } else if (!firebaseUser && storedForActive && hasCompletedSelections(storedForActive.selections)) {
       setQuinielaSelections({ ...storedForActive.selections });
       setLastSubmittedAt(storedForActive.submittedAt ?? null);
-      setIsReadOnlyView(true);
+      setIsReadOnlyView(Boolean(storedForActive.submittedAt));
       setCurrentSubmissionAt(storedForActive.submittedAt ?? null);
     } else {
+      if (firebaseUser && storedForActive) {
+        clearSubmissionForUser(user.email, activeJourneyNumber);
+      }
       setQuinielaSelections(createEmptySelections(activeJourneyNumber));
       setLastSubmittedAt(null);
       setIsReadOnlyView(false);
@@ -1129,6 +1168,8 @@ useEffect(() => {
     hideSubmitTooltip,
     resetDownloadState,
     previousJourneyNumber,
+    firebaseUser,
+    userQuinielasMap,
   ]);
 
   const handleSignOut = useCallback(async () => {
@@ -1195,9 +1236,9 @@ useEffect(() => {
       let nextSelections = draftSelectionsByJourney[journeyNumber]
         ? { ...draftSelectionsByJourney[journeyNumber] }
         : createEmptySelections(journeyNumber);
-      let nextReadOnly = targetClosed;
-      let submissionDetected = false;
       let submissionTimestamp: string | null = null;
+      let hasRemoteSubmission = false;
+      let restoredLocalSubmission = false;
 
       if (firebaseUser) {
         try {
@@ -1212,12 +1253,11 @@ useEffect(() => {
 
           if (snapshot.exists()) {
             const meta = resolveSubmissionMetadata(journeyNumber, snapshot.data() as QuinielaDocData);
-            if (meta.selections) {
+            if (meta.submitted && meta.selections) {
               nextSelections = { ...meta.selections };
             }
             if (meta.submitted) {
-              nextReadOnly = true;
-              submissionDetected = true;
+              hasRemoteSubmission = true;
               submissionTimestamp = meta.submittedAt ?? new Date().toISOString();
             }
           }
@@ -1226,13 +1266,14 @@ useEffect(() => {
         }
       }
 
-      if (!submissionDetected && user) {
+      if (!hasRemoteSubmission && user) {
         const stored = loadSubmissionForUser(user.email, journeyNumber);
-        if (stored && hasCompletedSelections(stored.selections)) {
+        if (!firebaseUser && stored && stored.submittedAt && hasCompletedSelections(stored.selections)) {
           nextSelections = { ...stored.selections };
-          nextReadOnly = true;
-          submissionDetected = true;
-          submissionTimestamp = stored.submittedAt ?? null;
+          restoredLocalSubmission = true;
+        } else if (firebaseUser && stored) {
+          clearSubmissionForUser(user.email, journeyNumber);
+          nextSelections = createEmptySelections(journeyNumber);
         }
       }
 
@@ -1242,19 +1283,22 @@ useEffect(() => {
       }));
       setActiveJourneyNumber(journeyNumber);
       setQuinielaSelections(nextSelections);
-      setIsReadOnlyView(nextReadOnly);
+      const shouldLockForm = hasRemoteSubmission || targetClosed;
+      setIsReadOnlyView(shouldLockForm);
       setView('quiniela');
 
-      if (submissionTimestamp) {
+      if (hasRemoteSubmission && submissionTimestamp) {
         setCurrentSubmissionAt(submissionTimestamp);
         setLastSubmittedAt(submissionTimestamp);
-      } else if (!submissionDetected) {
+      } else if (!hasRemoteSubmission) {
         setCurrentSubmissionAt(null);
         setLastSubmittedAt(null);
       }
 
-      if (submissionDetected && !targetClosed) {
+      if (hasRemoteSubmission && !targetClosed) {
         showToast('Esta jornada ya fue enviada. Mostramos la versión guardada.', 'success');
+      } else if (restoredLocalSubmission && !targetClosed) {
+        showToast('Recuperamos tu borrador guardado. Revisa y envíalo cuando estés lista.', 'success');
       }
     },
     [

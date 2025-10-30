@@ -195,13 +195,34 @@
 
 .quiniela-surface .submit-button {
   box-shadow: 0 22px 40px -24px rgba(246, 212, 51, 0.55);
+  margin-left: auto;
 }
 
 .quiniela-surface .submit-button-wrapper {
   position: relative;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.quiniela-surface .submit-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 28px;
+  border-radius: 18px;
+  border: 1px solid rgba(130, 196, 138, 0.4);
+  background: rgba(46, 64, 51, 0.22);
+  color: #9ce7b1;
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.quiniela-surface .submit-status-chip svg {
+  flex-shrink: 0;
 }
 
 .quiniela-surface .submit-button-tooltip {

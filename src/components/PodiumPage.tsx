@@ -136,10 +136,12 @@ export function PodiumPage() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [handleCloseMobileSearch, isMobileSearchOpen]);
 
-  const handleClearQuery = useCallback(() => {
-    setQuery("");
-    searchInputRef.current?.focus();
-  }, []);
+  const handleDismissSearch = useCallback(() => {
+    if (query) {
+      setQuery("");
+    }
+    handleCloseMobileSearch();
+  }, [handleCloseMobileSearch, query]);
 
   const visibleEntries = filteredEntries.slice(0, visibleCount);
 
@@ -180,21 +182,11 @@ export function PodiumPage() {
               onChange={(event) => setQuery(event.target.value)}
               ref={searchInputRef}
             />
-            {query ? (
-              <button
-                type="button"
-                className="podium-search__clear"
-                onClick={handleClearQuery}
-                aria-label="Limpiar búsqueda"
-              >
-                Borrar
-              </button>
-            ) : null}
             <button
               type="button"
               className="podium-search__dismiss"
-              onClick={handleCloseMobileSearch}
-              aria-label="Cerrar búsqueda"
+              onClick={handleDismissSearch}
+              aria-label={query ? "Limpiar y cerrar búsqueda" : "Cerrar búsqueda"}
             >
               <X size={16} aria-hidden="true" />
             </button>

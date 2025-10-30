@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Download, Loader2, Share2, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Download, Loader2, Share2, X } from 'lucide-react';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 import { collection, doc, getDoc, onSnapshot, Timestamp } from 'firebase/firestore';
 import { Dashboard } from './components/Dashboard';
@@ -561,10 +561,11 @@ export default function App() {
     }
 
     const applyParticipationOverride = (card: JourneyCardViewModel): JourneyCardViewModel => {
-      if (card.group !== 'regular') {
-        return card;
-      }
-      if (!PARTICIPATION_OVERRIDE_JOURNEYS.has(card.number)) {
+      if (
+        card.group !== 'regular'
+        || card.tone === 'success'
+        || !PARTICIPATION_OVERRIDE_JOURNEYS.has(card.number)
+      ) {
         return card;
       }
 
@@ -1129,7 +1130,9 @@ useEffect(() => {
         { ...submission.selections },
       ]),
     );
-    if (firebaseUser && !hasRemoteSubmission) {
+    const storedCompleted = storedForActive && hasCompletedSelections(storedForActive.selections);
+    const storedSubmissionSubmitted = storedCompleted && Boolean(storedForActive?.submittedAt);
+    if (firebaseUser && !hasRemoteSubmission && !storedSubmissionSubmitted) {
       delete nextDrafts[activeJourneyNumber];
     }
     setDraftSelectionsByJourney(nextDrafts);
@@ -1139,13 +1142,14 @@ useEffect(() => {
       setLastSubmittedAt(remoteMeta.submittedAt ?? null);
       setIsReadOnlyView(true);
       setCurrentSubmissionAt(remoteMeta.submittedAt ?? null);
-    } else if (!firebaseUser && storedForActive && hasCompletedSelections(storedForActive.selections)) {
+    } else if (storedSubmissionSubmitted && storedForActive) {
+      const submittedAt = storedForActive.submittedAt ?? null;
       setQuinielaSelections({ ...storedForActive.selections });
-      setLastSubmittedAt(storedForActive.submittedAt ?? null);
-      setIsReadOnlyView(Boolean(storedForActive.submittedAt));
-      setCurrentSubmissionAt(storedForActive.submittedAt ?? null);
+      setLastSubmittedAt(submittedAt);
+      setIsReadOnlyView(true);
+      setCurrentSubmissionAt(submittedAt);
     } else {
-      if (firebaseUser && storedForActive) {
+      if (firebaseUser && storedForActive && !storedSubmissionSubmitted) {
         clearSubmissionForUser(user.email, activeJourneyNumber);
       }
       setQuinielaSelections(createEmptySelections(activeJourneyNumber));
@@ -1268,9 +1272,13 @@ useEffect(() => {
 
       if (!hasRemoteSubmission && user) {
         const stored = loadSubmissionForUser(user.email, journeyNumber);
-        if (!firebaseUser && stored && stored.submittedAt && hasCompletedSelections(stored.selections)) {
+        if (stored && stored.submittedAt && hasCompletedSelections(stored.selections)) {
           nextSelections = { ...stored.selections };
           restoredLocalSubmission = true;
+          submissionTimestamp = stored.submittedAt ?? submissionTimestamp;
+          if (firebaseUser) {
+            hasRemoteSubmission = true;
+          }
         } else if (firebaseUser && stored) {
           clearSubmissionForUser(user.email, journeyNumber);
           nextSelections = createEmptySelections(journeyNumber);
@@ -1283,11 +1291,11 @@ useEffect(() => {
       }));
       setActiveJourneyNumber(journeyNumber);
       setQuinielaSelections(nextSelections);
-      const shouldLockForm = hasRemoteSubmission || targetClosed;
+      const shouldLockForm = hasRemoteSubmission || targetClosed || restoredLocalSubmission;
       setIsReadOnlyView(shouldLockForm);
       setView('quiniela');
 
-      if (hasRemoteSubmission && submissionTimestamp) {
+      if ((hasRemoteSubmission || restoredLocalSubmission) && submissionTimestamp) {
         setCurrentSubmissionAt(submissionTimestamp);
         setLastSubmittedAt(submissionTimestamp);
       } else if (!hasRemoteSubmission) {
@@ -1295,10 +1303,8 @@ useEffect(() => {
         setLastSubmittedAt(null);
       }
 
-      if (hasRemoteSubmission && !targetClosed) {
+      if ((hasRemoteSubmission || restoredLocalSubmission) && !targetClosed) {
         showToast('Esta jornada ya fue enviada. Mostramos la versión guardada.', 'success');
-      } else if (restoredLocalSubmission && !targetClosed) {
-        showToast('Recuperamos tu borrador guardado. Revisa y envíalo cuando estés lista.', 'success');
       }
     },
     [
@@ -1351,6 +1357,26 @@ useEffect(() => {
     [activeJourneyNumber, isReadOnlyView, showSelectionErrors, hideSubmitTooltip]
   );
 
+  const handleClearSelections = useCallback(() => {
+    if (isReadOnlyView) {
+      showToast('Esta quiniela es de solo lectura.', 'error');
+      return;
+    }
+
+    const emptySelections = createEmptySelections(activeJourneyNumber);
+    setQuinielaSelections(emptySelections);
+    setDraftSelectionsByJourney((prev) => ({
+      ...prev,
+      [activeJourneyNumber]: { ...emptySelections },
+    }));
+    if (user) {
+      clearSubmissionForUser(user.email, activeJourneyNumber);
+    }
+    setShowSelectionErrors(false);
+    hideSubmitTooltip();
+    showToast('Pronósticos reiniciados.', 'success');
+  }, [activeJourneyNumber, createEmptySelections, hideSubmitTooltip, isReadOnlyView, showToast, user]);
+
   const handleSubmitQuiniela = useCallback(async () => {
     if (isReadOnlyView) {
       showToast('Esta quiniela es de solo lectura.', 'error');
@@ -1385,9 +1411,9 @@ useEffect(() => {
     };
 
     try {
+      const matches = getMatchesForJourney(activeJourneyNumber);
       let badgeResult: Awaited<ReturnType<typeof guardarQuiniela>> | null = null;
       if (firebaseUser) {
-        const matches = getMatchesForJourney(activeJourneyNumber);
         const pronosticos = matches.map((match) => submission.selections[match.id]) as Selection[];
         badgeResult = await guardarQuiniela({
           uid: firebaseUser.uid,
@@ -1399,6 +1425,7 @@ useEffect(() => {
 
       persistSubmissionForUser(user.email, activeJourneyNumber, submission);
       setLastSubmittedAt(submission.submittedAt);
+      setCurrentSubmissionAt(submission.submittedAt);
       setShowSelectionErrors(false);
       hideSubmitTooltip();
       setIsReadOnlyView(true);
@@ -1406,6 +1433,23 @@ useEffect(() => {
         ...prev,
         [activeJourneyNumber]: { ...submission.selections },
       }));
+      setUserQuinielasMap((prev) => {
+        if (!firebaseUser) {
+          return prev;
+        }
+        const pronosticos = matches.map((match) => submission.selections[match.id] ?? null);
+        const existing = prev[activeJourneyNumber] ?? {};
+        return {
+          ...prev,
+          [activeJourneyNumber]: {
+            ...existing,
+            pronosticos,
+            estadoQuiniela: 'enviada',
+            quinielaEnviada: true,
+            fechaActualizacion: Timestamp.fromDate(new Date()),
+          },
+        };
+      });
       showToast('Pronóstico enviado correctamente.', 'success');
 
       if (badgeResult) {
@@ -1703,9 +1747,11 @@ useEffect(() => {
           </div>
         </div>
 
-        <div className="canvas-frame__hint" role="note">
-          Selecciona tus pronósticos tocando L / E / V en cada partido.
-        </div>
+        {!isReadOnlyView ? (
+          <div className="canvas-frame__hint" role="note">
+            Selecciona tus pronósticos tocando L / E / V en cada partido.
+          </div>
+        ) : null}
 
         <div className="canvas-shell">
           <div className="canvas-wrapper">
@@ -1726,15 +1772,32 @@ useEffect(() => {
 
       <div className="canvas-frame__footer">
         <div className="submit-button-wrapper">
-          <button
-            type="button"
-            onClick={handleSubmitQuiniela}
-            disabled={isSubmitDisabled}
-            aria-disabled={needsMoreSelections || isReadOnlyView}
-            className="btn btn-primary submit-button"
-          >
-            {isSaving ? 'Enviando…' : isReadOnlyView ? 'Enviada' : 'Enviar'}
-          </button>
+          {!isReadOnlyView ? (
+            <>
+              <button
+                type="button"
+                onClick={handleClearSelections}
+                className="btn btn-secondary"
+                disabled={isSaving || journeyClosed}
+              >
+                Limpiar
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmitQuiniela}
+                disabled={isSubmitDisabled}
+                aria-disabled={needsMoreSelections || isReadOnlyView}
+                className="btn btn-primary submit-button"
+              >
+                {isSaving ? 'Enviando…' : 'Enviar'}
+              </button>
+            </>
+          ) : (
+            <div className="submit-status-chip" role="status" aria-live="polite">
+              <CheckCircle size={18} aria-hidden="true" />
+              <span>Enviado</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

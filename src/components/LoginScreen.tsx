@@ -336,21 +336,6 @@ export function LoginScreen({ onLogin, onQuickAccess }: LoginScreenProps) {
           </div>
         </div>
 
-        {onQuickAccess ? (
-          <div className="login-quick">
-            <div className="login-quick__button-wrapper">
-              <button
-                type="button"
-                className="login-quick__button"
-                onClick={onQuickAccess}
-                disabled={isSubmitting}
-              >
-                Acceso rápido (sin registro)
-              </button>
-            </div>
-            <span className="login-quick__note">Tus selecciones se guardan solo en este dispositivo.</span>
-          </div>
-        ) : null}
       </div>
     </div>
   );

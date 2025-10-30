@@ -520,6 +520,8 @@ export default function App() {
   const [notificationStatus, setNotificationStatus] = useState<NotificationStatus>(initialNotificationPermission);
   const [isNotificationLoading, setIsNotificationLoading] = useState(false);
   const syncDeviceToken = useSyncDeviceToken(firebaseUser);
+  const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
+  const notificationPromptShownRef = useRef(false);
   const journeyClosed = useMemo(() => {
     if (!journeyCloseDate) {
       return false;
@@ -855,6 +857,26 @@ useEffect(() => {
 }, [firebaseUser, syncDeviceToken]);
 
 useEffect(() => {
+  if (!user) {
+    setShowNotificationPrompt(false);
+    notificationPromptShownRef.current = false;
+    return;
+  }
+
+  const ineligibleStatuses = new Set<NotificationStatus>(['granted', 'denied', 'unsupported', 'missing-key', 'error']);
+  if (ineligibleStatuses.has(notificationStatus)) {
+    setShowNotificationPrompt(false);
+    notificationPromptShownRef.current = true;
+    return;
+  }
+
+  if ((notificationStatus === 'default' || notificationStatus === 'prompt-skipped') && !notificationPromptShownRef.current) {
+    notificationPromptShownRef.current = true;
+    setShowNotificationPrompt(true);
+  }
+}, [notificationStatus, user]);
+
+useEffect(() => {
   if (!firebaseUser) {
     setIsReadOnlyView(false);
     setCurrentSubmissionAt(null);
@@ -910,6 +932,11 @@ useEffect(() => {
       setIsNotificationLoading(false);
     }
   }, [firebaseUser, showToast, syncDeviceToken]);
+
+  const handleDismissNotificationPrompt = useCallback(() => {
+    notificationPromptShownRef.current = true;
+    setShowNotificationPrompt(false);
+  }, []);
 
 
 useEffect(() => {
@@ -1866,6 +1893,8 @@ useEffect(() => {
           onEnableNotifications={handleEnableNotifications}
           notificationLoading={isNotificationLoading}
           onNavigateToProfile={handleOpenProfileView}
+          showNotificationPrompt={showNotificationPrompt}
+          onDismissNotificationPrompt={handleDismissNotificationPrompt}
         />
         {mainContent}
       </div>

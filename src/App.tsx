@@ -1807,7 +1807,7 @@ useEffect(() => {
         {toastBanner}
         {manualSaveModal}
         <div className="build-badge" aria-hidden="true">
-          Versión {BUILD_VERSION}
+          Turbo {BUILD_VERSION}
         </div>
         {quinielaView}
       </>
@@ -1853,7 +1853,7 @@ useEffect(() => {
       {toastBanner}
       {manualSaveModal}
       <div className="build-badge" aria-hidden="true">
-        Versión {BUILD_VERSION}
+        Turbo {BUILD_VERSION}
       </div>
       <div className="dashboard-shell">
         <Navbar
